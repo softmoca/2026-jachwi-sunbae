@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import StatusPanel from '@/shared/ui/status-panel/StatusPanel';
 
 import useNaverMap from '../../hooks/useNaverMap';
+import { demoMapCoordinate, demoMapOffset, demoRadiusDiameter } from '../../lib/mapDemoProjection';
 import { clampToSouthKorea } from '../../lib/mapLocation';
 import { markerScale } from '../../lib/mapMarkerPresentation';
 import type { MapMarker } from '../../model/Map';
@@ -14,16 +15,21 @@ import styles from './MapCanvas.module.css';
 
 const EMPTY_MARKERS: MapMarker[] = [];
 const EMPTY_CIRCLES: NonNullable<MapCanvasProps['circles']> = [];
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
-
-const demoMarkerStyle = (marker: MapMarker, center: { latitude: number; longitude: number }): CSSProperties => ({
-  transform:
-    marker.tone === 'property' || marker.tone === 'selected'
-      ? 'translate(-50%, -120.710678%)'
-      : 'translate(-50%, -50%)',
-  left: `${clamp(50 + (marker.longitude - center.longitude) * 3_100, 9, 91)}%`,
-  top: `${clamp(50 - (marker.latitude - center.latitude) * 4_200, 10, 88)}%`,
-});
+const demoMarkerStyle = (
+  marker: MapMarker,
+  center: { latitude: number; longitude: number },
+  level: number,
+): CSSProperties => {
+  const offset = demoMapOffset(marker, center, level);
+  return {
+    transform:
+      marker.tone === 'property' || marker.tone === 'selected'
+        ? 'translate(-50%, -120.710678%)'
+        : 'translate(-50%, -50%)',
+    left: `calc(50% + ${offset.x}px)`,
+    top: `calc(50% + ${offset.y}px)`,
+  };
+};
 
 const MapCanvas = ({
   center,
@@ -42,6 +48,7 @@ const MapCanvas = ({
   radiusCenter = center,
 }: MapCanvasProps) => {
   const boundedCenter = useMemo(() => clampToSouthKorea(center), [center.latitude, center.longitude]);
+  const radiusOffset = demoMapOffset(radiusCenter, boundedCenter, level);
   const { containerRef, canvasRef, liveMode, sdkError } = useNaverMap({
     center,
     markers,
@@ -64,10 +71,14 @@ const MapCanvas = ({
       onClick={(event) => {
         if (liveMode || !interactive || onSelectLocation === undefined) return;
         const rect = event.currentTarget.getBoundingClientRect();
-        const picked = clampToSouthKorea({
-          latitude: boundedCenter.latitude + (0.5 - (event.clientY - rect.top) / rect.height) * 0.018,
-          longitude: boundedCenter.longitude + ((event.clientX - rect.left) / rect.width - 0.5) * 0.024,
-        });
+        const picked = clampToSouthKorea(
+          demoMapCoordinate(
+            boundedCenter,
+            level,
+            event.clientX - rect.left - rect.width / 2,
+            event.clientY - rect.top - rect.height / 2,
+          ),
+        );
         onSelectLocation(picked.latitude, picked.longitude);
       }}
     >
@@ -86,9 +97,9 @@ const MapCanvas = ({
               key={circle.radiusMeters}
               className={styles.radiusCircle}
               style={{
-                width: `${(circle.radiusMeters / 2000) * 84}%`,
-                left: `${50 + (radiusCenter.longitude - boundedCenter.longitude) * 3_100}%`,
-                top: `${50 - (radiusCenter.latitude - boundedCenter.latitude) * 4_200}%`,
+                width: `${demoRadiusDiameter(circle.radiusMeters, radiusCenter.latitude, level)}px`,
+                left: `calc(50% + ${radiusOffset.x}px)`,
+                top: `calc(50% + ${radiusOffset.y}px)`,
               }}
               aria-hidden="true"
             />
@@ -100,7 +111,7 @@ const MapCanvas = ({
                 className={styles.demoMarkerPosition}
                 style={
                   {
-                    ...demoMarkerStyle(marker, boundedCenter),
+                    ...demoMarkerStyle(marker, boundedCenter, level),
                     '--map-marker-scale': markerScale(marker, level),
                   } as CSSProperties
                 }

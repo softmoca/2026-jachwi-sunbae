@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import mascotImage from '@/shared/assets/empty-property.jpg';
+import Icon from '@/shared/ui/icon/Icon';
 
 import type { MapMarker } from '../../model/Map';
 import MapCategoryIcon from '../map-category-icon/MapCategoryIcon';
@@ -36,6 +37,7 @@ const markerClassName = (marker: MapMarker, selectedMarkerId: string | null | un
     marker.tone === 'current' ? styles.currentMarker : '',
     marker.tone === 'selected' ? styles.selectedMarker : '',
     marker.tone === 'place' ? styles.placeMarker : '',
+    marker.tone === 'store' ? styles.storeMarker : '',
     marker.tone === 'cluster' ? styles.clusterMarker : '',
     marker.tone === 'propertyCluster' ? styles.propertyClusterMarker : '',
     selectedMarkerId === marker.id ? styles.activeMarker : '',
@@ -48,7 +50,9 @@ const MapMarkerView = ({ marker, selectedMarkerId = null, onSelectMarker }: MapM
   const canSelect = marker.actionable === true && onSelectMarker !== undefined;
   const markerContent = (
     <>
-      {isCurrentLocationDot(marker) ? null : usesCategoryIcon(marker) && marker.category !== undefined ? (
+      {isCurrentLocationDot(marker) ? null : marker.tone === 'store' ? (
+        <Icon name="store" size={18} />
+      ) : usesCategoryIcon(marker) && marker.category !== undefined ? (
         <MapCategoryIcon category={marker.category} className={styles.categoryIcon} />
       ) : marker.tone === 'property' || marker.tone === 'selected' || marker.tone === 'propertyCluster' ? (
         <img

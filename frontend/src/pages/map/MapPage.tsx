@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import useMapSheet from '@/features/map/hooks/useMapSheet';
 import { getMapFocusCenter } from '@/features/map/lib/mapViewportFocus';
 import type { MapAddress, MapBounds } from '@/features/map/model/Map';
 import type { MapMarker } from '@/features/map/model/Map';
@@ -12,7 +13,6 @@ import useMapLocation from './hooks/useMapLocation';
 import useMapNearby from './hooks/useMapNearby';
 import useMapProperties from './hooks/useMapProperties';
 import useMapSearch from './hooks/useMapSearch';
-import useMapSheet from './hooks/useMapSheet';
 import { levelForRadius, type MapRadius } from './lib/mapRadius';
 import { readMapView, writeMapView } from './lib/mapViewState';
 import MapAddPropertySheet from './ui/map-add-property-sheet/MapAddPropertySheet';

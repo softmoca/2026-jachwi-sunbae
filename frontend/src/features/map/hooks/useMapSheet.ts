@@ -1,7 +1,7 @@
 import type { PointerEvent } from 'react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
-import type { MapPropertySheetStage } from '../model/MapSheet';
+import type { MapSheetStage } from '../model/MapSheet';
 
 const SHEET_DRAG_THRESHOLD = 20;
 
@@ -22,7 +22,7 @@ const setSheetContentHeight = (sheet: HTMLElement, visibleHeight: number, preser
   );
 };
 
-const sheetStageHeights = (sheetRef: React.RefObject<HTMLElement | null>): Record<MapPropertySheetStage, number> => {
+const sheetStageHeights = (sheetRef: React.RefObject<HTMLElement | null>): Record<MapSheetStage, number> => {
   const parent = sheetRef.current?.parentElement;
   const stage = parent?.hasAttribute('data-sheet-viewport') ? parent.parentElement : parent;
   const stageHeight = stage?.getBoundingClientRect().height ?? 0;
@@ -36,19 +36,22 @@ const sheetStageHeights = (sheetRef: React.RefObject<HTMLElement | null>): Recor
       ? content.scrollHeight + (sheet.firstElementChild?.getBoundingClientRect().height || 2.25 * rem) + 0.5 * rem
       : Infinity;
   return {
-    closed: Math.min(2.25 * rem + bottomInset, fullHeight),
+    closed: Math.min(
+      Math.max(sheet?.firstElementChild?.getBoundingClientRect().height || 0, 2.25 * rem) + bottomInset,
+      fullHeight,
+    ),
     mid: Math.min(Math.min(stageHeight * 0.34, 18 * rem, singleHeight) + bottomInset, fullHeight),
     full: fullHeight,
   };
 };
 
-const useMapSheet = (isVisible = true, initialStage: MapPropertySheetStage = 'closed') => {
-  const [sheetStage, setSheetStage] = useState<MapPropertySheetStage>(initialStage);
+const useMapSheet = (isVisible = true, initialStage: MapSheetStage = 'closed') => {
+  const [sheetStage, setSheetStage] = useState<MapSheetStage>(initialStage);
   const [isDragging, setIsDragging] = useState(false);
   const sheetRef = useRef<HTMLElement | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const dragStartRef = useRef<{ y: number; height: number } | null>(null);
-  const dragHeightsRef = useRef<Record<MapPropertySheetStage, number> | null>(null);
+  const dragHeightsRef = useRef<Record<MapSheetStage, number> | null>(null);
   const pendingClientYRef = useRef<number | null>(null);
   const dragFrameRef = useRef<number | null>(null);
   const draggedSheetRef = useRef(false);
@@ -63,7 +66,7 @@ const useMapSheet = (isVisible = true, initialStage: MapPropertySheetStage = 'cl
     sheetRef.current?.parentElement?.style.removeProperty('--map-sheet-drag-height');
   }, []);
 
-  const syncSheetStageTransform = useCallback((stage: MapPropertySheetStage) => {
+  const syncSheetStageTransform = useCallback((stage: MapSheetStage) => {
     const sheet = sheetRef.current;
     if (sheet === null) return;
 
@@ -185,7 +188,7 @@ const useMapSheet = (isVisible = true, initialStage: MapPropertySheetStage = 'cl
         return;
       }
       const released = start.height + (start.y - event.clientY);
-      const nearest = (Object.entries(heights) as Array<[MapPropertySheetStage, number]>).reduce((best, entry) =>
+      const nearest = (Object.entries(heights) as Array<[MapSheetStage, number]>).reduce((best, entry) =>
         Math.abs(entry[1] - released) < Math.abs(best[1] - released) ? entry : best,
       );
       setSheetStage(nearest[0]);

@@ -27,6 +27,7 @@ const PropertyActiveChecklistPage = lazy(() => import('@/pages/property-active-c
 const PropertyChecklistPage = lazy(() => import('@/pages/property-checklist/PropertyChecklistPage'));
 const MyPage = lazy(() => import('@/pages/my/MyPage'));
 const MapPage = lazy(() => import('@/pages/map/MapPage'));
+const NeighborhoodPage = lazy(() => import('@/pages/neighborhood/NeighborhoodPage'));
 const MapLocationSelectPage = lazy(() => import('@/pages/map-location-select/MapLocationSelectPage'));
 const NearbyAnalysisPage = lazy(() => import('@/pages/nearby-analysis/NearbyAnalysisPage'));
 const PropertyComparePage = lazy(() => import('@/pages/property-compare/PropertyComparePage'));
@@ -83,6 +84,7 @@ const AppRoutes = () => (
         <Route path="/checklists/:resource" element={lazyPage(<ChecklistResourceRoute />)} />
         <Route path="/me" element={lazyPage(<MyPage />)} />
         <Route path="/map" element={lazyPage(<MapPage />)} />
+        <Route path="/neighborhood" element={lazyPage(<NeighborhoodPage />)} />
         <Route path="/map/select-location" element={lazyPage(<MapLocationSelectPage />)} />
         <Route path="/compare" element={lazyPage(<PropertyComparePage />)} />
         <Route path="/export" element={lazyPage(<UpcomingFeaturePage feature="export" />)} />

@@ -9,7 +9,7 @@ export type MapMarker = {
   label: string;
   /** 마커 아래에 노출할 짧은 문구. 없으면 label을 쓴다. */
   caption?: string;
-  tone?: 'property' | 'current' | 'place' | 'selected' | 'cluster' | 'propertyCluster';
+  tone?: 'property' | 'current' | 'place' | 'selected' | 'cluster' | 'propertyCluster' | 'store';
   category?: MapCategory;
   count?: number;
   placeId?: string;

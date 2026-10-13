@@ -108,6 +108,21 @@ button.clusterMarker::before {
   z-index: 5;
 }
 
+.storeMarker {
+  z-index: 6;
+  width: 2rem;
+  height: 2rem;
+  background: var(--color-brand-yellow);
+  color: var(--color-ink);
+}
+
+.storeMarker.activeMarker {
+  z-index: 10;
+  background: var(--color-ink);
+  color: var(--color-on-action);
+  outline-color: var(--color-brand-yellow);
+}
+
 .placeMarker[data-category='HOSPITAL'] {
   background: #212124;
 }

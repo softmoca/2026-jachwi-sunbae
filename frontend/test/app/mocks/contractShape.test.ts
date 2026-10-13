@@ -9,6 +9,19 @@ import { handlers } from '@/app/mocks/handlers';
  * 그래서 "많아도 실패"하도록 키 집합을 정확히 비교한다. 계약이 바뀌면 이 표를 먼저 고친다.
  */
 const CONTRACT = {
+  GoodPriceStoresResponse: ['center', 'radius', 'count', 'dataAsOf', 'stores'],
+  GoodPriceStoreResponse: [
+    'id',
+    'name',
+    'businessType',
+    'phone',
+    'address',
+    'latitude',
+    'longitude',
+    'distanceMeters',
+    'menus',
+  ],
+  GoodPriceMenuResponse: ['name', 'price'],
   PropertyListItemResponse: [
     'id',
     'name',
@@ -126,6 +139,17 @@ const json = (body: unknown): RequestInit => ({
 });
 
 describe('목 응답은 배포된 dev 계약과 같은 필드를 내려준다', () => {
+  it('GET /api/maps/good-price-stores', async () => {
+    const data = (await readData('/api/maps/good-price-stores?latitude=37.5665&longitude=126.978&radius=1000')) as {
+      stores: Array<{ menus: unknown[] }>;
+    };
+    expectShape(data, 'GoodPriceStoresResponse');
+    expect(data.stores.length).toBeGreaterThan(0);
+    for (const store of data.stores) {
+      expectShape(store, 'GoodPriceStoreResponse');
+      for (const menu of store.menus) expectShape(menu, 'GoodPriceMenuResponse');
+    }
+  });
   it('GET /api/properties', async () => {
     const data = (await readData('/api/properties')) as { items: Array<Record<string, unknown>> };
     // 사진과 적용된 체크리스트가 모두 있는 매물이라야 중첩 응답까지 확인할 수 있다.

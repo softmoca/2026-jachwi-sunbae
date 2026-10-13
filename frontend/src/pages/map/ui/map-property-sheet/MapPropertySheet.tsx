@@ -1,15 +1,14 @@
 import type { PointerEvent, RefObject } from 'react';
 
+import type { MapSheetStage } from '@/features/map/model/MapSheet';
 import type { PropertySummary } from '@/features/property/model/Property';
 import PropertyCard from '@/features/property/ui/property-card/PropertyCard';
-
-import type { MapPropertySheetStage } from '../../model/MapSheet';
 
 import styles from './MapPropertySheet.module.css';
 
 type MapPropertySheetProps = {
   sheetRef: RefObject<HTMLElement | null>;
-  stage: MapPropertySheetStage;
+  stage: MapSheetStage;
   isDragging: boolean;
   isLoading: boolean;
   isError: boolean;

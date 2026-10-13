@@ -1,7 +1,7 @@
 import type { MapCoordinate } from '@/features/map/lib/mapLocation';
 import type { MapCategory } from '@/features/map/model/Map';
+import type { MapSheetStage } from '@/features/map/model/MapSheet';
 
-import type { MapPropertySheetStage } from '../model/MapSheet';
 import type { MapRadius } from './mapRadius';
 
 export type MapViewState = {
@@ -12,7 +12,7 @@ export type MapViewState = {
   hasNearbyAnchor: boolean;
   radius: MapRadius | null;
   categories: MapCategory[];
-  sheetStage: MapPropertySheetStage;
+  sheetStage: MapSheetStage;
 };
 
 // 방문 기록별로 보관한다. 새 지도 진입과 상세에서 돌아오는 진입을 구분한다.

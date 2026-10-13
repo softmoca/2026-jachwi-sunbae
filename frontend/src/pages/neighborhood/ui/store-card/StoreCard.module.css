@@ -1,0 +1,76 @@
+.card {
+  display: grid;
+  width: 100%;
+  gap: 0.55rem;
+  padding: 1.2rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+.topLine,
+.name,
+.menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.businessType {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  background: var(--color-surface-muted);
+  padding: 0.22rem 0.5rem;
+  border-radius: 0.3rem;
+}
+.distance {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+}
+.name {
+  font-size: 1.06rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.name svg {
+  flex-shrink: 0;
+  color: var(--color-muted);
+}
+.address {
+  color: var(--color-ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.menus {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+.menu {
+  align-items: baseline;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+.menu span,
+.menu strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.menu strong {
+  text-align: right;
+  max-width: 58%;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.more,
+.noMenu {
+  font-size: 0.72rem;
+  color: var(--color-ink-soft);
+}
