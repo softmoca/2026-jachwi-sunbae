@@ -13,6 +13,7 @@ const createPlugins = ({ isProduction, buildEnvironment }) => [
     __POSTHOG_HOST__: JSON.stringify(buildEnvironment.posthogHost),
     __APP_VERSION__: JSON.stringify(buildEnvironment.appVersion ?? packageVersion),
     __APP_ENVIRONMENT__: JSON.stringify(buildEnvironment.appEnvironment),
+    __PAGES_BASE_PATH__: JSON.stringify(buildEnvironment.pagesBasePath),
     __ENABLE_MSW__: JSON.stringify(buildEnvironment.isMockingEnabled),
   }),
   new HtmlWebpackPlugin({

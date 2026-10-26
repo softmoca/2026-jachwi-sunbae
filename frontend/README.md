@@ -107,6 +107,14 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 - 이번 작업은 웹 미리보기 범위입니다. 하단 탭 구성은 기존 네 개를 유지합니다.
 - 실험에서는 지도 내 알뜰 선택률·업소 상세 확인률·고유 업소 탐색 수를 구분합니다. 전용 PostHog 이벤트와 인터뷰 수집은 이번 프로토타입에 포함하지 않습니다.
 
+### 개인 포크의 GitHub Pages
+
+[공유용 알뜰 지도](https://softmoca.github.io/2026-jachwi-sunbae/#/map?mode=thrifty)는 `softmoca/2026-jachwi-sunbae` 포크의 `codex/351-neighborhood-prototype` 브랜치로 배포합니다. 이 브랜치에 push하면 `Prototype Pages` 워크플로가 검사·빌드 후 배포합니다. 팀 저장소에서는 이 워크플로를 실행하지 않습니다.
+
+Pages 전용 빌드는 `frontend/`에서 `npm run build:pages`로 생성합니다. `PAGES_BASE_PATH` 기본값은 `/2026-jachwi-sunbae/`이며, 저장소 이름이 바뀌면 워크플로의 값을 함께 변경합니다. `dist/`에 서비스 워커를 복사하고 자산 경로와 해시 라우팅을 적용해 상세 링크와 새로고침을 지원합니다.
+
+이 빌드는 샘플 API와 데모 지도를 사용하며 지도 키·분석 설정을 포함하지 않습니다. 외부 백엔드 없이 브라우저에서 동작하고, 주소를 열면 알뜰 지도로 바로 진입합니다. 일반 `npm run build`의 운영 설정은 그대로 유지합니다.
+
 ## 상태와 보안
 
 - Access Token은 탭 단위 `sessionStorage`에 `expiresAt`과 함께 저장해 새로고침만 복구합니다. `localStorage`에는 쓰지 않습니다.

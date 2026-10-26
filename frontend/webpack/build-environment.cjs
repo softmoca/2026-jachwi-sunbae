@@ -33,25 +33,35 @@ const resolveAppEnvironment = (apiBaseUrl) => {
 const readBuildEnvironment = ({ isProduction, proxyTarget }) => {
   loadLocalEnv();
 
-  const isMockingEnabled = process.env.ENABLE_MSW === 'true';
+  const pagesBasePath = process.env.PAGES_BASE_PATH ?? '';
+  if (pagesBasePath !== '' && !/^\/(?:[a-zA-Z0-9._-]+\/)*$/.test(pagesBasePath)) {
+    throw new Error('PAGES_BASE_PATH는 /저장소이름/ 형식이어야 합니다.');
+  }
+  const isPagesPreview = pagesBasePath !== '';
+  const isMockingEnabled = isPagesPreview || process.env.ENABLE_MSW === 'true';
   const devServerPort = readDevServerPort();
-  const apiBaseUrl = proxyTarget
-    ? `http://localhost:${devServerPort}`
-    : (process.env.API_BASE_URL ?? 'http://localhost:8080');
-  const naverMapClientId = process.env.NAVER_MAP_CLIENT_ID ?? '';
+  const apiBaseUrl = isPagesPreview
+    ? 'https://prototype.invalid'
+    : proxyTarget
+      ? `http://localhost:${devServerPort}`
+      : (process.env.API_BASE_URL ?? 'http://localhost:8080');
+  const naverMapClientId = isPagesPreview ? '' : (process.env.NAVER_MAP_CLIENT_ID ?? '');
 
   return {
     apiBaseUrl,
+    pagesBasePath,
     appEnvironment: resolveAppEnvironment(apiBaseUrl),
     appVersion: process.env.APP_VERSION ?? packageVersion,
     devServerPort,
     isMockingEnabled,
-    mapProviderMode: isProduction
-      ? 'naver'
-      : (process.env.MAP_PROVIDER_MODE ?? (naverMapClientId === '' ? 'demo' : 'naver')),
+    mapProviderMode: isPagesPreview
+      ? 'demo'
+      : isProduction
+        ? 'naver'
+        : (process.env.MAP_PROVIDER_MODE ?? (naverMapClientId === '' ? 'demo' : 'naver')),
     naverMapClientId,
-    posthogHost: process.env.POSTHOG_HOST ?? '',
-    posthogProjectToken: process.env.POSTHOG_PROJECT_TOKEN ?? '',
+    posthogHost: isPagesPreview ? '' : (process.env.POSTHOG_HOST ?? ''),
+    posthogProjectToken: isPagesPreview ? '' : (process.env.POSTHOG_PROJECT_TOKEN ?? ''),
   };
 };
 

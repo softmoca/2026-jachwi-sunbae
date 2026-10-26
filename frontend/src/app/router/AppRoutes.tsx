@@ -68,7 +68,19 @@ const AppRoutes = () => (
     <Route path="/login" element={<LoginRoute />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<PropertyAppLayout />}>
-        <Route index element={<Navigate to="/properties" replace />} />
+        <Route
+          index
+          element={
+            <Navigate
+              to={
+                typeof __PAGES_BASE_PATH__ === 'string' && __PAGES_BASE_PATH__ !== ''
+                  ? '/map?mode=thrifty'
+                  : '/properties'
+              }
+              replace
+            />
+          }
+        />
         <Route path="/properties" element={lazyPage(<PropertyListPage />)} />
         <Route path="/properties/new" element={lazyPage(<CreatePropertyPage />)} />
         <Route path="/properties/:propertyId" element={lazyPage(<PropertyDetailPage />)} />
