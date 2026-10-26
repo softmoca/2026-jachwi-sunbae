@@ -8,6 +8,7 @@ import type { MapMarker } from '@/features/map/model/Map';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
 
 import useAddPropertyMode from './hooks/useAddPropertyMode';
+import useGoodPriceMap from './hooks/useGoodPriceMap';
 import useMapFilters from './hooks/useMapFilters';
 import useMapLocation from './hooks/useMapLocation';
 import useMapNearby from './hooks/useMapNearby';
@@ -18,6 +19,7 @@ import { readMapView, writeMapView } from './lib/mapViewState';
 import MapAddPropertySheet from './ui/map-add-property-sheet/MapAddPropertySheet';
 import MapAddressSearch from './ui/map-address-search/MapAddressSearch';
 import MapControls from './ui/map-controls/MapControls';
+import MapGoodPriceLayer from './ui/map-good-price-layer/MapGoodPriceLayer';
 import MapNearbyCountToast from './ui/map-nearby-count-toast/MapNearbyCountToast';
 import MapPropertySheet from './ui/map-property-sheet/MapPropertySheet';
 
@@ -48,8 +50,10 @@ const MapPage = () => {
   const search = useMapSearch();
   const filters = useMapFilters(initialView);
   const addMode = useAddPropertyMode();
-  const sheet = useMapSheet(!search.searchOpen && !addMode.isAddMode, initialView?.sheetStage);
   const mapLocation = useMapLocation(initialView?.center);
+  const goodPrice = useGoodPriceMap({ ...mapLocation.viewportCenter, label: mapLocation.locationLabel });
+  const [isGoodPriceLocationOpen, setGoodPriceLocationOpen] = useState(false);
+  const sheet = useMapSheet(!search.searchOpen && !addMode.isAddMode && !goodPrice.isActive, initialView?.sheetStage);
   const [nearbyAnchor, setNearbyAnchor] = useState(initialView?.nearbyAnchor ?? mapLocation.viewportCenter);
   const [hasNearbyAnchor, setHasNearbyAnchor] = useState(initialView?.hasNearbyAnchor ?? false);
   const mapStageRef = useRef<HTMLElement | null>(null);
@@ -179,6 +183,31 @@ const MapPage = () => {
     addMode.cancel();
   };
 
+  const exitGoodPrice = () => {
+    mapLocation.moveToAddress({
+      ...goodPrice.viewport,
+      address: goodPrice.area.label,
+      roadAddress: null,
+      jibunAddress: null,
+    });
+    setNearbyAnchor(goodPrice.area);
+    setHasNearbyAnchor(true);
+    setSelectedPropertyId(null);
+    setMapLevel(goodPrice.level);
+    if (filters.selectedRadius !== goodPrice.radius) filters.toggleRadius(goodPrice.radius);
+    goodPrice.exit();
+  };
+  const toggleGoodPrice = () => {
+    if (goodPrice.isActive) {
+      exitGoodPrice();
+      return;
+    }
+    goodPrice.enter(
+      { ...mapLocation.viewportCenter, label: mapLocation.locationLabel },
+      filters.selectedRadius ?? 1000,
+    );
+  };
+
   const { selectedRadius, selectedCategories } = filters;
   const toastCategory = selectedCategories.length === 1 ? selectedCategories[0] : undefined;
 
@@ -186,11 +215,11 @@ const MapPage = () => {
     <main className={styles.page}>
       <MapAddressSearch
         isOpen={search.searchOpen}
-        locationLabel={mapLocation.locationLabel}
+        locationLabel={goodPrice.isActive ? goodPrice.area.label : mapLocation.locationLabel}
         query={search.searchQuery}
         results={search.searchResults}
         status={search.searchStatus}
-        onOpen={search.openSearch}
+        onOpen={goodPrice.isActive ? () => setGoodPriceLocationOpen(true) : search.openSearch}
         onClose={search.closeSearch}
         onQueryChange={search.changeQuery}
         onSubmit={() => void search.submitSearch()}
@@ -198,49 +227,72 @@ const MapPage = () => {
       />
 
       <section
-        ref={mapStageRef}
+        ref={goodPrice.isActive ? goodPrice.mapStageRef : mapStageRef}
         className={styles.mapStage}
-        aria-label="매물 지도"
+        aria-label={goodPrice.isActive ? '착한가격 가게 지도' : '매물 지도'}
         data-search-open={search.searchOpen || undefined}
         aria-hidden={search.searchOpen}
         inert={search.searchOpen}
       >
         <MapCanvas
-          center={mapLocation.viewportCenter}
-          markers={markers}
-          circles={circles}
-          radiusCenter={nearbyCenter}
-          level={mapLevel}
+          center={goodPrice.isActive ? goodPrice.viewport : mapLocation.viewportCenter}
+          markers={goodPrice.isActive ? goodPrice.markers : markers}
+          circles={goodPrice.isActive ? [{ radiusMeters: goodPrice.radius, label: `${goodPrice.radius}m` }] : circles}
+          radiusCenter={goodPrice.isActive ? goodPrice.area : nearbyCenter}
+          level={goodPrice.isActive ? goodPrice.level : mapLevel}
           showRadiusLabels={false}
           showCenterPin={addMode.isAddMode}
           interactive={!addMode.isAddMode}
-          selectedMarkerId={selectedPropertyId === null ? undefined : `${PROPERTY_MARKER_PREFIX}${selectedPropertyId}`}
-          onSelectMarker={selectMarker}
-          onSelectLocation={() => {
+          selectedMarkerId={
+            goodPrice.isActive
+              ? goodPrice.selectedStore === null
+                ? undefined
+                : `store-${goodPrice.selectedStore.id}`
+              : selectedPropertyId === null
+                ? undefined
+                : `${PROPERTY_MARKER_PREFIX}${selectedPropertyId}`
+          }
+          onSelectMarker={
+            goodPrice.isActive
+              ? (marker) => goodPrice.openStore(Number(marker.id.slice('store-'.length)))
+              : selectMarker
+          }
+          onSelectLocation={(latitude, longitude) => {
+            if (goodPrice.isActive) {
+              goodPrice.moveMap(latitude, longitude);
+              return;
+            }
             if (addMode.isAddMode || selectedPropertyId === null) return;
             setSelectedPropertyId(null);
             sheet.closeSheet();
           }}
-          onCenterChange={changeCenter}
-          onLevelChange={setMapLevel}
+          onCenterChange={goodPrice.isActive ? goodPrice.moveMap : changeCenter}
+          onLevelChange={goodPrice.isActive ? goodPrice.changeLevel : setMapLevel}
           onBoundsChange={updateBounds}
         />
         <MapControls
           isAddMode={addMode.isAddMode}
+          isGoodPriceMode={goodPrice.isActive}
+          onToggleGoodPrice={toggleGoodPrice}
           hasNearbyAnchor={hasNearbyAnchor}
-          locationStatus={mapLocation.locationStatus}
+          locationStatus={
+            goodPrice.isActive ? (goodPrice.isLocating ? 'locating' : 'ready') : mapLocation.locationStatus
+          }
           locationFailure={mapLocation.locationFailure}
           canRetryLocation={mapLocation.canRetryLocation}
           locationPermission={mapLocation.locationPermission}
-          selectedRadius={selectedRadius}
-          selectedCategories={selectedCategories}
-          categoryCounts={categoryCounts}
-          onSelectRadius={selectRadius}
-          onToggleCategory={filters.toggleCategory}
-          onMoveToCurrentLocation={moveToCurrentLocation}
+          selectedRadius={goodPrice.isActive ? goodPrice.radius : selectedRadius}
+          selectedCategories={goodPrice.isActive ? [] : selectedCategories}
+          categoryCounts={goodPrice.isActive ? {} : categoryCounts}
+          onSelectRadius={goodPrice.isActive ? goodPrice.selectRadius : selectRadius}
+          onToggleCategory={(category) => {
+            if (goodPrice.isActive) exitGoodPrice();
+            filters.toggleCategory(category);
+          }}
+          onMoveToCurrentLocation={goodPrice.isActive ? () => void goodPrice.locate() : moveToCurrentLocation}
           onEnterAddMode={enterAddMode}
         />
-        {selectedRadius !== null && toastCategory !== undefined && (
+        {!goodPrice.isActive && selectedRadius !== null && toastCategory !== undefined && (
           <MapNearbyCountToast
             isAddMode={addMode.isAddMode}
             radius={selectedRadius}
@@ -248,7 +300,14 @@ const MapPage = () => {
             count={categoryCounts[toastCategory] ?? 0}
           />
         )}
-        {addMode.isAddMode ? (
+        {goodPrice.isActive ? (
+          <MapGoodPriceLayer
+            exploration={goodPrice}
+            isLocationOpen={isGoodPriceLocationOpen}
+            onOpenLocation={() => setGoodPriceLocationOpen(true)}
+            onCloseLocation={() => setGoodPriceLocationOpen(false)}
+          />
+        ) : addMode.isAddMode ? (
           <MapAddPropertySheet
             address={addMode.address}
             status={addMode.addressStatus}

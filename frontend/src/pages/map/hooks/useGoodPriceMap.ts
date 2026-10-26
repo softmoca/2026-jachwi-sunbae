@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useGoodPriceStores } from '@/features/good-price/api/goodPriceApi';
@@ -7,6 +7,7 @@ import useMapSheet from '@/features/map/hooks/useMapSheet';
 import type { MapCoordinate } from '@/features/map/lib/mapLocation';
 import { coordinatesAreClose, isInSouthKorea, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import { getMapFocusCenter } from '@/features/map/lib/mapViewportFocus';
+import type { MapMarker } from '@/features/map/model/Map';
 
 export type NeighborhoodArea = MapCoordinate & { label: string };
 const AREA_KEY = 'jachwi-sunbae.neighborhoodArea';
@@ -35,25 +36,39 @@ const readArea = (): NeighborhoodArea | null => {
   return isNeighborhoodPreview ? (previewAreas[0] ?? null) : null;
 };
 
-const useNeighborhood = () => {
-  const [area, setArea] = useState(readArea);
-  const [viewport, setViewport] = useState<MapCoordinate | null>(area);
+const useGoodPriceMap = (initialArea: NeighborhoodArea) => {
+  const [params, setParams] = useSearchParams();
+  const isActive = params.get('mode') === 'thrifty';
+  const [area, setArea] = useState(() => (isActive ? (readArea() ?? initialArea) : initialArea));
+  const [viewport, setViewport] = useState<MapCoordinate>(area);
   const [radius, setRadius] = useState<GoodPriceResult['radius']>(1000);
-  const sheet = useMapSheet();
+  const [level, setLevel] = useState(6);
+  const sheet = useMapSheet(isActive, params.has('store') ? 'mid' : 'closed');
   const mapStageRef = useRef<HTMLElement | null>(null);
   const [isMapMoved, setMapMoved] = useState(false);
   const [isLocating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [params, setParams] = useSearchParams();
   const locationRequest = useRef(0);
   useEffect(
     () => () => {
       locationRequest.current += 1;
     },
-    [],
+    [isActive],
   );
-  const query = useGoodPriceStores(area, radius);
+  const query = useGoodPriceStores(isActive ? area : null, radius);
   const selectedStore = query.data?.stores.find((store) => String(store.id) === params.get('store')) ?? null;
+  const markers = useMemo<MapMarker[]>(
+    () =>
+      query.data?.stores.map((store) => ({
+        id: `store-${store.id}`,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        label: `${store.name} 상세 보기`,
+        tone: 'store',
+        actionable: true,
+      })) ?? [],
+    [query.data],
+  );
 
   const chooseArea = (next: NeighborhoodArea) => {
     locationRequest.current += 1;
@@ -99,7 +114,6 @@ const useNeighborhood = () => {
       { replace: true },
     );
 
-  const level = radius === 500 ? 5 : radius === 1000 ? 6 : 7;
   const openStore = (id: number) => {
     const store = query.data?.stores.find((item) => item.id === id);
     if (store === undefined) return;
@@ -115,6 +129,42 @@ const useNeighborhood = () => {
   };
 
   return {
+    isActive,
+    markers,
+    enter: (next: NeighborhoodArea, nextRadius: GoodPriceResult['radius']) => {
+      locationRequest.current += 1;
+      setArea(next);
+      setViewport(next);
+      setRadius(nextRadius);
+      setLevel(nextRadius === 500 ? 5 : nextRadius === 1000 ? 6 : 7);
+      setMapMoved(false);
+      setLocating(false);
+      setLocationError(null);
+      sheet.closeSheet();
+      try {
+        window.sessionStorage.setItem(AREA_KEY, JSON.stringify(next));
+      } catch {
+        /* 탐색은 계속한다. */
+      }
+      setParams((previous) => {
+        const nextParams = new URLSearchParams(previous);
+        nextParams.set('mode', 'thrifty');
+        nextParams.delete('store');
+        return nextParams;
+      });
+    },
+    exit: () => {
+      locationRequest.current += 1;
+      setLocating(false);
+      sheet.closeSheet();
+      setParams((previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('mode');
+        next.delete('store');
+        return next;
+      });
+    },
+    changeLevel: (next: number) => setLevel(next),
     area,
     viewport,
     radius,
@@ -132,6 +182,7 @@ const useNeighborhood = () => {
     isMapMoved,
     selectRadius: (next: GoodPriceResult['radius']) => {
       setRadius(next);
+      setLevel(next === 500 ? 5 : next === 1000 ? 6 : 7);
       closeStore();
       setViewport(area);
       setMapMoved(false);
@@ -139,14 +190,14 @@ const useNeighborhood = () => {
     },
     moveMap: (latitude: number, longitude: number) => {
       const next = { latitude, longitude };
-      if (viewport !== null && coordinatesAreClose(viewport, next)) return;
+      if (coordinatesAreClose(viewport, next)) return;
       setViewport(next);
-      setMapMoved(area === null || !coordinatesAreClose(area, next));
+      setMapMoved(!coordinatesAreClose(area, next));
     },
     searchMap: () => {
-      if (viewport !== null) chooseArea({ ...viewport, label: '지도에서 선택한 위치' });
+      chooseArea({ ...viewport, label: '지도에서 선택한 위치' });
     },
   };
 };
 
-export default useNeighborhood;
+export default useGoodPriceMap;

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import { MAP_CATEGORY_OPTIONS } from '../../lib/mapPresentation';
 import type { MapCategory } from '../../model/Map';
 import MapCategoryIcon from '../map-category-icon/MapCategoryIcon';
@@ -9,10 +11,23 @@ type MapCategoryRailProps = {
   counts?: Partial<Record<MapCategory, number>>;
   onToggle: (category: MapCategory) => void;
   className?: string;
+  extraCategory?: { label: string; icon: ReactNode; isSelected: boolean; onToggle: () => void };
 };
 
-const MapCategoryRail = ({ selectedCategories, counts, onToggle, className }: MapCategoryRailProps) => (
+const MapCategoryRail = ({ selectedCategories, counts, onToggle, className, extraCategory }: MapCategoryRailProps) => (
   <aside className={`${styles.rail} ${className ?? ''}`} aria-label="지도 시설 카테고리">
+    {extraCategory !== undefined && (
+      <button
+        type="button"
+        className={styles.categoryButton}
+        aria-label={extraCategory.label}
+        aria-pressed={extraCategory.isSelected}
+        onClick={extraCategory.onToggle}
+      >
+        {extraCategory.icon}
+        <span>{extraCategory.label}</span>
+      </button>
+    )}
     {MAP_CATEGORY_OPTIONS.map((option) => {
       const selected = selectedCategories.includes(option.value);
       const count = counts?.[option.value];

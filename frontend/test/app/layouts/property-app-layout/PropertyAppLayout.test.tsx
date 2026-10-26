@@ -23,7 +23,7 @@ describe('모바일 앱 셸', () => {
     expect(container.querySelector('[data-map-page="true"][data-native-tab-bar="true"]')).not.toBeNull();
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
   });
-  it('현재 화면과 동네생활을 포함한 주요 메뉴 다섯 개를 함께 표시한다', () => {
+  it('현재 화면과 주요 메뉴 네 개를 함께 표시한다', () => {
     render(
       <MemoryRouter initialEntries={['/properties']}>
         <Routes>
@@ -39,7 +39,9 @@ describe('모바일 앱 셸', () => {
     expect(screen.getByRole('heading', { name: '매물 목록' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '홈' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '체크리스트' })).toHaveAttribute('href', '/checklists');
-    expect(screen.getByRole('link', { name: '동네생활' })).toHaveAttribute('href', '/neighborhood');
+    expect(screen.getByRole('link', { name: '지도' })).toHaveAttribute('href', '/map');
+    expect(screen.queryByRole('link', { name: '동네생활' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
     expect(screen.getByRole('link', { name: '마이' })).toHaveAttribute('href', '/me');
   });
 

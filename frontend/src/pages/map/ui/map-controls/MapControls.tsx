@@ -12,6 +12,8 @@ import styles from './MapControls.module.css';
 
 type MapControlsProps = {
   isAddMode: boolean;
+  isGoodPriceMode: boolean;
+  onToggleGoodPrice: () => void;
   hasNearbyAnchor: boolean;
   locationStatus: 'ready' | 'locating' | 'fallback';
   locationFailure: MapLocationFailure;
@@ -28,6 +30,8 @@ type MapControlsProps = {
 
 const MapControls = ({
   isAddMode,
+  isGoodPriceMode,
+  onToggleGoodPrice,
   hasNearbyAnchor,
   locationStatus,
   locationFailure,
@@ -45,8 +49,8 @@ const MapControls = ({
     <>
       <MapRadiusSelector
         className={styles.radiusSelector}
-        label="시설 확인 반경"
-        disabled={!hasNearbyAnchor && !isAddMode}
+        label={isGoodPriceMode ? '조회 반경' : '시설 확인 반경'}
+        disabled={!isGoodPriceMode && !hasNearbyAnchor && !isAddMode}
         options={RADIUS_OPTIONS.map((value) => ({
           value,
           label: radiusLabel(value),
@@ -59,17 +63,29 @@ const MapControls = ({
         selectedCategories={selectedCategories}
         counts={categoryCounts}
         onToggle={onToggleCategory}
+        extraCategory={
+          isAddMode
+            ? undefined
+            : {
+                label: '알뜰',
+                icon: <Icon name="store" size={22} />,
+                isSelected: isGoodPriceMode,
+                onToggle: onToggleGoodPrice,
+              }
+        }
       />
     </>
     <div className={styles.locationControls}>
-      <MapLocationStatus
-        className={styles.locationToast}
-        status={locationStatus}
-        failure={locationFailure}
-        canRetry={canRetryLocation}
-        permission={locationPermission}
-        onRetry={onMoveToCurrentLocation}
-      />
+      {!isGoodPriceMode && (
+        <MapLocationStatus
+          className={styles.locationToast}
+          status={locationStatus}
+          failure={locationFailure}
+          canRetry={canRetryLocation}
+          permission={locationPermission}
+          onRetry={onMoveToCurrentLocation}
+        />
+      )}
       <button
         type="button"
         className={styles.currentLocationButton}
@@ -80,7 +96,7 @@ const MapControls = ({
         <Icon name="target" size={22} />
       </button>
     </div>
-    {!isAddMode && (
+    {!isAddMode && !isGoodPriceMode && (
       <div className={styles.addPropertyAction}>
         <PageAction placement="inline" onClick={onEnterAddMode} aria-label="지도에서 매물 추가">
           매물 추가
