@@ -107,6 +107,14 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 - 이번 작업은 웹 미리보기 범위입니다. 하단 탭 구성은 기존 네 개를 유지합니다.
 - 실험에서는 지도 내 알뜰 선택률·업소 상세 확인률·고유 업소 탐색 수를 구분합니다. 전용 PostHog 이벤트와 인터뷰 수집은 이번 프로토타입에 포함하지 않습니다.
 
+### 로컬에서 착한가격업소 dev API 연결
+
+`frontend/`에서 `PORT=3001 npm run dev:good-price`를 실행하고 `http://127.0.0.1:3001/map?mode=thrifty`를 엽니다. 가게 목록과 상세의 주소·전화번호·메뉴·가격은 dev 서버의 `GET /api/maps/good-price-stores` 응답을 사용합니다. 상세 전용 API는 없으며 선택한 업소의 정보를 목록 응답에서 표시합니다. 실패하면 오류와 재시도를 표시하고 샘플 데이터로 대체하지 않습니다.
+
+가게 조회용 익명 인증은 `/api/auth/refresh`로 복원하고, 복원할 수 없을 때 `/api/auth/login`으로 시작합니다. 토큰은 메모리에만 보관하고 만료되거나 조회가 401을 반환하면 한 번 갱신합니다. 목 로그인과 분리하여 다른 기능의 데이터를 dev 서버에 저장하지 않습니다.
+
+개발 서버는 위 세 경로만 `https://dev-api.jachwi-sunbae.kr`로 중계합니다. 기존 로컬 프록시처럼 Origin 헤더만 제거하며 TLS 검증과 인증 헤더를 유지합니다. 지도와 나머지 기능은 기존 데모·MSW를 사용합니다. `npm run dev:mock`과 GitHub Pages 빌드는 착한가격업소도 샘플 데이터를 사용합니다.
+
 ### 개인 포크의 GitHub Pages
 
 [공유용 알뜰 지도](https://softmoca.github.io/2026-jachwi-sunbae/#/map?mode=thrifty)는 `softmoca/2026-jachwi-sunbae` 포크의 `codex/351-neighborhood-prototype` 브랜치로 배포합니다. 이 브랜치에 push하면 `Prototype Pages` 워크플로가 검사·빌드 후 배포합니다. 팀 저장소에서는 이 워크플로를 실행하지 않습니다.

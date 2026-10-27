@@ -9,6 +9,7 @@ afterEach(() => vi.unstubAllEnvs());
 it('Pages 빌드는 로컬 운영 설정이 있어도 데모 API와 지도만 사용한다', () => {
   vi.stubEnv('PAGES_BASE_PATH', '/2026-jachwi-sunbae/');
   vi.stubEnv('ENABLE_MSW', 'false');
+  vi.stubEnv('USE_REAL_GOOD_PRICE_API', 'true');
   vi.stubEnv('API_BASE_URL', 'https://api.jachwi-sunbae.kr');
   vi.stubEnv('MAP_PROVIDER_MODE', 'naver');
   vi.stubEnv('NAVER_MAP_CLIENT_ID', 'test-map-id');
@@ -18,6 +19,7 @@ it('Pages 빌드는 로컬 운영 설정이 있어도 데모 API와 지도만 �
     pagesBasePath: '/2026-jachwi-sunbae/',
     isMockingEnabled: true,
     apiBaseUrl: 'https://prototype.invalid',
+    goodPriceApiBaseUrl: '',
     mapProviderMode: 'demo',
     naverMapClientId: '',
     posthogHost: '',
@@ -28,6 +30,7 @@ it('Pages 빌드는 로컬 운영 설정이 있어도 데모 API와 지도만 �
 it('일반 운영 빌드 설정을 유지한다', () => {
   vi.stubEnv('PAGES_BASE_PATH', '');
   vi.stubEnv('ENABLE_MSW', 'false');
+  vi.stubEnv('USE_REAL_GOOD_PRICE_API', 'false');
   vi.stubEnv('API_BASE_URL', 'https://api.jachwi-sunbae.kr');
   vi.stubEnv('MAP_PROVIDER_MODE', 'demo');
   expect(readBuildEnvironment({ isProduction: true })).toMatchObject({
@@ -35,6 +38,16 @@ it('일반 운영 빌드 설정을 유지한다', () => {
     isMockingEnabled: false,
     apiBaseUrl: 'https://api.jachwi-sunbae.kr',
     mapProviderMode: 'naver',
+  });
+});
+
+it('착한가격업소 실서버 모드는 로컬 프록시와 목 API를 함께 사용한다', () => {
+  vi.stubEnv('PAGES_BASE_PATH', '');
+  vi.stubEnv('ENABLE_MSW', 'true');
+  vi.stubEnv('USE_REAL_GOOD_PRICE_API', 'true');
+  expect(readBuildEnvironment({ isProduction: false })).toMatchObject({
+    isMockingEnabled: true,
+    goodPriceApiBaseUrl: '/',
   });
 });
 

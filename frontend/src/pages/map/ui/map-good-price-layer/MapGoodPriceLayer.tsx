@@ -1,5 +1,6 @@
 import useAddressSearch from '@/features/map/api/useAddressSearch';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
+import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { Button } from '@/shared/ui/button/Button';
 import Icon from '@/shared/ui/icon/Icon';
 import SearchField from '@/shared/ui/search-field/SearchField';
@@ -21,6 +22,8 @@ type Props = {
 const MapGoodPriceLayer = ({ exploration, isLocationOpen, onOpenLocation, onCloseLocation }: Props) => {
   const { area, radius, query, selectedStore, sheet } = exploration;
   const search = useAddressSearch();
+  const { goodPriceApiBaseUrl } = usePublicConfig();
+  const usesGoodPriceServer = goodPriceApiBaseUrl !== undefined;
   const closeLocation = () => {
     onCloseLocation();
     search.clear();
@@ -32,7 +35,9 @@ const MapGoodPriceLayer = ({ exploration, isLocationOpen, onOpenLocation, onClos
         <span>착한가격 가게</span>
         {query.data !== undefined && <strong>{query.data.count}</strong>}
       </div>
-      {isNeighborhoodPreview && <span className={styles.preview}>샘플 데이터</span>}
+      {isNeighborhoodPreview && (
+        <span className={styles.preview}>{usesGoodPriceServer ? 'dev 서버 데이터' : '샘플 데이터'}</span>
+      )}
       {exploration.locationError !== null && !isLocationOpen && (
         <p className={styles.notice} role="alert">
           {exploration.locationError}
@@ -96,7 +101,7 @@ const MapGoodPriceLayer = ({ exploration, isLocationOpen, onOpenLocation, onClos
           />
           {isNeighborhoodPreview && (
             <div className={styles.sampleAreas}>
-              <p>샘플 동네 둘러보기</p>
+              <p>{usesGoodPriceServer ? '동네 바로 선택' : '샘플 동네 둘러보기'}</p>
               {previewAreas.map((sample) => (
                 <button
                   type="button"

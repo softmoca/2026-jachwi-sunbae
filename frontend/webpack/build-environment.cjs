@@ -38,6 +38,7 @@ const readBuildEnvironment = ({ isProduction, proxyTarget }) => {
     throw new Error('PAGES_BASE_PATH는 /저장소이름/ 형식이어야 합니다.');
   }
   const isPagesPreview = pagesBasePath !== '';
+  const usesGoodPriceServer = !isPagesPreview && process.env.USE_REAL_GOOD_PRICE_API === 'true';
   const isMockingEnabled = isPagesPreview || process.env.ENABLE_MSW === 'true';
   const devServerPort = readDevServerPort();
   const apiBaseUrl = isPagesPreview
@@ -49,6 +50,7 @@ const readBuildEnvironment = ({ isProduction, proxyTarget }) => {
 
   return {
     apiBaseUrl,
+    goodPriceApiBaseUrl: usesGoodPriceServer ? (isProduction ? 'https://dev-api.jachwi-sunbae.kr' : '/') : '',
     pagesBasePath,
     appEnvironment: resolveAppEnvironment(apiBaseUrl),
     appVersion: process.env.APP_VERSION ?? packageVersion,

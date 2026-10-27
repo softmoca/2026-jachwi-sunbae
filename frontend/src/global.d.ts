@@ -1,5 +1,6 @@
 declare const __PAGES_BASE_PATH__: string;
 declare const __API_BASE_URL__: string;
+declare const __GOOD_PRICE_API_BASE_URL__: string;
 declare const __MAP_PROVIDER_MODE__: string;
 declare const __NAVER_MAP_CLIENT_ID__: string;
 declare const __POSTHOG_PROJECT_TOKEN__: string;

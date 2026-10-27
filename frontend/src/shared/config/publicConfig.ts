@@ -33,6 +33,13 @@ export const getPublicConfig = (): PublicConfig => {
 
   return {
     apiBaseUrl: requireHttpUrl(typeof __API_BASE_URL__ === 'string' ? __API_BASE_URL__ : '', 'API_BASE_URL'),
+    goodPriceApiBaseUrl:
+      typeof __GOOD_PRICE_API_BASE_URL__ === 'string' && __GOOD_PRICE_API_BASE_URL__ !== ''
+        ? requireHttpUrl(
+            new URL(__GOOD_PRICE_API_BASE_URL__, window.location.origin).toString(),
+            'GOOD_PRICE_API_BASE_URL',
+          )
+        : undefined,
     mapProviderMode,
     naverMapClientId: typeof __NAVER_MAP_CLIENT_ID__ === 'string' ? __NAVER_MAP_CLIENT_ID__.trim() : '',
     posthogProjectToken: typeof __POSTHOG_PROJECT_TOKEN__ === 'string' ? __POSTHOG_PROJECT_TOKEN__.trim() : '',

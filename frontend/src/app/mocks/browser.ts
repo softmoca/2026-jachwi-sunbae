@@ -2,9 +2,11 @@ import { setupWorker } from 'msw/browser';
 
 import { setAuthentication } from '@/features/auth/model/authStore';
 
-import { handlers } from './handlers';
+import { createHandlers } from './handlers/index';
 
-const worker = setupWorker(...handlers);
+const worker = setupWorker(
+  ...createHandlers(typeof __GOOD_PRICE_API_BASE_URL__ === 'string' && __GOOD_PRICE_API_BASE_URL__ !== ''),
+);
 
 export const startBrowserMocking = async () => {
   await worker.start({

@@ -53,18 +53,30 @@ module.exports = (_env, argv) => {
       maxEntrypointSize: 350 * 1024,
     },
     devServer: {
-      proxy: proxyTarget
-        ? [
-            {
-              context: ['/api'],
-              target: proxyTarget,
-              changeOrigin: true,
-              on: {
-                proxyReq: (proxyReq) => proxyReq.removeHeader('origin'),
+      proxy:
+        buildEnvironment.goodPriceApiBaseUrl === '/'
+          ? [
+              {
+                context: ['/api/maps/good-price-stores', '/api/auth/login', '/api/auth/refresh'],
+                target: 'https://dev-api.jachwi-sunbae.kr',
+                changeOrigin: true,
+                on: {
+                  proxyReq: (proxyReq) => proxyReq.removeHeader('origin'),
+                },
               },
-            },
-          ]
-        : [],
+            ]
+          : proxyTarget
+            ? [
+                {
+                  context: ['/api'],
+                  target: proxyTarget,
+                  changeOrigin: true,
+                  on: {
+                    proxyReq: (proxyReq) => proxyReq.removeHeader('origin'),
+                  },
+                },
+              ]
+            : [],
       static: {
         directory: path.join(__dirname, '../public'),
       },

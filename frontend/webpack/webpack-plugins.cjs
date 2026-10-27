@@ -7,6 +7,7 @@ const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const createPlugins = ({ isProduction, buildEnvironment }) => [
   new webpack.DefinePlugin({
     __API_BASE_URL__: JSON.stringify(buildEnvironment.apiBaseUrl),
+    __GOOD_PRICE_API_BASE_URL__: JSON.stringify(buildEnvironment.goodPriceApiBaseUrl),
     __MAP_PROVIDER_MODE__: JSON.stringify(buildEnvironment.mapProviderMode),
     __NAVER_MAP_CLIENT_ID__: JSON.stringify(buildEnvironment.naverMapClientId),
     __POSTHOG_PROJECT_TOKEN__: JSON.stringify(buildEnvironment.posthogProjectToken),

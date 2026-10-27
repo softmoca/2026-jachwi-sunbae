@@ -5,11 +5,13 @@ import { mapHandlers } from './mapHandlers';
 import { propertyChecklistHandlers } from './propertyChecklistHandlers';
 import { propertyHandlers } from './propertyHandlers';
 
-export const handlers = [
+export const createHandlers = (usesGoodPriceServer = false) => [
   ...authHandlers,
   ...propertyHandlers,
   ...checklistHandlers,
   ...propertyChecklistHandlers,
   ...mapHandlers,
-  ...goodPriceHandlers,
+  ...(usesGoodPriceServer ? [] : goodPriceHandlers),
 ];
+
+export const handlers = createHandlers();

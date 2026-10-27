@@ -6,6 +6,7 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import type { GoodPriceResult, GoodPriceStore } from '../model/GoodPriceStore';
+import { fetchGoodPriceServerData } from './goodPriceServerApi';
 
 const coordinate = (record: Record<string, unknown>, key: string): number => {
   const value = record[key];
@@ -45,23 +46,38 @@ export const parseGoodPriceResult = (value: unknown): GoodPriceResult => {
   };
 };
 
-export const fetchGoodPriceStores = (
+export const fetchGoodPriceStores = async (
   config: PublicConfig,
   center: GoodPriceResult['center'],
   radius: GoodPriceResult['radius'],
   signal?: AbortSignal,
-) =>
-  apiRequest({
+) => {
+  const parameters = new URLSearchParams({
+    latitude: String(center.latitude),
+    longitude: String(center.longitude),
+    radius: String(radius),
+  });
+  if (config.goodPriceApiBaseUrl !== undefined) {
+    return parseGoodPriceResult(await fetchGoodPriceServerData(config.goodPriceApiBaseUrl, parameters, signal));
+  }
+  return apiRequest({
     config,
     path: `/api/maps/good-price-stores?latitude=${center.latitude}&longitude=${center.longitude}&radius=${radius}`,
     signal,
     parseData: parseGoodPriceResult,
   });
+};
 
 export const useGoodPriceStores = (center: GoodPriceResult['center'] | null, radius: GoodPriceResult['radius']) => {
   const config = usePublicConfig();
   return useQuery({
-    queryKey: ['good-price-stores', config.apiBaseUrl, center?.latitude, center?.longitude, radius],
+    queryKey: [
+      'good-price-stores',
+      config.goodPriceApiBaseUrl ?? config.apiBaseUrl,
+      center?.latitude,
+      center?.longitude,
+      radius,
+    ],
     enabled: center !== null,
     queryFn: ({ signal }) => {
       if (center === null) throw new Error('동네를 먼저 선택해 주세요.');
