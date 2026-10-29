@@ -35,7 +35,7 @@
 | `frontend/public/version.json` | `version`                                 |
 | `backend/build.gradle`         | `version`                                 |
 
-lock 파일에서 외부 의존성의 버전은 변경하지 않는다. `CHANGELOG.md`에는 해당 버전의 릴리스 섹션과 변경 내역, 릴리스 링크를 추가하고 `Unreleased` 비교 링크의 기준 태그를 갱신한다.
+제품 명세 상단의 `제품 버전: Unreleased`도 같은 릴리스 버전으로 바꾼다. lock 파일에서 외부 의존성의 버전은 변경하지 않는다. `CHANGELOG.md`에는 해당 버전의 릴리스 섹션과 변경 내역, 릴리스 링크를 추가하고 `Unreleased` 비교 링크의 기준 태그를 갱신한다.
 
 저장소 루트에서 두 검사를 모두 통과해야 한다. 버전 검사에는 프론트엔드 lock 파일의 제품 버전도 포함된다.
 
