@@ -104,6 +104,7 @@ jobs:
           key: backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties', 'backend/**/gradle.properties', 'backend/gradle/**/*.toml', '.github/gradle/backend-ci.init.gradle') }}-${{ github.sha }}
           restore-keys: |
             backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties', 'backend/**/gradle.properties', 'backend/gradle/**/*.toml', '.github/gradle/backend-ci.init.gradle') }}-
+            backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-
 
       - name: Build
         if: steps.changes.outputs.backend == 'true'

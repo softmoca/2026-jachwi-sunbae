@@ -19,11 +19,11 @@ Backend CI는 `backend/docs/**`와 `backend` 바로 아래 Markdown만 바뀌면
 | 종류      | 경로                                             | 키와 복원 방식                                                                                          |
 | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | 의존성    | Gradle User Home의 절대 경로 `caches`, `wrapper` | 실행 환경과 백엔드 Gradle 설정으로 키를 만들고, 이전 백엔드 캐시 또는 기존 `setup-java-...` 캐시를 복원 |
-| 작업 결과 | `runner.temp/backend-gradle-task-cache`          | 실행 환경·Gradle 설정·CI 초기화 스크립트·커밋 SHA로 저장하고, 설정이 같은 이전 커밋의 캐시도 복원       |
+| 작업 결과 | `runner.temp/backend-gradle-task-cache`          | 실행 환경·Gradle 설정·CI 초기화 스크립트·커밋 SHA로 저장하고, 이전 커밋의 캐시도 복원                   |
 
 의존성 캐시는 최초 PR부터 기본 브랜치의 기존 캐시를 재사용한다. 기존 basic provider가 저장한 `/home/runner/.gradle/caches`와 `/home/runner/.gradle/wrapper`의 순서와 절대 경로를 맞춘다. GitHub 캐시는 경로와 압축 방식도 버전 해시에 넣으므로 키 접두어만 맞추는 것으로는 기존 캐시를 읽을 수 없다.
 
-`setup-gradle`을 먼저 실행해 `GRADLE_USER_HOME`을 설정하고 `cache-provider: external`로 중복 캐시 관리를 끈다. 그 뒤 두 캐시를 복원한다. 캐시가 없어도 Gradle은 필요한 의존성을 다운로드하고 정상 빌드를 수행한다.
+`setup-gradle`을 먼저 실행해 `GRADLE_USER_HOME`을 설정하고 `cache-provider: external`로 중복 캐시 관리를 끈다. 그 뒤 두 캐시를 복원한다. 설정이 같은 작업 결과 캐시를 우선 복원하고, 없으면 같은 실행 환경의 이전 캐시를 복원해 Gradle이 작업별 입력을 다시 판단한다. 캐시가 없어도 Gradle은 필요한 의존성을 다운로드하고 정상 빌드를 수행한다.
 
 성공한 동일 저장소 PR과 push·수동 실행은 새 캐시를 저장한다. fork PR은 읽기만 한다. PR 캐시는 해당 PR의 후속 커밋·재실행에 사용되며 다른 PR이 읽는 공유 캐시와 구분된다. 기본 브랜치에서 저장한 캐시는 새 PR에서도 복원할 수 있다. 기존 키가 정확히 적중하면 같은 키를 다시 저장하지 않는다.
 
@@ -34,6 +34,8 @@ Backend CI는 `backend/docs/**`와 `backend` 바로 아래 Markdown만 바뀌면
 `--build-cache`를 사용하면 같은 입력의 Java 컴파일 등을 `FROM-CACHE`로 복원할 수 있다. 소스·클래스패스 등 입력이 바뀌면 Gradle이 다시 실행한다. `clean`은 유지하며 프로젝트의 이전 빌드 디렉터리를 그대로 복원하지 않는다.
 
 Test 작업은 `outputs.cacheIf { false }`와 `outputs.upToDateWhen { false }`로 매 실행 수행한다. 각 작업은 `CI_TASK :작업명 elapsed_ms=... outcome=...`를 출력해 컴파일 재사용과 실제 테스트 실행 시간을 구분한다.
+
+캐시만 수정한 원격 실행에서도 Test 작업이 약 3분 39초를 차지해 CI에서 테스트 JVM을 최대 2개로 제한해 병렬 실행한다. JUnit의 같은 JVM 내부 스레드 병렬화는 켜지 않는다. `CI_TEST_CONFIG`와 `CI_TEST_SUMMARY`로 실제 fork 수, 테스트 건수, 실패·생략 건수를 확인한다. 기존 태그 제외 정책은 유지하고 테스트 파일을 수정하거나 제외하지 않는다.
 
 ## 개선 전 기준선
 
