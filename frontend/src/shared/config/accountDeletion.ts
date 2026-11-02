@@ -12,7 +12,7 @@ export const createAccountDeletionMailto = (memberId?: number) => {
   if (memberId !== undefined) {
     params.set(
       'body',
-      `회원 번호: ${memberId}\n삭제 범위: 계정 전체와 연결된 모든 기록\n\n이 메일을 그대로 보내 주세요.`,
+      `회원 번호: ${memberId}\n삭제 범위: 계정 전체와 연결된 모든 기록(초기화 전 이전 기록 포함)\n\n이 메일을 그대로 보내 주세요.`,
     );
   }
   // URLSearchParams는 공백을 '+'로 바꾸지만 mailto는 '%20'을 써야 메일 앱에서 그대로 보인다.

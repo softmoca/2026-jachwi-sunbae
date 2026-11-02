@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { StrictMode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createMockWeatherForecast } from '@/app/mocks/handlers/weatherHandlers';
 import AppRoutes from '@/app/router/AppRoutes';
+import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
@@ -67,6 +68,8 @@ const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable') => {
   });
 };
 
+const CurrentPath = () => <output aria-label="현재 경로">{useLocation().pathname}</output>;
+
 const renderMyPage = () =>
   render(
     <StrictMode>
@@ -74,6 +77,7 @@ const renderMyPage = () =>
         <PublicConfigProvider config={config}>
           <MemoryRouter initialEntries={['/me']}>
             <AppRoutes />
+            <CurrentPath />
           </MemoryRouter>
         </PublicConfigProvider>
       </QueryClientProvider>
@@ -103,7 +107,7 @@ afterEach(() => {
 });
 
 describe('마이 화면', () => {
-  it('생활 날씨·개인정보 처리방침·계정 삭제 요청만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
+  it('생활 날씨, 개인정보 처리방침, 초기화만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
     const user = userEvent.setup();
     const weather = useWeatherServer();
     mockGeolocation('allowed');
@@ -114,10 +118,10 @@ describe('마이 화면', () => {
     expect(screen.queryByText(/프로토타입|샘플|시연/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /개인정보 처리방침/ })).toHaveAttribute('href', '/privacy');
 
-    // 계정 삭제는 카드 → 확인 한 번으로 회원 번호가 채워진 메일을 연다.
-    await user.click(screen.getByRole('button', { name: /계정 및 데이터 삭제 요청/ }));
-    expect(screen.getByRole('dialog', { name: '계정 삭제를 요청할까요?' })).toHaveTextContent(/회원 번호 \d+/);
-    await user.keyboard('{Escape}');
+    // 계정과 데이터를 완전히 지우는 것은 초기화 아래 링크로, 회원 번호가 채워진 메일을 연다.
+    expect(screen.getByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    const mailLink = screen.getByRole('link', { name: '계정과 데이터를 완전히 지우려면 메일로 요청해 주세요' });
+    expect(mailLink.getAttribute('href')).toMatch(/^mailto:.+%ED%9A%8C%EC%9B%90%20%EB%B2%88%ED%98%B8%3A%201/);
 
     const toggle = screen.getByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
@@ -134,6 +138,89 @@ describe('마이 화면', () => {
     await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
     expect(weather.updates).toEqual([true, false]);
     expect(screen.getByText('생활 날씨 알림이 꺼져 있어요')).toBeInTheDocument();
+  });
+});
+
+describe('마이 화면의 초기화', () => {
+  /** 탈퇴 요청 수를 세고, 성공하면 이어지는 로그인에서 2번 새 회원을 돌려주는 인증 API */
+  const useResetServer = (result: 'success' | 'failure') => {
+    const state = { resetCalls: 0, isDeleted: false };
+    server.use(
+      http.delete('*/api/members/me', () => {
+        state.resetCalls += 1;
+        if (result === 'failure') {
+          return HttpResponse.json({ code: 'INTERNAL_ERROR', message: '실패', errors: [] }, { status: 500 });
+        }
+        state.isDeleted = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      // 탈퇴로 Refresh 쿠키가 만료된 뒤의 로그인만 새 회원을 만든다.
+      http.post('*/api/auth/login', () =>
+        success({
+          accessToken: state.isDeleted ? 'reset-member-token' : 'test-auto-login-token',
+          tokenType: 'Bearer',
+          expiresIn: 900,
+          newMember: state.isDeleted,
+          member: { memberId: state.isDeleted ? 2 : 1 },
+        }),
+      ),
+    );
+    return state;
+  };
+
+  const openResetDialog = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByRole('button', { name: /^초기화/ }));
+    const dialog = screen.getByRole('dialog', { name: '초기화할까요?' });
+    expect(dialog).toHaveTextContent(
+      '새 아이디로 다시 시작해요. 지금까지의 기록은 더 이상 볼 수 없고, 90일 뒤 파기돼요.',
+    );
+    return dialog;
+  };
+
+  it('확인하면 새 회원으로 바꾸고 홈으로 간다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('success');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+
+    await waitFor(() => expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent(/^\/$/));
+    expect(reset.resetCalls).toBe(1);
+    expect(getAuthenticationSnapshot().session).toMatchObject({ accessToken: 'reset-member-token', memberId: 2 });
+  });
+
+  it('실패하면 대화상자에 안내하고 지금 회원과 화면을 그대로 둔다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('failure');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '초기화하지 못했어요. 지금 아이디와 기록은 그대로예요.',
+    );
+    expect(reset.resetCalls).toBe(1);
+    expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent('/me');
+    expect(getAuthenticationSnapshot()).toMatchObject({ terminationReason: null, session: { memberId: 1 } });
+  });
+
+  it('취소하면 초기화 요청을 보내지 않는다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('success');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(reset.resetCalls).toBe(0);
+    expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+    expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent('/me');
   });
 });
 

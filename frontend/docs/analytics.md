@@ -47,7 +47,7 @@ SDK 로딩 중 액션은 순서대로 큐에 넣는다. 일시적인 import/초�
 
 수동 기능 이벤트에 공통 속성을 직접 보강하고 `before_send`에서도 자동 수집·오류 이벤트를 보강한다. 속성 등록 실패나 reset으로 환경/버전이 빠지는 경우를 줄이고 호출부가 공통 값을 임의로 덮어쓰지 못하게 한다.
 
-Access Token은 메모리에만 있어 새로고침 직후에는 늘 세션이 없다. 그래서 세션이 없다는 이유만으로 `reset()`하지 않고, 서버가 Refresh 쿠키로도 회원 복원을 거절해 인증이 끝났을 때만 reset한다. reset 뒤 환경·버전·플랫폼을 다시 등록한다. 같은 회원의 반복 identify는 생략한다. 자동 로그인은 페이지를 열고 처음 회원을 정할 때만 `login_succeeded`(`login_method: anonymous`, `new_member`)로, 실패는 `login_failed`로 남기고 토큰 갱신은 기록하지 않는다.
+Access Token은 메모리에만 있어 새로고침 직후에는 늘 세션이 없다. 그래서 세션이 없다는 이유만으로 `reset()`하지 않고, 서버가 Refresh 쿠키로도 회원 복원을 거절해 인증이 끝났을 때만 reset한다. reset 뒤 환경·버전·플랫폼을 다시 등록한다. 같은 회원의 반복 identify는 생략한다. 자동 로그인은 페이지를 열고 처음 회원을 정할 때만 `login_succeeded`(`login_method: anonymous`, `new_member`)로, 실패는 `login_failed`로 남기고 토큰 갱신은 기록하지 않는다. 마이의 초기화는 성공하면 이전 회원 식별로 `account_reset_succeeded`를 남긴 뒤 reset하고, 이어지는 새 회원 로그인은 `login_succeeded`(`new_member: true`)로 남고, 새 회원은 회원 조회가 끝나면 다시 식별한다. 탈퇴 요청의 실패는 `account_reset_failed`(`error_kind`, `error_code`)로 남기며 식별은 그대로 둔다.
 
 오류 등급은 [에러 트래킹 문서](error-tracking.md)를 따른다. 이전 청크 삭제 정책은 그대로 유지한다.
 

@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
-import AccountDeletionCard from './AccountDeletionCard';
+import AccountResetCard from './AccountResetCard';
 
 const meta = {
-  title: '페이지/마이/공통/AccountDeletionCard',
-  component: AccountDeletionCard,
+  title: '페이지/마이/공통/AccountResetCard',
+  component: AccountResetCard,
   args: {
     memberId: 1024,
   },
   argTypes: {
-    memberId: { description: '삭제 요청 메일 본문에 채워 넣는 회원 번호' },
+    memberId: { description: '완전 삭제 요청 메일 본문에 채워 넣는 회원 번호' },
   },
   decorators: [
     (Story) => (
@@ -18,7 +18,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof AccountDeletionCard>;
+} satisfies Meta<typeof AccountResetCard>;
 
 export default meta;
 
@@ -28,6 +28,6 @@ export const Default: Story = {};
 
 export const ConfirmOpen: Story = {
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: /계정 및 데이터 삭제 요청/ }));
+    await userEvent.click(canvas.getByRole('button', { name: /초기화/ }));
   },
 };

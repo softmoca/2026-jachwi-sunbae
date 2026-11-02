@@ -4,7 +4,7 @@ import Icon from '@/shared/ui/icon/Icon';
 
 import * as styles from '../my-row-card/MyRowCard.styles';
 
-/** 개인정보 처리방침으로 가는 카드. 계정 삭제 요청 카드와 같은 모양을 쓴다. */
+/** 개인정보 처리방침으로 가는 카드. 초기화 카드와 같은 모양을 쓴다. */
 const PrivacyLinkCard = () => (
   <Link className={styles.notice} to="/privacy">
     <span className={styles.noticeIcon}>

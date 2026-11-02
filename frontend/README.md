@@ -126,6 +126,7 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 
 - Access Token은 메모리에만 둡니다. 앱을 열면 `POST /api/auth/login`이 HttpOnly Refresh 쿠키로 같은 익명 회원을 복원하거나 새 익명 회원을 만듭니다.
 - Access Token이 만료되거나 업무 API가 401을 주면 `POST /api/auth/refresh`로 갱신해 원래 요청을 한 번 다시 보냅니다. 갱신이 `401 REFRESH_TOKEN_INVALID`로 거절되면 새 회원을 만들지 않고 인증 Query Cache와 토큰을 지운 뒤 안내합니다.
+- 마이의 초기화는 `DELETE /api/members/me`를 Access Token으로 보내 지금 회원을 탈퇴 처리하고, 메모리의 Access Token을 비운 뒤 `POST /api/auth/login`으로 새 익명 회원의 토큰을 받고 Query Cache를 비우고 홈으로 갑니다. 진행 중인 로그인과 갱신이 끝난 뒤 보내고, 초기화 중의 갱신은 초기화를 함께 기다립니다. 탈퇴 요청이 401을 받으면 한 번 갱신해 다시 보냅니다. 탈퇴가 실패하면 기존 회원을 그대로 두고, 탈퇴 뒤 로그인이 실패하면 이전 회원으로 돌아가지 않고 다음 요청의 자동 로그인이 새 회원을 만듭니다.
 - 사진 콘텐츠는 URL을 `<img>`에 직접 주지 않고 Bearer 인증 Blob으로 조회해 Object URL을 만든 뒤 해제합니다.
 - 사진은 JPEG·PNG·WebP, 파일당 5MiB, 매물당 30장으로 선택 단계부터 검증합니다.
 - 서버 상태는 TanStack Query가 관리하고, 체크 항목 상태와 메모 저장 채널은 서로 독립적입니다.

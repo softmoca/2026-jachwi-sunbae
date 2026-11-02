@@ -75,3 +75,53 @@ describe('개인정보처리방침 뒤로 가기', () => {
     expect(await screen.findByText('/login?next=%2Fproperties')).toBeInTheDocument();
   });
 });
+
+describe('개인정보처리방침의 초기화와 파기 안내', () => {
+  const renderPrivacy = () =>
+    render(
+      <MemoryRouter initialEntries={['/privacy']}>
+        <TestRoutes />
+      </MemoryRouter>,
+    );
+
+  it('초기화는 삭제가 아니며 이전 기록을 90일 보관 뒤 파기한다고 안내한다', () => {
+    renderPrivacy();
+    const reset = screen.getByRole('region', { name: '초기화' });
+    expect(reset).toHaveTextContent('새 회원 아이디로 다시 시작합니다');
+    expect(reset).toHaveTextContent('더 이상 접근할 수 없습니다');
+    expect(reset).toHaveTextContent('초기화는 계정 삭제가 아닙니다');
+    expect(reset).toHaveTextContent('초기화한 날부터 90일 동안 보관한 뒤 파기합니다');
+  });
+
+  it('앱에서 삭제한 매물, 체크리스트, 거리 메모도 90일 보관 뒤 완전히 파기한다고 안내한다', () => {
+    renderPrivacy();
+    expect(screen.getByRole('region', { name: '보관과 삭제' })).toHaveTextContent(
+      '앱에서 삭제한 매물, 체크리스트, 거리 메모는 바로 볼 수 없게 되며, 삭제한 날부터 90일 동안 보관한 뒤 완전히 파기합니다.',
+    );
+  });
+
+  it('메일로 완전 삭제를 요청하면 초기화 전 이전 아이디의 데이터도 함께 파기한다고 안내하고 시행일을 갱신한다', () => {
+    renderPrivacy();
+    expect(screen.getByRole('region', { name: '자취선배 계정 및 데이터 삭제 요청' })).toHaveTextContent(
+      '초기화한 적이 있다면 초기화 전 이전 아이디의 데이터도 함께 파기합니다.',
+    );
+    expect(screen.getByText('시행일: 2026년 11월 2일')).toBeInTheDocument();
+  });
+});
+
+describe('개인정보처리방침의 수집 항목', () => {
+  it('닉네임과 비밀번호 대신 회원 식별자와 로그인 유지용 쿠키를 처리한다고 안내한다', () => {
+    render(
+      <MemoryRouter initialEntries={['/privacy']}>
+        <TestRoutes />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('main')).not.toHaveTextContent(/닉네임|비밀번호/);
+    expect(screen.getByRole('region', { name: '처리하는 정보와 목적' })).toHaveTextContent(
+      '회원 식별자와 로그인 유지용 쿠키(Refresh Token): 자동 로그인과 회원 식별',
+    );
+    expect(screen.getByRole('region', { name: '안전성 확보 조치' })).toHaveTextContent(
+      '로그인 유지용 쿠키를 스크립트로 읽을 수 없는 HttpOnly 쿠키로 전달하고 서버에는 원문이 아닌 해시 형태로 저장',
+    );
+  });
+});
