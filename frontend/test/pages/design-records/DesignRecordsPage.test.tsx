@@ -471,6 +471,13 @@ it('시설 카테고리를 켜면 반경 원 없이 지도 화면 안의 시설�
   expect(await screen.findByRole('button', { name: /^병원 숨기기, \d+개$/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
+it('기록을 받는 동안에는 기다리지 않고 바로 리스트 뼈대를 보여 준다', () => {
+  server.use(http.get('*/api/properties', () => new Promise<never>(() => undefined)));
+  renderRecords();
+  // 화면 코드를 받는 동안의 뼈대에서 이어지도록, 빈 칸으로 두었다가 늦게 띄우지 않는다.
+  expect(screen.getByRole('status')).toHaveTextContent('기록을 불러오는 중이에요.');
+});
+
 it('기록을 불러오지 못하면 지도 위 헤더 없이 오류 안내와 다시 시도를 보여 준다', async () => {
   let fails = true;
   server.use(

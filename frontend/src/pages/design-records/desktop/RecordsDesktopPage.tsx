@@ -1,10 +1,8 @@
-import { css } from '@emotion/css';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
 import type { MapAddress } from '@/features/map/model/Map';
-import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import DesktopHeader from '@/shared/ui/desktop-header/DesktopHeader';
 import DesktopHeaderSlot, { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
@@ -20,6 +18,8 @@ import RecordListSkeleton from '../ui/record-list/RecordListSkeleton';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
 import RecordsDesktopMap from './RecordsDesktopMap';
+
+import * as styles from './RecordsDesktopPage.styles';
 
 /**
  * 데스크탑 본 방 기록. 왼쪽 칸에 리스트, 오른쪽에 지도를 두고 보기 전환 없이 함께 본다.
@@ -61,31 +61,25 @@ const RecordsDesktopPage = () => {
     },
   });
   const closeDetail = () => setSelectedId(null);
-  const isSkeletonVisible = useDelayedLoading(records.properties.isPending);
 
-  // 빠른 응답에는 뼈대 없이 빈 칸을 두었다가 바로 목록을 보여 주고, 오래 걸릴 때만 뼈대를 보여 준다.
-  const list =
-    records.properties.isPending || isSkeletonVisible ? (
-      isSkeletonVisible ? (
-        <RecordListSkeleton className={styles.list} />
-      ) : (
-        <div className={styles.list} />
-      )
-    ) : records.properties.isError ? (
-      <RecordLoadError
-        className={styles.list}
-        error={records.properties.error}
-        onRetry={() => void records.properties.refetch()}
-      />
-    ) : (
-      <RecordList
-        className={styles.list}
-        records={records.records}
-        district={records.district}
-        onOpen={setSelectedId}
-        onNotice={setNotice}
-      />
-    );
+  // 처음 여는 화면이라 남겨 둘 목록이 없다. 늦추지 않고 바로 뼈대를 보여, 화면 코드를 받는 동안의 뼈대(`RecordsPageSkeleton`)에서 이어지게 한다.
+  const list = records.properties.isPending ? (
+    <RecordListSkeleton className={styles.list} />
+  ) : records.properties.isError ? (
+    <RecordLoadError
+      className={styles.list}
+      error={records.properties.error}
+      onRetry={() => void records.properties.refetch()}
+    />
+  ) : (
+    <RecordList
+      className={styles.list}
+      records={records.records}
+      district={records.district}
+      onOpen={setSelectedId}
+      onNotice={setNotice}
+    />
+  );
 
   const detail =
     selected !== undefined ? (
@@ -138,74 +132,6 @@ const RecordsDesktopPage = () => {
       </main>
     </DesktopHeaderSlotProvider>
   );
-};
-
-const styles = {
-  /* 데스크탑 본 방 기록: 화면 전체를 쓰며 왼쪽에 리스트, 그 옆에 매물 등록·상세 칸, 오른쪽에 지도를 나란히 둔다. */
-  page: css`
-    label: RecordsDesktopPage-page;
-    height: 100dvh;
-    background: #f0f2f5;
-    color: #25282d;
-  `,
-
-  frame: css`
-    label: RecordsDesktopPage-frame;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    background: white;
-    overflow: hidden;
-
-    & button:focus-visible {
-      outline: 2px solid #25282d;
-      outline-offset: 3px;
-    }
-  `,
-
-  /* 지도 위쪽 동네 뱃지 줄 아래에 상세 닫기 버튼을 둔다. */
-  body: css`
-    label: RecordsDesktopPage-body;
-    --list-detail-close-top: 4.5rem;
-    flex: 1;
-    height: auto;
-  `,
-
-  list: css`
-    label: RecordsDesktopPage-list;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 1rem 1.5rem 1.5rem;
-    background: white;
-  `,
-
-  /* 매물 등록·상세는 자체 여백을 가지므로 칸에는 스크롤만 둔다. */
-  detail: css`
-    label: RecordsDesktopPage-detail;
-    min-height: 0;
-    overflow-y: auto;
-    background: white;
-  `,
-
-  headerSearch: css`
-    label: RecordsDesktopPage-headerSearch;
-    max-width: 32rem;
-  `,
-
-  map: css`
-    label: RecordsDesktopPage-map;
-    height: 100%;
-  `,
-
-  notice: css`
-    label: RecordsDesktopPage-notice;
-    right: 1.5rem;
-    bottom: 1.5rem;
-    left: auto;
-    width: 22rem;
-  `,
 };
 
 export default RecordsDesktopPage;

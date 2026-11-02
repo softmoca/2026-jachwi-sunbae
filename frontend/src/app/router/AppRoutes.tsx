@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-do
 
 import PropertyAppLayout from '@/app/layouts/property-app-layout/PropertyAppLayout';
 import PublicExploreLayout from '@/app/layouts/public-explore-layout/PublicExploreLayout';
+import RecordsPageSkeleton from '@/pages/design-records/RecordsPageSkeleton';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 
@@ -33,7 +34,9 @@ const NearbyAnalysisPage = lazy(() => import('@/pages/nearby-analysis/NearbyAnal
 const PropertyComparePage = lazy(() => import('@/pages/property-compare/PropertyComparePage'));
 const UpcomingFeaturePage = lazy(() => import('@/pages/upcoming-feature/UpcomingFeaturePage'));
 
-const lazyPage = (page: ReactNode) => <LazyRouteBoundary>{page}</LazyRouteBoundary>;
+const lazyPage = (page: ReactNode, fallback?: ReactNode) => (
+  <LazyRouteBoundary fallback={fallback}>{page}</LazyRouteBoundary>
+);
 
 /**
  * 본 방 기록(`/properties`)과 매물 상세(`/properties/:propertyId`).
@@ -42,7 +45,8 @@ const lazyPage = (page: ReactNode) => <LazyRouteBoundary>{page}</LazyRouteBounda
 const RecordsRoute = () => {
   const isDesktop = useIsDesktop();
   const propertyId = useParams().propertyId;
-  if (isDesktop || propertyId === undefined) return lazyPage(<DesignRecordsPage />);
+  // 처음 여는 기록 화면은 진행 표시 대신 화면 뼈대를 바로 보여, 화면 코드와 기록을 받는 동안 같은 뼈대가 이어지게 한다.
+  if (isDesktop || propertyId === undefined) return lazyPage(<DesignRecordsPage />, <RecordsPageSkeleton />);
   return <PropertyAppLayout />;
 };
 
