@@ -41,7 +41,7 @@ const buttonClassName = (variant: ButtonVariant, size: ButtonSize, fullWidth: bo
 /**
  * 공용 버튼. `isLoading`이면 반응은 바로, 로딩 UI만 늦게 보여 준다.
  * 사용자가 눌러 시작한 요청이라 두 번째 누름은 바로 막고 화면 읽기 프로그램에도 `aria-busy`로 바로 알린다.
- * 스피너와 흐린 비활성화 모양은 요청이 500ms를 넘길 때만 보여, 빠른 응답에서 버튼이 깜빡이지 않게 한다.
+ * 스피너와 흐린 비활성화 모양은 요청이 300ms를 넘길 때만 보여, 빠른 응답에서 버튼이 깜빡이지 않게 한다.
  */
 export const Button = ({
   children,

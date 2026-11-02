@@ -1,3 +1,4 @@
+import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import { Button } from '@/shared/ui/button/Button';
 import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 
@@ -14,7 +15,11 @@ type AnalysisOverlayProps = {
 
 /** 분석 중·실패 안내. 지도를 지우지 않고 반투명하게 덮어 고른 위치가 뒤에 비쳐 보이게 한다. */
 const AnalysisOverlay = ({ preview }: AnalysisOverlayProps) => {
-  if (preview.isAnalyzing)
+  // 지도와 조건 패널이 그대로 남아 있으니, 빠른 응답에는 분석 안내를 띄우지 않고 바로 결과를 보여 준다.
+  // 오래 걸릴 때만 안내를 덮고, 한 번 덮은 안내는 최소 노출 시간만큼 남겨 번쩍이지 않게 한다.
+  const isAnalysisVisible = useDelayedLoading(preview.isAnalyzing);
+
+  if (isAnalysisVisible)
     return (
       <section className={`${shared.analysis} ${shared.mapOverlay}`}>
         <ProgressCircle label="주변 동네를 분석하는 중이에요." />
@@ -31,6 +36,7 @@ const AnalysisOverlay = ({ preview }: AnalysisOverlayProps) => {
         </Button>
       </section>
     );
+  if (preview.isAnalyzing) return null;
   if (preview.error)
     return (
       <section className={`${shared.analysis} ${shared.mapOverlay}`}>

@@ -5,6 +5,7 @@ import {
   usePropertyChecklistItemStatusMutation,
 } from '@/features/property/api/usePropertyChecklistItemMutations';
 import type { PropertyChecklistItem, PropertyChecklistItemStatus } from '@/features/property/model/Property';
+import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import Icon from '@/shared/ui/icon/Icon';
 
 import * as styles from './PropertyChecklistItemControl.styles';
@@ -35,6 +36,9 @@ const PropertyChecklistItemControl = ({
   const [memo, setMemo] = useState(item.memo);
   const statusMutation = usePropertyChecklistItemStatusMutation(propertyId, propertyChecklistId);
   const memoMutation = usePropertyChecklistItemMemoMutation(propertyId, propertyChecklistId);
+  // 메모 저장은 대부분 금방 끝난다. "저장 중…"과 비활성화 모양은 오래 걸릴 때만 보여 버튼이 번쩍이지 않게 한다.
+  // 두 번째 누름은 모양과 상관없이 `memoMutation.isPending`으로 바로 막는다.
+  const isMemoSavingVisible = useDelayedLoading(memoMutation.isPending);
   const hasMemo = item.memo.trim() !== '';
   const memoButtonRef = useRef<HTMLButtonElement>(null);
   const wasMemoEditing = useRef(isMemoEditing);
@@ -57,6 +61,7 @@ const PropertyChecklistItemControl = ({
   };
 
   const cancelMemo = () => {
+    if (memoMutation.isPending) return;
     setMemo(item.memo);
     onFinishMemoEdit();
   };
@@ -136,7 +141,7 @@ const PropertyChecklistItemControl = ({
             <button
               type="button"
               className={styles.memoCancelButton}
-              disabled={memoMutation.isPending}
+              disabled={isMemoSavingVisible}
               onClick={cancelMemo}
             >
               취소
@@ -144,10 +149,11 @@ const PropertyChecklistItemControl = ({
             <button
               type="button"
               className={styles.memoSaveButton}
-              disabled={memoMutation.isPending}
+              disabled={isMemoSavingVisible}
+              aria-busy={memoMutation.isPending || undefined}
               onClick={() => void saveMemo()}
             >
-              {memoMutation.isPending ? '저장 중…' : '저장'}
+              {isMemoSavingVisible ? '저장 중…' : '저장'}
             </button>
           </div>
         </div>

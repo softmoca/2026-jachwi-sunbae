@@ -178,8 +178,8 @@ const DesignHomePage = () => (useIsDesktop() ? <HomeDesktopPage /> : <HomeMobile
 - 조회·변경 Query Hook도 같은 기능의 `api`에 둡니다.
 - 화면에는 최소한 loading, error, empty, success 상태를 고려합니다.
 - 페이지 전체를 조회 결과로 그릴 때는 `shared/ui/query-state/QueryState`로 로딩·오류 화면을 맡깁니다. 오류 안내는 `describePropertyLoadError`, `describeChecklistLoadError`처럼 소유 기능의 `api`에서 만듭니다.
-- 화면 일부만 불러올 때는 `shared/ui/delayed-fallback/DelayedFallback`으로 감쌉니다. 500ms 안에 끝나면 로딩 UI 없이 빈자리(`placeholder`)만 두었다가 바로 내용을 보여 주고, 그보다 길어지면 `fallback`을 띄워 최소 250ms는 남깁니다. 오류 처리는 맡지 않습니다. 감싸기 어려운 곳(스켈레톤, 지도 안내 등)은 같은 규칙의 `useDelayedLoading`을 씁니다.
-- 공용 `Button`의 `isLoading`은 켜지는 즉시 두 번째 클릭을 막고 `aria-busy`를 달지만, 스피너와 문구, 비활성 모양은 500ms가 지나야 보여 줍니다. 라우트 Suspense 대체 화면(`RouteLoading`)도 처음엔 투명하게 두고 500ms 뒤 CSS 애니메이션으로 나타냅니다.
+- 화면 일부만 불러올 때는 `shared/ui/delayed-fallback/DelayedFallback`으로 감쌉니다. 300ms 안에 끝나면 로딩 UI 없이 빈자리(`placeholder`)만 두었다가 바로 내용을 보여 주고, 그보다 길어지면 `fallback`을 띄워 최소 250ms는 남깁니다. 오류 처리는 맡지 않습니다. 감싸기 어려운 곳(스켈레톤, 지도 안내 등)은 같은 규칙의 `useDelayedLoading`을 씁니다.
+- 공용 `Button`의 `isLoading`은 켜지는 즉시 두 번째 클릭을 막고 `aria-busy`를 달지만, 스피너와 문구, 비활성 모양은 300ms가 지나야 보여 줍니다. 라우트 Suspense 대체 화면(`RouteLoading`)도 처음엔 투명하게 두고 300ms 뒤 CSS 애니메이션으로 나타냅니다.
 - 오류 코드는 `isApiErrorCode(error, 'CODE')`로 확인합니다.
 - 서버 상태와 UI 상태를 구분합니다. 서버에서 가져온 데이터를 불필요하게 여러 컴포넌트의 로컬 상태로 복사하지 않습니다.
 

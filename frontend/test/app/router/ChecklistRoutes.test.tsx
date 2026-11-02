@@ -294,7 +294,8 @@ describe('매물 체크리스트 연결과 자동 저장', () => {
     const sectionHeading = await screen.findByRole('heading', { name: '체크리스트' });
     const section = sectionHeading.closest('section');
     expect(section).not.toBeNull();
-    expect(within(section as HTMLElement).getByRole('button', { name: /^체크리스트$/ })).toBeInTheDocument();
+    // 기본 체크리스트를 자동으로 붙이는 동안에는 시작 버튼을 그리지 않는다. 자동으로 붙이지 못했을 때 시작 버튼이 나타난다.
+    expect(await within(section as HTMLElement).findByRole('button', { name: /^체크리스트$/ })).toBeInTheDocument();
   });
 
   it('내 체크리스트가 없어도 시작 방식 선택 없이 새 체크리스트 만들기만 제공한다', async () => {

@@ -10,7 +10,7 @@ React 19·TypeScript 6·Webpack 5 기반 모바일 우선 SPA입니다.
 
 체크리스트 집계 막대와 범례는 괜찮음=초록, 주의=빨강, 미확인=회색을 사용합니다. 동네 찾기 통근 범례도 홈 집계처럼 짧은 세로 색상 막대와 텍스트로 표시하며, 통근 구간의 파랑·초록·빨강 의미는 유지합니다.
 
-페이지 전환의 화면 파일 로딩은 공용 `ProgressCircle`(40px)로 표시하되, 500ms 안에 끝나면 보여 주지 않습니다. 홈(`/properties`)은 사진·텍스트 형태의 매물 스켈레톤을 사용하며 목록 데이터 로딩에도 같은 스켈레톤을 재사용합니다. 실제 진행률을 알 수 없어 원형 로딩은 불확정 회전으로 표시합니다. `LazyRouteBoundary`의 fallback만 변경하면 기존 안내 UI로 되돌릴 수 있으며 오류·재시도 화면은 유지합니다.
+페이지 전환의 화면 파일 로딩은 공용 `ProgressCircle`(40px)로 표시하되, 300ms 안에 끝나면 보여 주지 않습니다. 홈(`/properties`)은 사진·텍스트 형태의 매물 스켈레톤을 사용하며 목록 데이터 로딩에도 같은 스켈레톤을 재사용합니다. 실제 진행률을 알 수 없어 원형 로딩은 불확정 회전으로 표시합니다. `LazyRouteBoundary`의 fallback만 변경하면 기존 안내 UI로 되돌릴 수 있으며 오류·재시도 화면은 유지합니다.
 
 - [백엔드와 프론트엔드 로컬 개발](../backend/docs/guides/local-development.md)
 - [백엔드 환경변수](../backend/docs/guides/environment-variables.md)

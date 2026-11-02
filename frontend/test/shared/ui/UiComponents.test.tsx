@@ -12,7 +12,7 @@ import TextField from '@/shared/ui/text-field/TextField';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 describe('공용 UI 컴포넌트', () => {
-  it('Button은 처리 중이면 두 번째 누름을 바로 막고 aria-busy로 알리지만, 스피너는 500ms가 지나야 보인다', () => {
+  it('Button은 처리 중이면 두 번째 누름을 바로 막고 aria-busy로 알리지만, 스피너는 300ms가 지나야 보인다', () => {
     vi.useFakeTimers();
     try {
       const onClick = vi.fn();
@@ -28,7 +28,7 @@ describe('공용 UI 컴포넌트', () => {
       fireEvent.click(button);
       expect(onClick).not.toHaveBeenCalled();
 
-      act(() => vi.advanceTimersByTime(499));
+      act(() => vi.advanceTimersByTime(299));
       expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
       act(() => vi.advanceTimersByTime(1));
       expect(screen.getByRole('button', { name: '저장 중…' })).toBeDisabled();
@@ -37,7 +37,7 @@ describe('공용 UI 컴포넌트', () => {
     }
   });
 
-  it('Button은 500ms 안에 끝난 요청에는 스피너를 보여 주지 않는다', () => {
+  it('Button은 300ms 안에 끝난 요청에는 스피너를 보여 주지 않는다', () => {
     vi.useFakeTimers();
     try {
       const { rerender } = render(
@@ -45,7 +45,7 @@ describe('공용 UI 컴포넌트', () => {
           저장
         </Button>,
       );
-      act(() => vi.advanceTimersByTime(300));
+      act(() => vi.advanceTimersByTime(200));
       rerender(<Button loadingLabel="저장 중…">저장</Button>);
       act(() => vi.runOnlyPendingTimers());
       const button = screen.getByRole('button', { name: '저장' });

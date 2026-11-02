@@ -14,7 +14,7 @@ describe('useDelayedLoading', () => {
       initialProps: { isLoading: true },
     });
 
-    act(() => vi.advanceTimersByTime(499));
+    act(() => vi.advanceTimersByTime(299));
     rerender({ isLoading: false });
     act(() => vi.runOnlyPendingTimers());
 
@@ -28,7 +28,7 @@ describe('useDelayedLoading', () => {
       initialProps: { isLoading: true },
     });
 
-    act(() => vi.advanceTimersByTime(500));
+    act(() => vi.advanceTimersByTime(300));
     expect(result.current).toBe(true);
 
     rerender({ isLoading: false });

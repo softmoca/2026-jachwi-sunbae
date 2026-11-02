@@ -1010,10 +1010,9 @@ it('위치 선택·분석·결과·다시 선택하기 내내 지도를 새로 �
   show();
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(await screen.findByRole('heading', { name: '주변 동네를 분석하고 있어요' })).toBeInTheDocument();
-  // 분석 화면이 덮고 있는 동안에도 지도는 남아 있고, 찾기 버튼은 꺼진다.
+  // 분석하는 동안에도 지도는 남아 있고, 찾기 버튼은 꺼진다. 빠른 응답에는 분석 안내가 덮이지 않는다.
+  await waitFor(() => expect(screen.queryByRole('button', { name: /에서 찾기$/ })).not.toBeInTheDocument());
   expect(screen.getByRole('region', { name: '지도에서 목적지 선택' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /에서 찾기$/ })).not.toBeInTheDocument();
   await screen.findByRole('region', { name: '행정동 프리셋 지도' });
   await user.click(screen.getByRole('button', { name: '다시 선택하기' }));
   expect(await screen.findByRole('region', { name: '지도에서 목적지 선택' })).toBeInTheDocument();

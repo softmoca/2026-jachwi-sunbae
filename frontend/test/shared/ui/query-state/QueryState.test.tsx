@@ -34,7 +34,7 @@ describe('QueryState', () => {
     );
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    act(() => vi.advanceTimersByTime(500));
+    act(() => vi.advanceTimersByTime(300));
     expect(screen.getByRole('status')).toHaveTextContent('불러오는 중');
   });
 
