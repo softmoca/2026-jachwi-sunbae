@@ -284,12 +284,12 @@ class WeatherApiIntegrationTest {
         }
         assertThat(locations.find(1)).isEmpty();
         mvc.perform(get("/api/members/me/weather-location").header("Authorization", bearer(999)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
         mvc.perform(put("/api/members/me/weather-location").header("Authorization", bearer(999))
                         .contentType(MediaType.APPLICATION_JSON).content(locationBody(37.5665, 126.978)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
         mvc.perform(delete("/api/members/me/weather-location").header("Authorization", bearer(999)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

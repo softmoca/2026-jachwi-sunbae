@@ -3,6 +3,7 @@ package com.jachwisunbae.member.repository;
 import com.jachwisunbae.member.entity.Member;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -56,6 +57,49 @@ public class JdbcMemberRepository implements MemberRepository {
         }, keyHolder);
         long memberId = keyHolder.getKey().longValue();
         return Member.reconstruct(memberId, member.getCreatedAt(), member.getUpdatedAt(), member.getDeletedAt());
+    }
+
+    @Override
+    public void deleteOwnedData(final Long memberId, final LocalDateTime deletedAt) {
+        jdbcTemplate.update("""
+                UPDATE property_photos
+                SET deleted_at = ?
+                WHERE member_id = ? AND deleted_at IS NULL
+                """, deletedAt, memberId);
+        jdbcTemplate.update("""
+                UPDATE properties
+                SET deleted_at = ?
+                WHERE member_id = ? AND deleted_at IS NULL
+                """, deletedAt, memberId);
+        jdbcTemplate.update("""
+                UPDATE user_checklists
+                SET deleted_at = ?
+                WHERE member_id = ? AND deleted_at IS NULL
+                """, deletedAt, memberId);
+        jdbcTemplate.update("""
+                UPDATE street_memos
+                SET updated_at = ?, deleted_at = ?
+                WHERE member_id = ? AND deleted_at IS NULL
+                """, deletedAt, deletedAt, memberId);
+        jdbcTemplate.update("""
+                UPDATE member_weather_notification_settings
+                SET enabled = FALSE, updated_at = ?
+                WHERE member_id = ?
+                """, deletedAt, memberId);
+        jdbcTemplate.update("""
+                UPDATE weather_notification_devices
+                SET token = NULL, token_hash = NULL, updated_at = ?
+                WHERE member_id = ?
+                """, deletedAt, memberId);
+    }
+
+    @Override
+    public void delete(final Long memberId, final LocalDateTime deletedAt) {
+        jdbcTemplate.update("""
+                UPDATE members
+                SET updated_at = ?, deleted_at = ?
+                WHERE id = ? AND deleted_at IS NULL
+                """, deletedAt, deletedAt, memberId);
     }
 
     private RowMapper<Member> memberRowMapper() {

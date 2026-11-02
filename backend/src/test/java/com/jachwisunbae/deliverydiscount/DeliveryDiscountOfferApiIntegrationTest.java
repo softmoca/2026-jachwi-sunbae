@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jachwisunbae.auth.token.JwtTokenProvider;
+import com.jachwisunbae.member.entity.Member;
+import com.jachwisunbae.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -55,6 +57,9 @@ class DeliveryDiscountOfferApiIntegrationTest {
     private JwtTokenProvider tokens;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private MemberRepository members;
+    private Long memberId;
 
     @DynamicPropertySource
     static void database(final DynamicPropertyRegistry registry) {
@@ -66,6 +71,7 @@ class DeliveryDiscountOfferApiIntegrationTest {
     @BeforeEach
     void clearOffers() {
         jdbc.update("DELETE FROM delivery_discount_offers");
+        memberId = members.save(Member.create(LocalDateTime.now(CLOCK))).getId();
     }
 
     @Test
@@ -158,7 +164,7 @@ class DeliveryDiscountOfferApiIntegrationTest {
     }
 
     private String bearer() {
-        return "Bearer " + tokens.createAccessToken(1L);
+        return "Bearer " + tokens.createAccessToken(memberId);
     }
 
     @TestConfiguration

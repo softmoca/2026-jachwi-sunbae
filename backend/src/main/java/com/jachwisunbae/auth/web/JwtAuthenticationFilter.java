@@ -6,6 +6,7 @@ import com.jachwisunbae.common.exception.client.AuthenticationFailedException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.observability.RequestLoggingFilter;
 import com.jachwisunbae.common.web.error.ErrorResponse;
+import com.jachwisunbae.member.repository.MemberRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,11 +27,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String MEMBER_ID_ATTRIBUTE = "authenticatedMemberId";
     private final JwtTokenProvider provider;
+    private final MemberRepository memberRepository;
     private final ObjectMapper objectMapper;
 
     public JwtAuthenticationFilter(JwtTokenProvider provider,
+                                   MemberRepository memberRepository,
                                    ObjectMapper objectMapper) {
         this.provider = provider;
+        this.memberRepository = memberRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -50,9 +54,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            request.setAttribute(
-                    MEMBER_ID_ATTRIBUTE,
-                    provider.parseMemberId(extractToken(authorization)));
+            Long memberId = provider.parseMemberId(extractToken(authorization));
+            if (memberRepository.findById(memberId).isEmpty()) {
+                writeAuthenticationError(request, response);
+                return;
+            }
+            request.setAttribute(MEMBER_ID_ATTRIBUTE, memberId);
         } catch (AuthenticationFailedException exception) { //잘못된 jwt. 클라 문제
             writeAuthenticationError(request, response);
             return;

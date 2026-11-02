@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jachwisunbae.auth.token.JwtTokenProvider;
+import com.jachwisunbae.member.entity.Member;
+import com.jachwisunbae.member.repository.MemberRepository;
 import com.jachwisunbae.promotion.domain.ConvenienceBrand;
 import com.jachwisunbae.promotion.provider.emart24.Emart24PromotionFetcher;
 import com.jachwisunbae.promotion.repository.JdbcPromotionProductRepository;
@@ -51,6 +53,9 @@ class PromotionApiIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
     @Autowired
+    private MemberRepository members;
+    private Long memberId;
+    @Autowired
     private JdbcPromotionProductRepository repository;
     // 수집 서비스가 생성 시 brand()를 읽으므로 실제 브랜드를 반환하는 Spy로 수집 호출만 감시한다.
     @MockitoSpyBean
@@ -66,6 +71,7 @@ class PromotionApiIntegrationTest {
     @BeforeEach
     void clearProducts() {
         jdbc.update("DELETE FROM promotion_products");
+        memberId = members.save(Member.create(LocalDateTime.now())).getId();
     }
 
     @AfterEach
@@ -133,6 +139,6 @@ class PromotionApiIntegrationTest {
     }
 
     private String bearer() {
-        return "Bearer " + tokens.createAccessToken(1L);
+        return "Bearer " + tokens.createAccessToken(memberId);
     }
 }

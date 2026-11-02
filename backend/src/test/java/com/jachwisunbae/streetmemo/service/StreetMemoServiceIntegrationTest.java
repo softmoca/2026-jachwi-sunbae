@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 
+import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
@@ -182,6 +184,11 @@ class StreetMemoServiceIntegrationTest {
     @EnableTransactionManagement
     @Import({StreetMemoService.class, MemberService.class, JdbcMemberRepository.class})
     static class TestConfig {
+
+        @Bean
+        RefreshTokenRepository refreshTokenRepository() {
+            return mock(RefreshTokenRepository.class);
+        }
 
         @Bean
         JdbcTemplate jdbcTemplate(DataSource dataSource) {
