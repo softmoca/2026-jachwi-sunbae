@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 
 import { LogScreen } from '@/shared/lib/analytics/logging';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 import useMealTabs from '../hooks/useMealTabs';
@@ -16,7 +17,12 @@ const CheapMealsMobilePage = () => {
     // 탭은 주소로 바뀌므로 key 없이 화면에 처음 들어올 때만 기록한다.
     <LogScreen event={CHEAP_MEAL_EVENTS.viewed}>
       <main className={styles.page}>
-        <TopNavigation title="저렴한 한 끼 찾기" backTo="/" backLabel="홈으로 돌아가기" className={styles.header} />
+        <TopNavigation
+          title="저렴한 한 끼 찾기"
+          backTo={HOME_PATH}
+          backLabel="홈으로 돌아가기"
+          className={styles.header}
+        />
         <MealTabList tabs={tabs} className={styles.tabs} />
         <MealTabPanels tabs={tabs} />
         {tabs.detail && <MealDetails detail={tabs.detail} layout={tabs.layout} onClose={tabs.closeDetail} />}

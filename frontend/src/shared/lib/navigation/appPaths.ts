@@ -1,4 +1,75 @@
+/**
+ * 화면 주소를 한곳에서 관리한다. 라우터 정의(`AppRoutes`)와 링크, 이동이 모두 이 파일을 쓴다.
+ * - 고정 주소는 `*_PATH` 상수로 두고 라우터 정의와 링크가 함께 쓴다.
+ * - 매개변수가 있는 라우터 정의용 패턴은 `ROUTE_PATTERNS`에 둔다.
+ * - 링크용 동적 주소는 `*Path()` 함수로 만든다.
+ * - 화면이 읽는 쿼리 파라미터 이름은 `*_PARAM` 상수로 둔다.
+ */
+
 /** 로그인하면 보이는 홈. 로그인하지 않았으면 같은 주소에서 랜딩으로 보낸다. */
 export const HOME_PATH = '/';
 /** 본 방 기록(지도·리스트) 화면. */
 export const RECORDS_PATH = '/properties';
+export const PROPERTY_NEW_PATH = '/properties/new';
+export const CHECKLISTS_PATH = '/checklists';
+export const MY_PATH = '/me';
+export const COMPARE_PATH = '/compare';
+export const CHEAP_MEALS_PATH = '/cheap-meals';
+export const GUIDE_PATH = '/guide';
+export const PRIVACY_PATH = '/privacy';
+export const MAP_SELECT_LOCATION_PATH = '/map/select-location';
+export const EXPORT_PATH = '/export';
+export const TIPS_PATH = '/tips';
+/** 동네 찾기(회원). */
+export const NEIGHBORHOODS_PATH = '/neighborhoods';
+export const NEIGHBORHOODS_NEARBY_PATH = '/neighborhoods/nearby';
+/** 동네 찾기(공개). */
+export const EXPLORE_PATH = '/explore';
+export const EXPLORE_NEARBY_PATH = '/explore/nearby';
+/** 예전 주소. 들어오면 다른 화면으로 보낸다. */
+export const LOGIN_PATH = '/login';
+export const LANDING_PATH = '/landing';
+export const ABOUT_PATH = '/about';
+
+/** 라우터 정의에만 쓰는 패턴. `area`, `areaDetails`는 동네 찾기 주소 아래에 붙는 상대 패턴이다. */
+export const ROUTE_PATTERNS = {
+  propertyRecords: '/properties/:propertyId?',
+  propertyEdit: '/properties/:propertyId/edit',
+  propertyPhotos: '/properties/:propertyId/photos',
+  propertyMemo: '/properties/:propertyId/memo',
+  propertyNearby: '/properties/:propertyId/nearby',
+  propertyActiveChecklist: '/properties/:propertyId/active-checklists/:stage',
+  propertyChecklist: '/properties/:propertyId/checklists/:propertyChecklistId',
+  legacyChecklists: '/checklists/*',
+  legacyMap: '/map/:propertyId?',
+  legacyExploreCommute: '/explore/commute/*',
+  legacyExplorePrice: '/explore/price/*',
+  legacyNeighborhoodsMap: '/neighborhoods/map/*',
+  area: 'areas/:adminDongCode',
+  areaDetails: 'areas/:adminDongCode/details',
+  notFound: '*',
+} as const;
+
+type PathId = number | string;
+
+export const propertyDetailPath = (propertyId: PathId) => `${RECORDS_PATH}/${propertyId}`;
+export const propertyEditPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/edit`;
+export const propertyPhotosPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/photos`;
+export const propertyMemoPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/memo`;
+export const propertyActiveChecklistPath = (propertyId: PathId, stage: string) =>
+  `${propertyDetailPath(propertyId)}/active-checklists/${stage}`;
+export const propertyChecklistPath = (propertyId: PathId, propertyChecklistId: PathId) =>
+  `${propertyDetailPath(propertyId)}/checklists/${propertyChecklistId}`;
+
+/** 동네 찾기 주소. 회원은 `/neighborhoods`, 공개는 `/explore`이다. */
+export type NeighborhoodBasePath = typeof EXPLORE_PATH | typeof NEIGHBORHOODS_PATH;
+export const neighborhoodAreaPath = (base: string, adminDongCode: PathId) => `${base}/areas/${adminDongCode}`;
+export const neighborhoodAreaDetailsPath = (base: string, adminDongCode: PathId) =>
+  `${neighborhoodAreaPath(base, adminDongCode)}/details`;
+
+/** 매물 상세 탭(`?tab=`). */
+export const PROPERTY_DETAIL_TAB_PARAM = 'tab';
+/** 본 방 기록 보기 방식(`?view=`). */
+export const RECORDS_VIEW_PARAM = 'view';
+/** 저렴한 한 끼 탭(`?tab=`). */
+export const CHEAP_MEALS_TAB_PARAM = 'tab';

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ALL_MAP_CATEGORIES, getMapCategoryLabel } from '@/features/map/lib/mapPresentation';
 import type { MapCategory, NearbyPlace } from '@/features/map/model/Map';
 import MapCategoryIcon from '@/features/map/ui/map-category-icon/MapCategoryIcon';
+import { MY_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 
 type MapNearbySheetProps = {
@@ -88,7 +89,7 @@ const MapNearbySheet = ({
             ))}
           </ul>
         )}
-        <Link to="/me">지도 데이터 모드와 이용 안내</Link>
+        <Link to={MY_PATH}>지도 데이터 모드와 이용 안내</Link>
       </div>
     )}
   </section>

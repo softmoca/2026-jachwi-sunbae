@@ -1,6 +1,7 @@
 import { Navigate, useMatch } from 'react-router-dom';
 
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
+import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 
 import NeighborhoodPreviewDesktopPage from './desktop/NeighborhoodPreviewDesktopPage';
 import useNeighborhoodPreview from './hooks/useNeighborhoodPreview';
@@ -13,7 +14,7 @@ import NeighborhoodPreviewMobilePage from './mobile/NeighborhoodPreviewMobilePag
 const NeighborhoodPreviewPage = () => {
   const preview = useNeighborhoodPreview();
   const isDesktop = useIsDesktop();
-  const isRoutePage = useMatch(`${preview.mapPath}/areas/:adminDongCode/*`);
+  const isRoutePage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.area}/*`);
   if (isRoutePage && !preview.selected && !preview.isAnalyzing && !preview.error) {
     return <Navigate to={preview.mapPath} replace />;
   }

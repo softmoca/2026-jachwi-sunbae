@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import type { MapAddress } from '@/features/map/model/Map';
 import { trackExplorationRecordView } from '@/features/onboarding/lib/explorationJourney';
 import { useKeyboardInset } from '@/shared/lib/hooks/useKeyboardInset';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import BottomActionArea from '@/shared/ui/bottom-action-area/BottomActionArea';
 import { Button } from '@/shared/ui/button/Button';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
@@ -38,7 +39,7 @@ const CreatePropertyPage = ({ panel }: { panel?: PropertyCreationPanel }) => {
         <TopNavigation
           className={styles.createNavigation}
           title="새 매물 등록"
-          backTo={panel ? undefined : '/'}
+          backTo={panel ? undefined : HOME_PATH}
           onBack={panel?.onClose}
           backLabel="매물 등록 닫기"
           navigationIcon="close"

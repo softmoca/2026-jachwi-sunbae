@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ChecklistProgressBar from '@/features/checklist/ui/checklist-progress-bar/ChecklistProgressBar';
 import placeholderImage from '@/shared/assets/property-placeholder-goose.webp';
 import placeholderImage2x from '@/shared/assets/property-placeholder-goose@2x.webp';
+import { propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
 import { formatManwon } from '../../lib/propertyFormat';
 import type { PropertyReturnPath } from '../../lib/propertyNavigation';
@@ -75,7 +76,7 @@ const PropertyCard = ({
   eyebrow,
 }: PropertyCardProps) => {
   const navigate = useNavigate();
-  const detailPath = to ?? `/properties/${property.propertyId}`;
+  const detailPath = to ?? propertyDetailPath(property.propertyId);
   const onSiteStage = property.stages.find((stage) => stage.stage === 'ON_SITE');
 
   return (

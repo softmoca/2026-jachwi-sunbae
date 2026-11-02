@@ -13,6 +13,7 @@ import ChecklistEditorFrame, {
   ChecklistDesktopHeading,
 } from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorFrame';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
@@ -35,7 +36,7 @@ const ChecklistDetailPage = ({ checklistId }: { checklistId: number }) => {
 const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
   const update = useUpdateChecklist(checklist.checklistId);
   const isDesktop = useIsDesktop();
-  const goBack = useReturnNavigation({ cameFromTarget: true, fallback: '/' });
+  const goBack = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
   const { isPickerOpen, openPicker, closePicker } = useChecklistItemPickerRoute();
   const draft = useChecklistDraft({
     initialName: checklist.name,

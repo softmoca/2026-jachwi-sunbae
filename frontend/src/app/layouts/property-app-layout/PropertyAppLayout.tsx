@@ -2,6 +2,15 @@ import { useLocation, useOutletContext } from 'react-router-dom';
 
 import type { Member } from '@/features/auth/model/Member';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
+import {
+  CHECKLISTS_PATH,
+  COMPARE_PATH,
+  MAP_SELECT_LOCATION_PATH,
+  MY_PATH,
+  NEIGHBORHOODS_NEARBY_PATH,
+  NEIGHBORHOODS_PATH,
+  PROPERTY_NEW_PATH,
+} from '@/shared/lib/navigation/appPaths';
 import { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
 
 import type { AppShellState } from './appShell';
@@ -14,24 +23,25 @@ const PropertyAppLayout = () => {
   const location = useLocation();
   const isDesktop = useIsDesktop();
   const isPropertyDetailPath = /^\/properties\/\d+$/.test(location.pathname);
-  const isMapPage = location.pathname === '/neighborhoods' || location.pathname.startsWith('/neighborhoods/areas/');
+  const isMapPage =
+    location.pathname === NEIGHBORHOODS_PATH || location.pathname.startsWith(`${NEIGHBORHOODS_PATH}/areas/`);
   // 매물 사진·메모·수정·주변 분석과 동네 주변 분석은 상세로 돌아가는 자체 "<"를 쓴다.
   // 홈으로 가는 상단 바를 위에 겹치면 그 "<"를 눌러 홈으로 빠져나가 버린다.
   const hasOwnBackNavigation =
     /^\/properties\/\d+\/(photos|memo|edit|nearby)$/.test(location.pathname) ||
-    location.pathname === '/neighborhoods/nearby';
+    location.pathname === NEIGHBORHOODS_NEARBY_PATH;
   const shell: AppShellState = {
     fullScreen:
-      location.pathname === '/map/select-location' ||
-      location.pathname.startsWith('/properties/new') ||
+      location.pathname === MAP_SELECT_LOCATION_PATH ||
+      location.pathname.startsWith(PROPERTY_NEW_PATH) ||
       isPropertyDetailPath ||
       // 체크리스트 편집은 자체 상단 내비게이션을 쓴다.
-      location.pathname === '/checklists' ||
+      location.pathname === CHECKLISTS_PATH ||
       /^\/properties\/\d+\/checklists\/\d+$/.test(location.pathname),
     isMapPage,
     isPropertyDetailPath,
-    isHomeWidthPage: location.pathname === '/me',
-    isWidePage: location.pathname === '/checklists',
+    isHomeWidthPage: location.pathname === MY_PATH,
+    isWidePage: location.pathname === CHECKLISTS_PATH,
   };
 
   return (
@@ -45,8 +55,8 @@ const PropertyAppLayout = () => {
         <PropertyAppMobileLayout
           member={member}
           shell={shell}
-          hidesAppBar={location.pathname === '/compare' || isMapPage || hasOwnBackNavigation}
-          appBarTitle={location.pathname === '/me' ? '마이' : undefined}
+          hidesAppBar={location.pathname === COMPARE_PATH || isMapPage || hasOwnBackNavigation}
+          appBarTitle={location.pathname === MY_PATH ? '마이' : undefined}
         />
       )}
     </DesktopHeaderSlotProvider>

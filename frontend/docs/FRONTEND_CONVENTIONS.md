@@ -37,6 +37,8 @@ frontend/
 
 `public`은 `/logo.svg`처럼 URL로 직접 제공하는 파일이고, `shared/assets`는 코드에서 import하여 Webpack이 처리하는 이미지·폰트입니다.
 
+화면 주소는 `shared/lib/navigation/appPaths.ts`에서만 정합니다. 라우터 정의(`app/router/AppRoutes.tsx`)와 링크, 이동은 문자열 대신 고정 주소 상수(`CHECKLISTS_PATH`), 라우터 패턴(`ROUTE_PATTERNS`), 동적 주소 함수(`propertyDetailPath(id)`), 쿼리 파라미터 이름(`PROPERTY_DETAIL_TAB_PARAM`)을 씁니다. 테스트(`test`)는 상수를 잘못 바꿔도 잡을 수 있도록 주소 문자열을 그대로 씁니다.
+
 테스트 파일은 구현 파일과 함께 두지 않고 `test` 아래에서 `src`와 동일한 경로를 유지합니다. 예를 들어 `src/features/map/lib/mapClustering.ts`의 테스트는 `test/features/map/lib/mapClustering.test.ts`에 둡니다. 공통 테스트 설정과 서버는 각각 `test/setup.ts`, `test/server.ts`에 둡니다.
 
 ## 2. 네이밍

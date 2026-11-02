@@ -17,6 +17,7 @@ import PropertyPhotoManager from '@/features/property/ui/property-photo-manager/
 import PropertyPhotoViewer from '@/features/property/ui/property-photo-viewer/PropertyPhotoViewer';
 import { LogScreen } from '@/shared/lib/analytics/logging';
 import useDocumentTitle from '@/shared/lib/hooks/useDocumentTitle';
+import { PROPERTY_DETAIL_TAB_PARAM, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog';
 import ContentState from '@/shared/ui/content-state/ContentState';
@@ -25,13 +26,7 @@ import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 import TopNavigationMenu from '@/shared/ui/top-navigation-menu/TopNavigationMenu';
 
-import {
-  DETAIL_TAB_PARAM,
-  type DetailTab,
-  parseDetailTab,
-  readLastDetailTab,
-  writeLastDetailTab,
-} from './model/detailTab';
+import { type DetailTab, parseDetailTab, readLastDetailTab, writeLastDetailTab } from './model/detailTab';
 import type { PropertyEditField } from './model/editField';
 import PropertyAdditionalInfoSection from './ui/property-additional-info-section/PropertyAdditionalInfoSection';
 import PropertyBasicInfoSection from './ui/property-basic-info-section/PropertyBasicInfoSection';
@@ -67,7 +62,7 @@ const PropertyDetailPage = ({ panel, returnTo }: PropertyDetailPageProps) => {
   if (propertyId === null) {
     return (
       <ContentState title="올바른 매물 주소가 아니에요.">
-        <Link to={backTo}>{backTo === '/properties' ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>
+        <Link to={backTo}>{backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>
       </ContentState>
     );
   }
@@ -90,7 +85,7 @@ const ResolvedPropertyDetailPage = ({
       query={property}
       loadingTitle="매물 상세를 불러오는 중이에요."
       describeError={describeError}
-      errorAction={<Link to={backTo}>{backTo === '/properties' ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>}
+      errorAction={<Link to={backTo}>{backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>}
     >
       {/* 상세를 불러온 뒤 매물마다 한 번 진입 로그를 남긴다. 다른 매물로 바뀌면 key가 바뀌어 다시 남긴다. */}
       {(detail) => (
@@ -115,14 +110,14 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = parseDetailTab(searchParams.get(DETAIL_TAB_PARAM)) ?? readLastDetailTab();
+  const activeTab = parseDetailTab(searchParams.get(PROPERTY_DETAIL_TAB_PARAM)) ?? readLastDetailTab();
   // 고른 탭을 주소에 남겨 체크리스트에서 돌아와도 그 탭으로 열고, 마지막 탭으로 기억해 다른 매물도 그 탭으로 연다.
   // 들어온 화면(state)은 그대로 둔다.
   const setActiveTab = (next: DetailTab) => {
     writeLastDetailTab(next);
     setSearchParams(
       (current) => {
-        current.set(DETAIL_TAB_PARAM, next);
+        current.set(PROPERTY_DETAIL_TAB_PARAM, next);
         return current;
       },
       { replace: true, state: locationState },
@@ -204,7 +199,7 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
                 event.preventDefault();
                 goBack();
               }}
-              aria-label={backTo === '/properties' ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
+              aria-label={backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
             >
               <Icon name="chevron-left" size={24} />
             </Link>

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { FROM_PROPERTY_DETAIL_STATE } from '@/features/property/lib/propertyNavigation';
 import type { PropertyDetail } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import { propertyPhotosPath } from '@/shared/lib/navigation/appPaths';
 import DetailSection from '@/shared/ui/detail-section/DetailSection';
 import Icon from '@/shared/ui/icon/Icon';
 
@@ -34,7 +35,7 @@ const PropertyPhotoSection = ({
       title="사진"
       meta={<span>{photoPreview.totalCount}/30</span>}
       action={
-        <Link to={`/properties/${propertyId}/photos`} state={FROM_PROPERTY_DETAIL_STATE} onClick={manage}>
+        <Link to={propertyPhotosPath(propertyId)} state={FROM_PROPERTY_DETAIL_STATE} onClick={manage}>
           <Icon name="plus" size={16} /> 사진 관리
         </Link>
       }
@@ -66,7 +67,7 @@ const PropertyPhotoSection = ({
       ) : (
         <Link
           className={styles.emptyLink}
-          to={`/properties/${propertyId}/photos`}
+          to={propertyPhotosPath(propertyId)}
           state={FROM_PROPERTY_DETAIL_STATE}
           onClick={manage}
         >

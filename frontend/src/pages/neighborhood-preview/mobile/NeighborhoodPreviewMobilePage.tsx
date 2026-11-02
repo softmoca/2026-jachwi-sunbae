@@ -7,6 +7,7 @@ import ExplorationRecordAction from '@/features/onboarding/ui/exploration-record
 import StreetMemoImpressionLog from '@/features/street-memo/ui/street-memo-impression-log/StreetMemoImpressionLog';
 import StreetMemoSheet from '@/features/street-memo/ui/street-memo-sheet/StreetMemoSheet';
 import { LogClick } from '@/shared/lib/analytics/logging';
+import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 import { Button } from '@/shared/ui/button/Button';
 import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
@@ -46,8 +47,8 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   const [filterField, setFilterField] = useState<'rent' | null>(null);
   // 위치를 고르는 동안 조건 칸 아래에 바로 펼친 피커. 같은 칸을 다시 누르면 접는다.
   const [pickerField, setPickerField] = useState<NeighborhoodFilterField | null>(null);
-  const isRoutePage = useMatch(`${preview.mapPath}/areas/:adminDongCode/*`);
-  const isDetailPage = useMatch(`${preview.mapPath}/areas/:adminDongCode/details`);
+  const isRoutePage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.area}/*`);
+  const isDetailPage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.areaDetails}`);
   const submitSearch = preview.startAnalysis;
   // 지도 빈 곳을 찍으면 시트를 닫지 않고 제목만 보이게 내린다.
   const [peekSignal, setPeekSignal] = useState(0);

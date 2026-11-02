@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 
 import { LogClick } from '@/shared/lib/analytics/logging';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 
 import { APP_STORES } from '../model/landingContent';
@@ -56,7 +57,7 @@ const LandingGetStarted = ({ search, position, layout }: LandingGetStartedProps)
     })}
     <LogClick event="landing_web_start_clicked" params={{ position }}>
       <ButtonLink
-        to={{ pathname: '/', search }}
+        to={{ pathname: HOME_PATH, search }}
         size="large"
         className={layout === 'stack' ? styles.fullRow : undefined}
       >

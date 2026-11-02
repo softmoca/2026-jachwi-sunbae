@@ -10,6 +10,7 @@ import { useCreateProperty } from '@/features/property/api/usePropertyMutations'
 import { trackPropertyEvent } from '@/features/property/lib/propertyAnalytics';
 import { addressOf, toQuickPropertyInput } from '@/features/property/lib/propertyForm';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import { propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
 import useAddressSearch from './useAddressSearch';
 import usePropertyLocation from './usePropertyLocation';
@@ -76,7 +77,7 @@ export const usePropertyCreationForm = (
       );
       if (routeState.fromExploration) trackExplorationSaved();
       if (onCreated) onCreated(created.propertyId);
-      else navigate(`/properties/${created.propertyId}`, { replace: true });
+      else navigate(propertyDetailPath(created.propertyId), { replace: true });
     } catch {
       setCreateError('매물을 등록하지 못했어요. 다시 시도해 주세요.');
     }

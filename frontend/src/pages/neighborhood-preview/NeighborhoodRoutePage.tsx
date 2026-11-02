@@ -1,6 +1,7 @@
 import { useMatch, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
+import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 
 import NeighborhoodRouteDesktopPage from './desktop/NeighborhoodRouteDesktopPage';
@@ -16,7 +17,7 @@ const NeighborhoodRoutePage = () => {
   const navigate = useNavigate();
   const { adminDongCode } = useParams();
   const isDesktop = useIsDesktop();
-  const isDetailPage = useMatch(`${preview.mapPath}/areas/:adminDongCode/details`);
+  const isDetailPage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.areaDetails}`);
   const area = preview.selected?.adminDongCode === adminDongCode ? preview.selected : undefined;
   useNeighborhoodDetailAnalytics({
     mock: preview.isMockData,

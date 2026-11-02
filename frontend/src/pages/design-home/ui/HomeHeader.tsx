@@ -4,12 +4,13 @@ import { Link } from 'react-router-dom';
 import iconProfile from '@/shared/assets/icon-profile.webp';
 import logo from '@/shared/assets/jachwi-sunbae-goose.webp';
 import logo2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
+import { HOME_PATH, MY_PATH } from '@/shared/lib/navigation/appPaths';
 
 const HomeHeader = ({ className }: { className?: string }) => {
   return (
     <header className={`${styles.header} ${className ?? ''}`.trim()}>
       {/* 라우터 이동이 아닌 일반 링크로 두어 로고를 누르면 홈을 새로 불러온다. */}
-      <a className={styles.home} href="/" aria-label="자취선배 홈 새로고침">
+      <a className={styles.home} href={HOME_PATH} aria-label="자취선배 홈 새로고침">
         <img
           className={styles.logo}
           src={logo}
@@ -19,7 +20,7 @@ const HomeHeader = ({ className }: { className?: string }) => {
           alt="자취선배"
         />
       </a>
-      <Link className={styles.profile} to="/me" aria-label="마이페이지">
+      <Link className={styles.profile} to={MY_PATH} aria-label="마이페이지">
         <img src={iconProfile} alt="" width={96} height={96} />
       </Link>
     </header>

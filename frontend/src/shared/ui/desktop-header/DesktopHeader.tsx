@@ -4,17 +4,25 @@ import { Link, NavLink } from 'react-router-dom';
 import iconProfile from '@/shared/assets/icon-profile.webp';
 import logo from '@/shared/assets/jachwi-sunbae-goose.webp';
 import logo2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
-import { HOME_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import {
+  CHEAP_MEALS_PATH,
+  CHECKLISTS_PATH,
+  COMPARE_PATH,
+  HOME_PATH,
+  MY_PATH,
+  NEIGHBORHOODS_PATH,
+  RECORDS_PATH,
+} from '@/shared/lib/navigation/appPaths';
 
 import { useRegisterDesktopHeaderSlot } from './DesktopHeaderSlot';
 
 /** 데스크탑 헤더에서 바로 옮겨 갈 수 있는 주요 화면. */
 const DESKTOP_NAV_ITEMS = [
   { label: '본 방 기록', to: RECORDS_PATH },
-  { label: '동네 찾기', to: '/neighborhoods' },
-  { label: '체크리스트', to: '/checklists' },
-  { label: '방 비교', to: '/compare' },
-  { label: '저렴한 한 끼', to: '/cheap-meals' },
+  { label: '동네 찾기', to: NEIGHBORHOODS_PATH },
+  { label: '체크리스트', to: CHECKLISTS_PATH },
+  { label: '방 비교', to: COMPARE_PATH },
+  { label: '저렴한 한 끼', to: CHEAP_MEALS_PATH },
 ] as const;
 
 type DesktopHeaderProps = {
@@ -43,7 +51,7 @@ const DesktopHeader = ({ className }: DesktopHeaderProps) => {
           </NavLink>
         ))}
       </nav>
-      <Link className={styles.profile} to="/me" aria-label="마이페이지">
+      <Link className={styles.profile} to={MY_PATH} aria-label="마이페이지">
         <img src={iconProfile} alt="" width={96} height={96} />
       </Link>
     </header>

@@ -1,5 +1,6 @@
 import { css } from '@emotion/css';
 
+import { CHEAP_MEALS_PATH } from '@/shared/lib/navigation/appPaths';
 import ActionCard from '@/shared/ui/action-card/ActionCard';
 
 /** 홈에서 저렴한 한 끼 찾기로 들어가는 카드. 휴대폰은 기능 카드 묶음 아래에, 데스크탑은 사용방법 카드 옆 오른쪽 열에 둔다. */
@@ -10,7 +11,7 @@ const CheapMealCard = ({ className }: { className?: string }) => (
     title="오늘 한 끼, 저렴하게"
     description="식당부터 편의점, 배달 할인까지"
     aria-label="오늘 한 끼, 저렴하게"
-    to="/cheap-meals"
+    to={CHEAP_MEALS_PATH}
     className={`${styles.card} ${className ?? ''}`.trim()}
   />
 );

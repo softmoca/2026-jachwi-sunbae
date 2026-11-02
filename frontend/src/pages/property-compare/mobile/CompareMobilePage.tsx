@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 
 import { usePropertyList } from '@/features/property/api/useProperties';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
@@ -21,7 +22,7 @@ const CompareMobilePage = () => {
 
   return (
     <main className={shared.page}>
-      <TopNavigation title="비교할 매물 선택" backTo="/" />
+      <TopNavigation title="비교할 매물 선택" backTo={HOME_PATH} />
       <CompareLoadState properties={properties}>
         {() => (
           <div className={shared.content}>

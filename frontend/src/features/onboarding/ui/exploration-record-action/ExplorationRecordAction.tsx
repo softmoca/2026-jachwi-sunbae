@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import type { MapAddress } from '@/features/map/model/Map';
+import { LOGIN_PATH } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 
 import { prepareExplorationRecord } from '../../lib/explorationJourney';
@@ -15,7 +16,7 @@ const ExplorationRecordAction = ({ location, className }: Props) => {
       fullWidth
       onClick={() => {
         prepareExplorationRecord(location);
-        navigate('/login');
+        navigate(LOGIN_PATH);
       }}
     >
       이 동네에서 본 방 기록하기

@@ -2,6 +2,7 @@ import { css, cx } from '@emotion/css';
 import { useNavigate, useNavigationType } from 'react-router-dom';
 
 import { createAccountDeletionMailto } from '@/shared/config/accountDeletion';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import AppBar from '@/shared/ui/app-bar/AppBar';
 import { ButtonLink } from '@/shared/ui/button/Button';
 
@@ -13,7 +14,7 @@ const PrivacyPage = () => {
       void navigate(-1);
       return;
     }
-    void navigate('/', { replace: true });
+    void navigate(HOME_PATH, { replace: true });
   };
 
   return (

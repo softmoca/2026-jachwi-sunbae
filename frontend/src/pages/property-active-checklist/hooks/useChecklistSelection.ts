@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { useAssignActiveChecklist } from '@/features/checklist/api/useChecklistMutations';
 import { writeLastSelectedChecklist } from '@/features/checklist/model/lastChecklistStore';
+import { propertyChecklistPath } from '@/shared/lib/navigation/appPaths';
 
 type AssignMutation = ReturnType<typeof useAssignActiveChecklist>;
 
@@ -36,7 +37,7 @@ const useChecklistSelection = ({
   }, [current, selectedId]);
 
   const openChecklist = (propertyChecklistId: number, replace: boolean) =>
-    navigate(`/properties/${propertyId}/checklists/${propertyChecklistId}`, { replace, ...detailState });
+    navigate(propertyChecklistPath(propertyId, propertyChecklistId), { replace, ...detailState });
 
   const toggleSelection = (checklistId: number) => {
     if (current?.checklistId === checklistId && appliedPropertyChecklistId !== null) {

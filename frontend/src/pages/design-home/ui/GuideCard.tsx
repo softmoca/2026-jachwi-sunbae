@@ -1,6 +1,7 @@
 import { css, keyframes } from '@emotion/css';
 
 import { LogClick } from '@/shared/lib/analytics/logging';
+import { GUIDE_PATH } from '@/shared/lib/navigation/appPaths';
 import ActionCard, { ActionCardIllustration } from '@/shared/ui/action-card/ActionCard';
 
 import guideGoose from '../assets/guide-goose.webp';
@@ -18,7 +19,7 @@ const GuideCard = ({ className }: { className?: string }) => (
         title="사용방법 알아보기"
         description="자취선배가 처음이라면?"
         aria-label="사용방법 알아보기"
-        to="/guide"
+        to={GUIDE_PATH}
         className={`${styles.guide} ${className ?? ''}`.trim()}
         illustration={
           <ActionCardIllustration src={guideGoose} src2x={guideGoose2x} width={68} height={100} placement="peek" />

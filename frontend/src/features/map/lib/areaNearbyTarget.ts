@@ -1,7 +1,9 @@
-export type AreaNearbyTarget = { name: string; latitude: number; longitude: number };
-export type AreaNearbyBase = '/explore' | '/neighborhoods';
+import { EXPLORE_PATH, type NeighborhoodBasePath } from '@/shared/lib/navigation/appPaths';
 
-const DEFAULT_BACK_PATH = '/explore';
+export type AreaNearbyTarget = { name: string; latitude: number; longitude: number };
+export type AreaNearbyBase = NeighborhoodBasePath;
+
+const DEFAULT_BACK_PATH = EXPLORE_PATH;
 const DEFAULT_AREA_NAME = '선택한 동네';
 const isLocalPath = (value: string | null): value is string =>
   value !== null && value.startsWith('/') && !value.startsWith('//');

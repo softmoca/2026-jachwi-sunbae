@@ -1,12 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
 
-import {
-  parseRecordsView,
-  readLastRecordsView,
-  RECORDS_VIEW_PARAM,
-  type RecordsView,
-  writeLastRecordsView,
-} from '../model/recordsView';
+import { RECORDS_VIEW_PARAM } from '@/shared/lib/navigation/appPaths';
+
+import { parseRecordsView, readLastRecordsView, type RecordsView, writeLastRecordsView } from '../model/recordsView';
 
 /** 휴대폰 본 방 기록의 보기 방식(지도, 리스트). 주소에 없으면 마지막으로 고른 보기로 연다. */
 const useRecordsView = () => {

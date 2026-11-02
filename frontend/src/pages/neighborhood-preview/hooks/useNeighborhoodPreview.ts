@@ -13,6 +13,13 @@ import { MapLocationError } from '@/features/map/lib/mapLocation';
 import type { MapAddress } from '@/features/map/model/Map';
 import { completeExploration, startExploration } from '@/features/onboarding/lib/explorationJourney';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
+import {
+  EXPLORE_PATH,
+  HOME_PATH,
+  neighborhoodAreaDetailsPath,
+  neighborhoodAreaPath,
+  NEIGHBORHOODS_PATH,
+} from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 
 import { commuteBand, commuteColor, OUT_OF_RENT_COLOR, OUT_OF_RENT_DRAW_STAGE } from '../model/commuteColors';
@@ -49,16 +56,16 @@ const useNeighborhoodPreview = () => {
   const client = useQueryClient();
   const isMockData = config.commuteDataSource === 'mock';
   const [query, setQuery] = useState('');
-  const isPublicExplore = location.pathname === '/explore' || location.pathname.startsWith('/explore/');
+  const isPublicExplore = location.pathname === EXPLORE_PATH || location.pathname.startsWith(`${EXPLORE_PATH}/`);
   const searchSessionKey = `jachwi.neighborhood-search.v2.${JSON.stringify([isPublicExplore, config.apiBaseUrl, config.boundaryBaseUrl, isMockData])}`;
   const [restoredSearch] = useState(() => readNeighborhoodSearch(searchSessionKey));
   const routeAreaId = location.pathname.match(/\/areas\/([^/]+)/)?.[1] ?? null;
   const [addressResults, setAddressResults] = useState<MapAddress[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const mapPath = isPublicExplore ? '/explore' : '/neighborhoods';
+  const mapPath = isPublicExplore ? EXPLORE_PATH : NEIGHBORHOODS_PATH;
   // 첫 화면이 곧 지도라 돌아갈 탐색 기준 선택 화면이 없다. 들어온 화면으로 돌아가고, 직접 들어왔으면 홈으로 간다.
-  const leave = useReturnNavigation({ cameFromTarget: true, fallback: '/' });
+  const leave = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
   const [phase, setPhase] = useState<'map' | 'conditions' | 'analyzing'>(restoredSearch ? 'analyzing' : 'map');
   const [destination, setDestination] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [mapCandidate, setMapCandidate] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
@@ -423,7 +430,7 @@ const useNeighborhoodPreview = () => {
       setSelectedStopId(area?.stations[0]?.stopId ?? null);
       // 데스크탑은 상세를 목록 옆에 붙여 지도를 가리지 않으므로, 동네를 고르면 바로 상세를 연다.
       const openDetails = options?.openDetails ?? location.pathname.endsWith('/details');
-      if (id) navigate(`${mapPath}/areas/${id}${openDetails ? '/details' : ''}`);
+      if (id) navigate(openDetails ? neighborhoodAreaDetailsPath(mapPath, id) : neighborhoodAreaPath(mapPath, id));
       // 선택을 풀면 동네 주소에서 지도 주소로 돌아가야 주소의 동네가 다시 골라지지 않는다.
       else if (routeAreaId) navigate(mapPath, { replace: true });
     },
@@ -438,10 +445,10 @@ const useNeighborhoodPreview = () => {
       setSelectedStopId(id);
     },
     openAreaDetails: () => {
-      if (selected) navigate(`${mapPath}/areas/${selected.adminDongCode}/details`);
+      if (selected) navigate(neighborhoodAreaDetailsPath(mapPath, selected.adminDongCode));
     },
     closeAreaDetails: () => {
-      if (selected) navigate(`${mapPath}/areas/${selected.adminDongCode}`, { replace: true });
+      if (selected) navigate(neighborhoodAreaPath(mapPath, selected.adminDongCode), { replace: true });
     },
     openListing: analytics.openListing,
   };

@@ -2,6 +2,7 @@ import { css } from '@emotion/css';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
+import { CHECKLISTS_PATH, NEIGHBORHOODS_PATH, PROPERTY_NEW_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 
 import checklistVideo from '../../assets/guide-checklist.mp4';
@@ -25,7 +26,7 @@ const SCENARIOS: Scenario[] = [
   {
     title: '동네 찾기',
     steps: ['회사나 학교 검색', '통근 시간, 환승, 월세 고르기', '가까운 동네부터 확인'],
-    action: { to: '/neighborhoods', label: '동네 찾아보기' },
+    action: { to: NEIGHBORHOODS_PATH, label: '동네 찾아보기' },
     video: {
       src: exploreVideo,
       poster: explorePoster,
@@ -35,7 +36,7 @@ const SCENARIOS: Scenario[] = [
   {
     title: '거리 메모 남기기',
     steps: ['기록 지도에서 + 누르고 메모', '지도에서 자리 고르기', '좋아요, 싫어요와 한 줄 남기기'],
-    action: { to: '/properties', label: '기록 지도 열기' },
+    action: { to: RECORDS_PATH, label: '기록 지도 열기' },
     video: {
       src: memoVideo,
       poster: memoPoster,
@@ -45,7 +46,7 @@ const SCENARIOS: Scenario[] = [
   {
     title: '매물 추가',
     steps: ['+ 누르고 매물', '지도에서 자리 고르기', '이름, 보증금, 월세 채우기'],
-    action: { to: '/properties/new', label: '매물 등록하기' },
+    action: { to: PROPERTY_NEW_PATH, label: '매물 등록하기' },
     video: {
       src: propertyVideo,
       poster: propertyPoster,
@@ -55,7 +56,7 @@ const SCENARIOS: Scenario[] = [
   {
     title: '체크리스트',
     steps: ['매물에서 체크리스트 탭', '항목마다 괜찮음, 주의', '필요하면 메모 추가'],
-    action: { to: '/checklists', label: '체크리스트 보기' },
+    action: { to: CHECKLISTS_PATH, label: '체크리스트 보기' },
     video: {
       src: checklistVideo,
       poster: checklistPoster,

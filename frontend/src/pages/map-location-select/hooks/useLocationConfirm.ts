@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { MapAddress } from '@/features/map/model/Map';
 import type { PropertyInputDto } from '@/features/property/api/dtos/PropertyDto';
 import { useCreateProperty } from '@/features/property/api/usePropertyMutations';
+import { propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
 type UseLocationConfirmOptions = {
   returnTo: string;
@@ -23,7 +24,7 @@ const useLocationConfirm = ({ returnTo, registrationDraft }: UseLocationConfirmO
       void createProperty
         .mutateAsync({ ...registrationDraft, address, latitude: selected.latitude, longitude: selected.longitude })
         .then((created) => {
-          navigate(`/properties/${created.propertyId}`, { replace: true });
+          navigate(propertyDetailPath(created.propertyId), { replace: true });
         })
         .catch(() => undefined);
       return;

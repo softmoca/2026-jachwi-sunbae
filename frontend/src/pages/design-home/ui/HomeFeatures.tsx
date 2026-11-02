@@ -1,5 +1,6 @@
 import { css } from '@emotion/css';
 
+import { NEIGHBORHOODS_PATH } from '@/shared/lib/navigation/appPaths';
 import ActionCard, { ActionCardIllustration } from '@/shared/ui/action-card/ActionCard';
 
 import cardNeighborhood from '../assets/card-neighborhood.webp';
@@ -22,7 +23,7 @@ const HomeFeatures = ({ className }: { className?: string }) => (
         }
         description="통근 시간과 월세 평균을 비교해요"
         aria-label="동네를 알아보는 중이에요"
-        to="/neighborhoods"
+        to={NEIGHBORHOODS_PATH}
         className={`${styles.fill} ${styles.neighborhood}`}
         illustration={<ActionCardIllustration src={cardNeighborhood} width={320} height={320} />}
       />

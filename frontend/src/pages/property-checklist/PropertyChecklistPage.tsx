@@ -7,6 +7,12 @@ import ChecklistPageLayout from '@/features/checklist/ui/checklist-page-layout/C
 import { usePropertyChecklistDetail, usePropertyDetail } from '@/features/property/api/useProperties';
 import { getChecklistStageLabel, parsePositiveId } from '@/features/property/lib/propertyFormat';
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
+import {
+  CHECKLISTS_PATH,
+  HOME_PATH,
+  propertyActiveChecklistPath,
+  propertyDetailPath,
+} from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import Icon from '@/shared/ui/icon/Icon';
@@ -28,7 +34,7 @@ const PropertyChecklistPage = () => {
   if (propertyId === null || propertyChecklistId === null) {
     return (
       <ContentState title="올바른 매물 체크리스트 주소가 아니에요.">
-        <Link to="/">홈으로 돌아가기</Link>
+        <Link to={HOME_PATH}>홈으로 돌아가기</Link>
       </ContentState>
     );
   }
@@ -58,7 +64,7 @@ const ResolvedPropertyChecklistPage = ({
   const fromPropertyDetail = isFromPropertyDetail(location.state);
   const backToDetail = useReturnNavigation({
     cameFromTarget: fromPropertyDetail,
-    fallback: `/properties/${propertyId}`,
+    fallback: propertyDetailPath(propertyId),
   });
 
   if (isLoading) {
@@ -76,7 +82,7 @@ const ResolvedPropertyChecklistPage = ({
             title={isNotFound ? '연결된 체크리스트를 찾을 수 없어요.' : '체크리스트를 불러오지 못했어요.'}
             onRetry={isNotFound ? undefined : () => void checklist.refetch()}
           >
-            <Link to={`/properties/${propertyId}`}>매물 상세로 돌아가기</Link>
+            <Link to={propertyDetailPath(propertyId)}>매물 상세로 돌아가기</Link>
           </ContentState>
         </div>
       </main>
@@ -96,7 +102,7 @@ const ResolvedPropertyChecklistPage = ({
           {detail.stage === USER_CHECKLIST_STAGE && (
             <Link
               className={styles.editAction}
-              to={`/properties/${propertyId}/active-checklists/${detail.stage}?mode=replace`}
+              to={`${propertyActiveChecklistPath(propertyId, detail.stage)}?mode=replace`}
               // 교체 화면이 이 화면 기록을 대신해, 교체를 마치고 돌아가도 체크리스트가 두 번 쌓이지 않는다.
               replace
               state={fromPropertyDetail ? PROPERTY_DETAIL_STATE : undefined}
@@ -105,7 +111,7 @@ const ResolvedPropertyChecklistPage = ({
             </Link>
           )}
           {detail.sourceChecklistId !== null && (
-            <IconButton label="체크리스트 항목 편집" to="/checklists">
+            <IconButton label="체크리스트 항목 편집" to={CHECKLISTS_PATH}>
               <Icon name="edit" size={16} />
             </IconButton>
           )}
@@ -140,7 +146,7 @@ const ResolvedPropertyChecklistPage = ({
 
       <div className={styles.saveAction}>
         <Link
-          to={`/properties/${propertyId}`}
+          to={propertyDetailPath(propertyId)}
           onClick={(event) => {
             event.preventDefault();
             backToDetail();

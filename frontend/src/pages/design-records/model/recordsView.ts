@@ -1,7 +1,5 @@
 export type RecordsView = 'map' | 'list';
 
-/** 주소(`?view=`)가 정하는 보기 방식. 뒤로가기로 돌아오면 그때 보던 보기로 열린다. */
-export const RECORDS_VIEW_PARAM = 'view';
 const LAST_VIEW_KEY = 'jachwi:records-view';
 
 export const parseRecordsView = (value: string | null): RecordsView | null =>

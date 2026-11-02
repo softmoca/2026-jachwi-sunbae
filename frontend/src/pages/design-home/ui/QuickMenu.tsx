@@ -1,13 +1,14 @@
 import { css } from '@emotion/css';
 
+import { CHECKLISTS_PATH, COMPARE_PATH } from '@/shared/lib/navigation/appPaths';
 import ShortcutTile from '@/shared/ui/shortcut-tile/ShortcutTile';
 
 import iconChecklist from '../assets/icon-checklist.webp';
 import iconCompare from '../assets/icon-compare.webp';
 
 const QUICK_MENU_ITEMS = [
-  { label: '체크리스트', to: '/checklists', icon: iconChecklist },
-  { label: '방 비교', to: '/compare', icon: iconCompare },
+  { label: '체크리스트', to: CHECKLISTS_PATH, icon: iconChecklist },
+  { label: '방 비교', to: COMPARE_PATH, icon: iconCompare },
 ];
 // 나머지 칸은 들어갈 기능이 정해질 때까지 보이지 않는 빈칸으로 자리만 잡는다.
 const EMPTY_SLOT_COUNT = 2;

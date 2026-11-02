@@ -2,6 +2,7 @@ import { css } from '@emotion/css';
 import { useLocation } from 'react-router-dom';
 
 import { LogScreen } from '@/shared/lib/analytics/logging';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 import PageHeading from '@/shared/ui/page-heading/PageHeading';
 
@@ -35,7 +36,7 @@ const UsageGuidePage = () => {
           </section>
           <UsageDemo />
           <div className={styles.actions}>
-            <ButtonLink to="/" fullWidth>
+            <ButtonLink to={HOME_PATH} fullWidth>
               홈에서 시작하기
             </ButtonLink>
           </div>

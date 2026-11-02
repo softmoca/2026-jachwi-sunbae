@@ -5,6 +5,7 @@ import { getPropertyErrorMessage } from '@/features/property/api/propertyErrorMe
 import { usePropertyDetail } from '@/features/property/api/useProperties';
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
+import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
@@ -15,7 +16,7 @@ const PropertyMemoPage = () => {
   if (propertyId === null) {
     return (
       <ContentState title="올바른 매물 주소가 아니에요.">
-        <Link to="/">홈으로 돌아가기</Link>
+        <Link to={HOME_PATH}>홈으로 돌아가기</Link>
       </ContentState>
     );
   }
@@ -46,12 +47,12 @@ const ResolvedPropertyMemoPage = ({ propertyId }: { propertyId: number }) => {
     <main className={styles.page}>
       <TopNavigation
         title={`${property.data.name} 부가 정보`}
-        backTo={`/properties/${propertyId}`}
+        backTo={propertyDetailPath(propertyId)}
         backLabel="매물 상세로 돌아가기"
       />
       <PropertyAdditionalInfoForm
         property={property.data}
-        onSaved={() => navigate(`/properties/${propertyId}`, { replace: true })}
+        onSaved={() => navigate(propertyDetailPath(propertyId), { replace: true })}
       />
     </main>
   );

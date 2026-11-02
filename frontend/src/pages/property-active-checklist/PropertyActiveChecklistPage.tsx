@@ -10,6 +10,7 @@ import type { ChecklistStage } from '@/features/checklist/model/checklistTypes';
 import ChecklistPageLayout from '@/features/checklist/ui/checklist-page-layout/ChecklistPageLayout';
 import { usePropertyChecklistOverview, usePropertyDetail } from '@/features/property/api/useProperties';
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
+import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import BottomActionArea from '@/shared/ui/bottom-action-area/BottomActionArea';
 import { Button } from '@/shared/ui/button/Button';
@@ -28,7 +29,7 @@ const readNewChecklistId = (state: unknown): number | null => {
 const isFromPropertyDetail = (state: unknown) =>
   typeof state === 'object' && state !== null && 'from' in state && state.from === 'property-detail';
 
-const backToList = <Link to="/">홈으로 돌아가기</Link>;
+const backToList = <Link to={HOME_PATH}>홈으로 돌아가기</Link>;
 const describeError = describeChecklistLoadError('체크리스트를 불러오지 못했어요.', {
   PROPERTY_NOT_FOUND: '매물을 찾을 수 없어요.',
 });
@@ -44,7 +45,7 @@ const ResolvedPropertyActiveChecklist = ({ propertyId, stage }: { propertyId: nu
   const fromPropertyDetail = isFromPropertyDetail(location.state) || searchParams.get('from') === 'property-detail';
   const backToDetail = useReturnNavigation({
     cameFromTarget: fromPropertyDetail,
-    fallback: `/properties/${propertyId}`,
+    fallback: propertyDetailPath(propertyId),
   });
   const overviewStage = overview.data?.stages.find((item) => item.stage === stage);
   const appliedStage = overviewStage?.applied === true ? overviewStage : undefined;

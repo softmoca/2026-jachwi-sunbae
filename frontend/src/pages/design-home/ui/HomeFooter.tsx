@@ -1,9 +1,11 @@
 import { css, cx } from '@emotion/css';
 import { Link } from 'react-router-dom';
 
+import { GUIDE_PATH, PRIVACY_PATH } from '@/shared/lib/navigation/appPaths';
+
 const FOOTER_LINKS = [
-  { label: '사용 방법', to: '/guide' },
-  { label: '개인정보·광고 측정 안내', to: '/privacy' },
+  { label: '사용 방법', to: GUIDE_PATH },
+  { label: '개인정보·광고 측정 안내', to: PRIVACY_PATH },
 ];
 
 /** 홈 맨 아래 푸터. 한 줄 소개와 안내 링크, 저작권 표기를 둔다. */

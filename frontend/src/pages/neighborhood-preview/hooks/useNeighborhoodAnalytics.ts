@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import { EXPLORE_PATH } from '@/shared/lib/navigation/appPaths';
 
 type SearchConditions = { maxMinutes: number; maxTransfers: number; maxRent: number };
 type AnalyticsOptions = {
@@ -28,7 +29,9 @@ const useNeighborhoodAnalytics = (options: AnalyticsOptions) => {
   const visit = useRef<string | null>(null);
   const search = useRef<{ id: string; finished: boolean; conditions: SearchConditions } | null>(null);
   const entrypoint =
-    location.pathname === '/explore' || location.pathname.startsWith('/explore/') ? 'public_explore' : 'neighborhoods';
+    location.pathname === EXPLORE_PATH || location.pathname.startsWith(`${EXPLORE_PATH}/`)
+      ? 'public_explore'
+      : 'neighborhoods';
   const context = { feature, entrypoint, mock_data: options.mock };
 
   useEffect(() => {

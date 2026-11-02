@@ -3,6 +3,7 @@ import { css, cx } from '@emotion/css';
 import { usePropertyList } from '@/features/property/api/useProperties';
 import { formatRentSummary } from '@/features/property/lib/propertyFormat';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
 import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
@@ -43,8 +44,8 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
               {rooms.map((property) => (
                 <RailCard
                   // 데스크탑은 같은 주소에서 본 방 기록 화면이 이 매물을 고른 채로 열린다.
-                  to={`/properties/${property.propertyId}`}
-                  state={{ returnTo: '/' }}
+                  to={propertyDetailPath(property.propertyId)}
+                  state={{ returnTo: HOME_PATH }}
                   key={property.propertyId}
                   className={styles.roomCard}
                 >

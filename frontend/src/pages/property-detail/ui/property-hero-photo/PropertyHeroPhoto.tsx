@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { FROM_PROPERTY_DETAIL_STATE } from '@/features/property/lib/propertyNavigation';
 import type { PropertyPhotoPreview } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import { propertyPhotosPath, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 
 type PropertyHeroPhotoProps = {
@@ -47,7 +48,7 @@ const PropertyHeroPhoto = ({
     ) : (
       <Link
         className={`${styles.button} ${styles.emptyButton}`}
-        to={`/properties/${propertyId}/photos`}
+        to={propertyPhotosPath(propertyId)}
         state={FROM_PROPERTY_DETAIL_STATE}
         onClick={(event) => {
           if (onManagePhotos === undefined) return;
@@ -66,7 +67,7 @@ const PropertyHeroPhoto = ({
         className={styles.backButton}
         to={backTo}
         state={backState}
-        aria-label={backTo === '/properties' ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
+        aria-label={backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
       >
         <Icon name="chevron-left" size={24} />
       </Link>

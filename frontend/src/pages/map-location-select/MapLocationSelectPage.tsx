@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { MapAddress } from '@/features/map/model/Map';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
 import type { PropertyInputDto } from '@/features/property/api/dtos/PropertyDto';
-import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import { PROPERTY_NEW_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 import useLocationConfirm from './hooks/useLocationConfirm';
@@ -21,7 +21,7 @@ const MapLocationSelectPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const routeState = (location.state as RouteState | null) ?? {};
-  const returnTo = routeState.returnTo ?? '/properties/new';
+  const returnTo = routeState.returnTo ?? PROPERTY_NEW_PATH;
   const launchedFromForm = routeState.returnTo !== undefined;
   const { registrationDraft, initialLocation } = routeState;
   const knownLocationLevel = initialLocation === undefined ? 5 : 3;

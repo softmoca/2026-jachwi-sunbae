@@ -1,5 +1,6 @@
 import { css, cx, keyframes } from '@emotion/css';
 
+import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import ActionCard from '@/shared/ui/action-card/ActionCard';
 
 import recordHouse from '../assets/record-house.webp';
@@ -13,7 +14,7 @@ const RecordCard = ({ className }: { className?: string }) => (
     size="large"
     title="본 방을 기록해요"
     description="가격, 사진, 체크리스트를 한곳에 모아요"
-    to="/properties"
+    to={RECORDS_PATH}
     className={`${styles.record} ${className ?? ''}`.trim()}
     illustration={
       <span className={styles.scene} aria-hidden="true">

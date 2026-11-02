@@ -1,7 +1,5 @@
 export type DetailTab = 'details' | 'checklist';
 
-/** 주소(`?tab=`)가 정하는 탭. 체크리스트에서 뒤로 돌아오면 그때 보던 탭으로 열린다. */
-export const DETAIL_TAB_PARAM = 'tab';
 const LAST_TAB_KEY = 'jachwi:property-detail-tab';
 
 export const parseDetailTab = (value: string | null): DetailTab | null =>
