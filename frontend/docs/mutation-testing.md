@@ -54,7 +54,9 @@ npm run test:mutation
 
 `frontend-ci.yml`의 `mutation` 잡은 PR에서 `src/**/{api,lib,model,hooks}` 아래 `.ts` 파일이 바뀐 경우에만 실행됩니다.
 
+- 대상 판정은 `scripts/mutation-changed.mjs --list`로 의존성 설치 전에 합니다. 대상이 없으면 `npm ci`도 건너뜁니다.
 - 바뀐 파일만 대상으로 `scripts/mutation-changed.mjs`를 실행합니다.
+- 의존성은 Frontend CI의 다른 job과 같은 `node_modules` 캐시를 씁니다.
 - 결과 요약을 workflow summary에 적고, HTML 보고서를 artifact `mutation-report`로 올립니다.
 - 증분 결과는 브랜치별로 캐시해 같은 PR의 다음 실행을 줄입니다.
 - `continue-on-error`로 두어 병합을 막지 않습니다. 살아남은 변이는 리뷰에서 테스트 보강 여부를 정합니다.

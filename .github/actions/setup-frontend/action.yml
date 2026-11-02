@@ -1,0 +1,26 @@
+name: Set up frontend
+description: Node.js를 설치하고 frontend/node_modules를 캐시에서 복원한다. 캐시가 없을 때만 npm ci를 실행한다.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      id: node
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: frontend/.nvmrc
+        # node_modules를 통째로 캐시하므로 npm 다운로드 캐시는 쓰지 않는다.
+        package-manager-cache: false
+
+    - name: Restore node_modules
+      id: node-modules
+      uses: actions/cache@v5
+      with:
+        path: frontend/node_modules
+        key: frontend-node-modules-${{ runner.os }}-${{ runner.arch }}-node-${{ steps.node.outputs.node-version }}-${{ hashFiles('frontend/package-lock.json') }}
+
+    - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: frontend
+      run: npm ci --no-audit --no-fund
