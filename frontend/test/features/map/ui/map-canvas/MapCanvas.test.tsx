@@ -385,6 +385,42 @@ describe('Naver 지도 상태 동기화', () => {
     expect(maps[0].refresh).not.toHaveBeenCalled();
   });
 
+  it('시점을 옮기는 중에 크기가 바뀌면 이동이 끝난 idle까지 autoResize를 미룬다', async () => {
+    const resizeCallbacks: (() => void)[] = [];
+    class FakeResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe = () => {
+        resizeCallbacks.push(this.callback);
+      };
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    const nextFrame = () =>
+      act(async () => {
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} animateView />,
+    );
+    await waitFor(() => expect(resizeCallbacks).toHaveLength(1));
+    resizeCallbacks[0]();
+    await waitFor(() => expect(maps[0].autoResize).toHaveBeenCalledOnce());
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} animateView />);
+    await waitFor(() => expect(maps[0].zoom).toBe(15));
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(640);
+    resizeCallbacks[0]();
+    await nextFrame();
+    expect(maps[0].autoResize).toHaveBeenCalledOnce();
+
+    const idle = vi
+      .mocked(window.naver!.maps.Event.addListener)
+      .mock.calls.find((call) => call[0] === maps[0] && call[1] === 'idle')!;
+    act(() => idle[2]());
+    expect(maps[0].autoResize).toHaveBeenCalledTimes(2);
+  });
+
   it('앱 확대 단계를 반대 방향인 Naver zoom으로 바꿔 전달한다', async () => {
     renderWithConfig(<MapCanvas center={{ latitude: 37.5665, longitude: 126.978 }} level={5} />);
 

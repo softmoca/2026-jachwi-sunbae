@@ -38,6 +38,16 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
   const [level, setLevel] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [station, setStation] = useState<AreaStation | null>(null);
+  // 결과 지도가 아닌 동안(다시 고르기, 분석 중)은 지도가 확대 단계와 범위를 알려 주지 않는다.
+  // 결과 지도를 떠날 때 기억한 값을 비워, 돌아온 지도가 멈추기 전에 예전 확대 단계로 마커를 올리지 않게 한다.
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (!enabled) {
+      setLevel(null);
+      setBounds(null);
+    }
+  }
   const isClose = enabled && level !== null && level <= PLACES_MAX_LEVEL;
   const query = useMemo(() => (isClose && bounds ? viewportQuery(bounds) : null), [isClose, bounds]);
   const places = useViewportPlaces(query);

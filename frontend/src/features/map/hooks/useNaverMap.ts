@@ -77,6 +77,11 @@ const useNaverMap = ({
   const [renderReady, setRenderReady] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const gestureActiveRef = useRef(false);
+  // 화면이 시점을 옮기는 애니메이션(morph) 도중 지도 크기를 다시 맞추면 SDK가 애니메이션을 그 자리에서 멈춘다.
+  // 동네를 고르며 옆 칸이 열려 지도 폭이 바뀌면 목표 확대 단계에 못 미쳐 정류장, 부동산 마커가 뜨지 않으므로
+  // 애니메이션이 끝나는 idle까지 크기 맞춤을 미룬다.
+  const viewAnimatingRef = useRef(false);
+  const pendingRelayoutRef = useRef<(() => void) | null>(null);
   const [settledVersion, setSettledVersion] = useState(0);
   const setGestureActive = (active: boolean) => {
     gestureActiveRef.current = active;
@@ -145,7 +150,11 @@ const useNaverMap = ({
           }),
           engine.addListener(map, 'idle', () => {
             setGestureActive(false);
+            viewAnimatingRef.current = false;
+            const pendingRelayout = pendingRelayoutRef.current;
+            pendingRelayoutRef.current = null;
             if (map === null || !isNaverSdkAvailable()) return;
+            pendingRelayout?.();
             setSettledVersion((current) => current + 1);
             const nextCenter = engine.getCenter(map);
             callbackRef.current.onCenterChange?.(nextCenter.latitude, nextCenter.longitude);
@@ -178,6 +187,7 @@ const useNaverMap = ({
       listeners.forEach((listener) => engine.removeListener(listener));
       listeners = [];
       setGestureActive(false);
+      viewAnimatingRef.current = false;
       if (isNaverSdkAvailable()) overlaysRef.current.forEach(({ overlay }) => overlay.setMap(null));
       overlaysRef.current.clear();
       if (isNaverSdkAvailable()) circlesRef.current.forEach((circle) => circle.setMap(null));
@@ -209,6 +219,7 @@ const useNaverMap = ({
       engine.getZoom(map) === level
     )
       return;
+    viewAnimatingRef.current = true;
     engine.animateView(map, engine.latLng(boundedCenter.latitude, boundedCenter.longitude), level);
   }, [boundedCenter, engine, liveMode, mapReady, animateView, level]);
 
@@ -240,13 +251,19 @@ const useNaverMap = ({
         const size = `${container.clientWidth}x${container.clientHeight}`;
         if (size === previousSize) return;
         previousSize = size;
-        engine.relayout(map);
-        callbackRef.current.onBoundsChange?.(engine.getBounds(map));
+        const relayout = () => {
+          if (mapRef.current !== map || !isNaverSdkAvailable()) return;
+          engine.relayout(map);
+          callbackRef.current.onBoundsChange?.(engine.getBounds(map));
+        };
+        if (viewAnimatingRef.current) pendingRelayoutRef.current = relayout;
+        else relayout();
       });
     });
     observer.observe(containerRef.current);
     return () => {
       observer.disconnect();
+      pendingRelayoutRef.current = null;
       if (relayoutFrame !== null) window.cancelAnimationFrame(relayoutFrame);
     };
   }, [engine, liveMode, mapReady]);
