@@ -36,14 +36,16 @@
 - [백엔드 문서](backend/docs/README.md) — 코드·API·예외 컨벤션, 패키지 구조, 환경변수·로컬 실행·운영
 - [환경변수](backend/docs/guides/environment-variables.md)와 [프론트엔드 공개 빌드 설정](frontend/README.md#공개-빌드-설정)
 - [백엔드 배포](backend/docs/operations/deployment.md)와 [프론트엔드 배포](frontend/docs/deployment.md)
+- [모바일 앱](mobile/README.md) — React Native WebView 앱 셸, 푸시 알림, 스토어 배포
 
 ## 저장소 구조
 
 ```text
 2026-jachwi-sunbae/
-├── .github/              # Issue·PR 템플릿, 백엔드·프론트엔드·Markdown CI
+├── .github/              # Issue·PR 템플릿, 백엔드·프론트엔드·모바일·Markdown CI
 ├── backend/              # Spring Boot, MySQL, MinIO, CodeDeploy 파일
 ├── frontend/             # React, TypeScript, Webpack, S3·CloudFront 배포 파일
+├── mobile/               # React Native WebView 앱 셸(iOS·Android), 푸시 발송 스크립트
 ├── qa/                   # AI E2E QA 기준 문서(docs/)와 Playwright 실행 코드
 ├── docs/
 │   ├── convention/       # 저장소 공통 규칙

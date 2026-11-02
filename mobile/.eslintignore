@@ -1,0 +1,6 @@
+ios/Pods/
+ios/build/
+android/.gradle/
+android/build/
+android/app/build/
+output/
