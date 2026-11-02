@@ -60,7 +60,7 @@ public class JdbcMemberRepository implements MemberRepository {
     }
 
     @Override
-    public void softDeleteOwnedData(final Long memberId, final LocalDateTime deletedAt) {
+    public void deleteOwnedData(final Long memberId, final LocalDateTime deletedAt) {
         jdbcTemplate.update("""
                 UPDATE property_photos
                 SET deleted_at = ?
@@ -94,7 +94,7 @@ public class JdbcMemberRepository implements MemberRepository {
     }
 
     @Override
-    public void softDelete(final Long memberId, final LocalDateTime deletedAt) {
+    public void delete(final Long memberId, final LocalDateTime deletedAt) {
         jdbcTemplate.update("""
                 UPDATE members
                 SET updated_at = ?, deleted_at = ?

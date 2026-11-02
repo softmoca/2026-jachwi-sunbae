@@ -43,8 +43,8 @@ public class MemberService {
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
                         "memberId=" + memberId + " 회원을 찾을 수 없습니다."));
         LocalDateTime now = LocalDateTime.now(clock);
-        memberRepository.softDeleteOwnedData(memberId, now);
+        memberRepository.deleteOwnedData(memberId, now);
         refreshTokenRepository.deleteByMemberId(memberId);
-        memberRepository.softDelete(memberId, now);
+        memberRepository.delete(memberId, now);
     }
 }

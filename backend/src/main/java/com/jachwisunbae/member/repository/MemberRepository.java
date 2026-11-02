@@ -13,7 +13,7 @@ public interface MemberRepository {
 
     Member save(Member member);
 
-    void softDeleteOwnedData(Long memberId, LocalDateTime deletedAt);
+    void deleteOwnedData(Long memberId, LocalDateTime deletedAt);
 
-    void softDelete(Long memberId, LocalDateTime deletedAt);
+    void delete(Long memberId, LocalDateTime deletedAt);
 }
