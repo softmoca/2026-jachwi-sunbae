@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.exception.server.UpstreamServiceException;
+import com.jachwisunbae.member.entity.Member;
+import com.jachwisunbae.member.repository.MemberRepository;
 import com.jachwisunbae.promotion.domain.ConvenienceBrand;
 import com.jachwisunbae.promotion.domain.PromotionProduct;
 import com.jachwisunbae.promotion.repository.JdbcPromotionProductRepository;
@@ -54,6 +56,9 @@ class SevenElevenPromotionIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
     @Autowired
+    private MemberRepository members;
+    private Long memberId;
+    @Autowired
     private JdbcPromotionProductRepository repository;
     @Autowired
     private PromotionCollectionService service;
@@ -70,6 +75,7 @@ class SevenElevenPromotionIntegrationTest {
     @BeforeEach
     void setUp() {
         jdbc.update("DELETE FROM promotion_products");
+        memberId = members.save(Member.create(LocalDateTime.now())).getId();
         repository.replaceByBrand(ConvenienceBrand.EMART24, List.of(product("이마트24 상품")), PREVIOUS_AT);
     }
 
@@ -113,6 +119,6 @@ class SevenElevenPromotionIntegrationTest {
     }
 
     private String bearer() {
-        return "Bearer " + tokens.createAccessToken(1L);
+        return "Bearer " + tokens.createAccessToken(memberId);
     }
 }

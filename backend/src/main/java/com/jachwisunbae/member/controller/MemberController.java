@@ -7,6 +7,11 @@ import com.jachwisunbae.member.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,4 +36,19 @@ public class MemberController {
         return ApiResponse.of(MemberDetailResponse.from(memberService.findProfileById(memberId)));
     }
 
+    @DeleteMapping("/me")
+    @Operation(summary = "회원 탈퇴", description = "회원과 소유 기록을 논리 삭제하고 인증을 폐기합니다.")
+    public ResponseEntity<Void> delete(@AuthenticatedMemberId final Long memberId,
+                                       final HttpServletResponse response) {
+        memberService.delete(memberId);
+        ResponseCookie expiredCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Lax")
+                .path("/api/auth")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, expiredCookie.toString());
+        return ResponseEntity.noContent().build();
+    }
 }
