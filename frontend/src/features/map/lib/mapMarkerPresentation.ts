@@ -32,7 +32,13 @@ export const markerAnchorTransform = (marker: MapMarker): string =>
     ? 'translate(-50%, -100%)'
     : 'translate(-50%, -50%)';
 
-export const markerZIndex = (marker: MapMarker, selectedMarkerId: string | null): number => {
+/** 종류마다 이만큼 자리를 두고 그 안에서 세부 순서를 더한다. 세부 순서가 다음 종류를 넘지 않는다. */
+const MARKER_Z_INDEX_TONE_SPAN = 20_000_000;
+/** 위도 0.00001도(약 1m) 차이까지 앞뒤를 가린다. 90도 전체가 MARKER_Z_INDEX_TONE_SPAN 안에 든다. */
+const LATITUDE_Z_INDEX_PRECISION = 100_000;
+const MAX_RANK = 1_000;
+
+const toneZIndex = (marker: MapMarker, selectedMarkerId: string | null): number => {
   if (marker.tone === 'flash') return 11;
   if (selectedMarkerId === marker.id) return 10;
   if (marker.tone === 'selected') return 9;
@@ -41,6 +47,27 @@ export const markerZIndex = (marker: MapMarker, selectedMarkerId: string | null)
   if (marker.tone === 'rank') return 6;
   return 5;
 };
+
+/** 같은 종류 안의 세부 순서. 순위 알약은 순위가 높을수록, 나머지는 화면 아래(남쪽)에 있을수록 앞에 둔다. */
+const detailZIndex = (marker: MapMarker): number => {
+  if (marker.tone === 'rank' && marker.rank !== undefined)
+    return MAX_RANK - clamp(Math.round(marker.rank), 1, MAX_RANK);
+  return Math.round((90 - clamp(marker.latitude, -90, 90)) * LATITUDE_Z_INDEX_PRECISION);
+};
+
+/**
+ * 종류별 순서(flash > 지금 고른 마커 > selected > 매물 > 현재 위치 > 순위 > 나머지)를 먼저 지키고,
+ * 같은 종류끼리는 detailZIndex로 앞뒤를 정한다. flash와 지금 고른 마커는 하나뿐이라 세부 순서가 없다.
+ */
+export const markerZIndex = (marker: MapMarker, selectedMarkerId: string | null): number => {
+  const tone = toneZIndex(marker, selectedMarkerId);
+  if (marker.tone === 'flash' || selectedMarkerId === marker.id) return tone * MARKER_Z_INDEX_TONE_SPAN;
+  return tone * MARKER_Z_INDEX_TONE_SPAN + detailZIndex(marker);
+};
+
+/** 지도 위에서 찍은 좌표의 버튼과 메뉴는 모든 마커보다 앞에 둔다. */
+export const COORDINATE_ACTION_Z_INDEX = 12 * MARKER_Z_INDEX_TONE_SPAN;
+export const COORDINATE_MENU_Z_INDEX = COORDINATE_ACTION_Z_INDEX + 1;
 
 /**
  * 배율에 따라 마커를 키우거나 줄이는 비율. 매물 핀은 가까울수록 키우고 멀수록 줄인다.

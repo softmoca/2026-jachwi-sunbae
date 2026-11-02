@@ -3,7 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import { clampToSouthKorea } from '../lib/mapLocation';
-import { markerScale, markerSignature, markerZIndex } from '../lib/mapMarkerPresentation';
+import {
+  COORDINATE_ACTION_Z_INDEX,
+  COORDINATE_MENU_Z_INDEX,
+  markerScale,
+  markerSignature,
+  markerZIndex,
+} from '../lib/mapMarkerPresentation';
 import { createMapRegionLayer, READY_TIMEOUT_MS } from '../lib/mapRegionLayer';
 import {
   isNaverSdkAvailable,
@@ -353,7 +359,7 @@ const useNaverMap = ({
         longitude: coordinateAction.longitude,
       },
       content,
-      30,
+      COORDINATE_ACTION_Z_INDEX,
     );
     return () => {
       if (isNaverSdkAvailable()) overlay.setMap(null);
@@ -374,7 +380,7 @@ const useNaverMap = ({
         tone: 'destination',
       },
       createMapCoordinateMenuElement(coordinateMenu),
-      40,
+      COORDINATE_MENU_Z_INDEX,
     );
     return () => {
       if (isNaverSdkAvailable()) overlay.setMap(null);
