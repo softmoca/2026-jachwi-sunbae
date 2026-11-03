@@ -164,6 +164,20 @@ describe('Naver 지도 상태 동기화', () => {
     );
   });
 
+  it('지도가 처음 그려진 뒤에야 onReady를 부른다', async () => {
+    const onReady = vi.fn();
+    renderWithConfig(
+      <MapCanvas center={{ latitude: 37.5, longitude: 127 }} customStyleId="style" interactive onReady={onReady} />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    // 지도 객체를 만든 것만으로는 타일이 그려지지 않았으니 급하지 않은 요청을 시작하지 않는다.
+    expect(onReady).not.toHaveBeenCalled();
+
+    (maps[0] as FakeMapInstance & { _glReady?: boolean })._glReady = true;
+
+    await waitFor(() => expect(onReady).toHaveBeenCalledOnce());
+  });
+
   it('GL 지도는 준비를 마친 뒤에 마커와 좌표 버튼을 넣어 가운데 쪽에 먼저 그렸다가 옮기지 않는다', async () => {
     const center = { latitude: 37.5, longitude: 127 };
     renderWithConfig(

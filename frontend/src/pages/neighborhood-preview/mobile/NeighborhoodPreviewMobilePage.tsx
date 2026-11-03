@@ -125,6 +125,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
           customStyleId={SERVICE_MAP_STYLE_ID}
           hideLoading={preview.isAnalyzing || Boolean(preview.error)}
           interactive
+          onReady={preview.prefetchBoundaries}
           {...mapProps}
         />
         <StreetMemoImpressionLog memos={memo.visibleMemos} />

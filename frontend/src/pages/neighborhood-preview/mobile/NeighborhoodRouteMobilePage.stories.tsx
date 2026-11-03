@@ -81,6 +81,7 @@ const noopRefetch = () => Promise.resolve({} as never);
 const preview: NeighborhoodPreviewContext = {
   isPublicExplore: false,
   mapPath: '/neighborhoods',
+  prefetchBoundaries: noop,
   maxRent: 0,
   changeMaxRent: noop,
   rentPeriod: { startDate: '2026-04-01', endDate: '2026-09-30' },

@@ -22,6 +22,8 @@ export type MapCoordinateMenu = {
 export type MapCanvasProps = {
   animateView?: boolean;
   onRetry?: () => void;
+  /** 지도가 처음 그려져 쓸 수 있게 되면 부른다. 데모 지도는 바로 부른다. 급하지 않은 요청을 이 뒤로 미룰 때 쓴다. */
+  onReady?: () => void;
   coordinateAction?: {
     latitude: number;
     longitude: number;
