@@ -11,7 +11,7 @@ export const supportsNativePush = () =>
   typeof window.ReactNativeWebView?.postMessage === 'function';
 
 /** 응답은 메모리에서만 사용한다. 네이티브 오류 원문·토큰을 로그나 분석으로 보내지 않는다. */
-const request = (action: 'status' | 'enable' | 'disable' | 'token'): Promise<Record<string, unknown>> => {
+const request = (action: 'status' | 'enable' | 'disable' | 'token' | 'settings'): Promise<Record<string, unknown>> => {
   if (!supportsNativePush()) return Promise.reject(new NativePushError('unsupported'));
   return new Promise((resolve, reject) => {
     const requestId = crypto.randomUUID();
@@ -56,4 +56,9 @@ export const readNativePushToken = async (): Promise<string> => {
 
 export const disableNativePush = async (): Promise<void> => {
   await request('disable');
+};
+
+/** 앱의 시스템 설정 화면을 연다. 위치나 알림 권한을 사용자가 직접 다시 허용하게 할 때 쓴다. */
+export const openNativeSettings = async (): Promise<void> => {
+  await request('settings');
 };

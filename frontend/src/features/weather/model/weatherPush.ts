@@ -19,7 +19,12 @@ import {
 } from '../api/weatherApi';
 import { getWeatherInstallation } from '../lib/weatherInstallation';
 
-export type WeatherPushState = { enabled: boolean; problem: 'permission' | 'cleanup' | null };
+/**
+ * - permission: 기기 알림 권한이 꺼져 있다.
+ * - cleanup: 동의는 껐지만 기기 연결 정리에 실패했다.
+ * - location: 알림을 보낼 위치를 하나도 몰라 켜지 못했다.
+ */
+export type WeatherPushState = { enabled: boolean; problem: 'permission' | 'cleanup' | 'location' | null };
 
 // ON/OFF와 백그라운드 동기화가 역순으로 서버에 도착하지 않게 한다.
 let queue: Promise<unknown> = Promise.resolve();
@@ -87,7 +92,8 @@ export const changeWeatherPush = (
   serial(memberId, async (): Promise<WeatherPushState> => {
     if (!enabled) return disable(config, memberId);
     if (!supportsNativePush()) throw new NativePushError('unsupported');
-    if (coordinate === null) return { enabled: false, problem: null };
+    // 알림은 저장된 위치로 보내므로, 위치를 하나도 모르면 켜지 않고 그 이유를 돌려준다.
+    if (coordinate === null) return { enabled: false, problem: 'location' };
     const status = await readNativePushStatus('enable');
     if (!status.enabled || !status.permissionGranted) {
       const result = await disable(config, memberId);

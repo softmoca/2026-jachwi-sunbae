@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { readNativePushStatus, readNativePushToken } from '@/shared/lib/native-app/nativePush';
+import { openNativeSettings, readNativePushStatus, readNativePushToken } from '@/shared/lib/native-app/nativePush';
 
 import { installNativePush } from '../../../helpers/nativePush';
 
@@ -30,6 +30,12 @@ describe('스토어 앱 푸시 브리지', () => {
     expect(await pending).toEqual({ enabled: true, permissionGranted: true });
     native.paused = false;
     expect(await readNativePushToken()).toBe(native.token);
+  });
+
+  it('설정 열기는 앱에 settings 요청을 보낸다', async () => {
+    const native = installNativePush();
+    await openNativeSettings();
+    expect(native.actions).toEqual(['settings']);
   });
 
   it('응답이 없으면 안전한 오류로 끝내고 리스너를 제거한다', async () => {

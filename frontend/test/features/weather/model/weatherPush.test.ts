@@ -156,6 +156,13 @@ describe('생활 날씨 기기 등록', () => {
     expect(localStorage.getItem('jachwi-weather-installation-v1')).toBe('{broken');
   });
 
+  it('위치를 하나도 모르면 권한을 묻거나 서버에 보내지 않고 위치 문제로 끝낸다', async () => {
+    const state = mockServer();
+    expect(await changeWeatherPush(config, 1, true, null)).toEqual({ enabled: false, problem: 'location' });
+    expect(native.actions).toEqual([]);
+    expect(state.calls).toEqual([]);
+  });
+
   it('브리지가 없는 웹·이전 앱은 ON 요청을 서버에 보내지 않는다', async () => {
     const state = mockServer();
     delete window.ReactNativeWebView;
