@@ -3,6 +3,7 @@ import { Fragment, useMemo, useState } from 'react';
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import BottomActionArea from '@/shared/ui/bottom-action-area/BottomActionArea';
 import { Button } from '@/shared/ui/button/Button';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import SearchField from '@/shared/ui/search-field/SearchField';
 
 import { getChecklistErrorMessage } from '../../api/checklistErrorMessages';
@@ -24,7 +25,7 @@ const CheckItemPicker = ({ stage, existingSourceIds, disabled, onCancel, onAdd }
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const result = useCheckItemSearch(stage, query);
-  // 빠른 응답에는 불러오는 중 문구 없이 바로 항목을 보여 주고, 오래 걸릴 때만 알린다.
+  // 빠른 응답에는 로딩 표시 없이 바로 항목을 보여 주고, 오래 걸릴 때만 그 자리에 Progress Circle을 둔다.
   const isLoadingVisible = useDelayedLoading(result.isPending);
   const items = useMemo(() => result.data?.pages.flatMap((page) => page.content) ?? [], [result.data]);
   const existingIds = useMemo(() => new Set(existingSourceIds), [existingSourceIds]);
@@ -88,8 +89,8 @@ const CheckItemPicker = ({ stage, existingSourceIds, disabled, onCancel, onAdd }
 
         {result.isPending || isLoadingVisible ? (
           isLoadingVisible && (
-            <div className={styles.compactState} role="status">
-              <span className="spinner" /> 항목을 불러오는 중이에요.
+            <div className={styles.compactState}>
+              <ProgressCircle size={24} label="항목을 불러오는 중이에요." />
             </div>
           )
         ) : result.isError ? (

@@ -181,8 +181,8 @@ export const mapLoading = css`
   left: 50%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 0.9rem;
+  /* 지도와 마커가 보이는 위에 덧그리는 작은 Overlay. 글자 없이 Progress Circle(24)만 둔다. */
+  padding: 0.5rem;
   border-radius: 999px;
   background: rgb(255 255 255 / 92%);
   box-shadow: 0 2px 8px rgb(0 0 0 / 12%);

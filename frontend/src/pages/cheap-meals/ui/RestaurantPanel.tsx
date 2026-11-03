@@ -1,4 +1,5 @@
 import { css, cx } from '@emotion/css';
+import { useEffect, useState } from 'react';
 
 import useAddressSearch from '@/features/map/api/useAddressSearch';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
@@ -10,6 +11,7 @@ import EmptyState from '@/shared/ui/empty-state/EmptyState';
 import Icon from '@/shared/ui/icon/Icon';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import SearchField from '@/shared/ui/search-field/SearchField';
 
 import type { MealLayout } from '../hooks/useMealTabs';
@@ -22,8 +24,14 @@ type RestaurantPanelProps = { isActive: boolean; layout: MealLayout };
 
 const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   const map = useRestaurantMap(isActive);
-  // 빠른 응답에는 찾는 중 문구 없이 바로 가게를 보여 주고, 오래 걸릴 때만 알린다.
-  const isLoadingVisible = useDelayedLoading(map.query.isPending);
+  // 식당 탭을 처음 열어 보여 줄 목록이 없을 때는 찾는 중 문구를 바로 보여 준다.
+  // 지도를 옮겨 다시 찾을 때처럼 이미 목록을 보여 준 뒤에는 빠른 응답에 문구가 번쩍이지 않게 늦춘다.
+  const [hasShownStores, setHasShownStores] = useState(false);
+  useEffect(() => {
+    if (map.query.data !== undefined) setHasShownStores(true);
+  }, [map.query.data]);
+  const isDelayedLoadingVisible = useDelayedLoading(map.query.isPending && hasShownStores);
+  const isLoadingVisible = (map.query.isPending && !hasShownStores) || isDelayedLoadingVisible;
   const search = useAddressSearch();
   const data = map.query.isError ? undefined : map.query.data;
   const locate = () => void map.locate();
@@ -80,7 +88,7 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   );
   const storeList =
     map.query.isPending || isLoadingVisible ? (
-      isLoadingVisible && <p role="status">주변 가게를 찾고 있어요…</p>
+      isLoadingVisible && <ProgressCircle size={24} label="주변 가게를 찾고 있어요." />
     ) : map.query.isError ? (
       <div role="alert">
         <p>가게 정보를 불러오지 못했어요.</p>

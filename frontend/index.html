@@ -29,9 +29,98 @@
       content="계약을 성사시키는 쪽이 한편이라면, 자취선배는 계약 후를 살아갈 임차인의 편입니다."
     />
     <title>자취선배</title>
+    <!--
+      JS를 받는 동안 흰 화면 대신 보여 줄 앱 뼈대. React가 처음 그리면 #root 안이 바뀐다.
+      홈(`/`)은 실제 첫 화면과 같은 자리와 크기의 카드 뼈대를 두고, 다른 화면은 헤더 자리만 둔다.
+      홈 뼈대 마크업은 HomePageSkeleton과 같아야 한다(테스트가 확인한다).
+    -->
+    <style>
+      body {
+        margin: 0;
+      }
+      .boot-skeleton {
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: #fff;
+      }
+      .boot-skeleton__header {
+        height: 54px;
+      }
+      .boot-skeleton__body {
+        display: none;
+      }
+      .boot-skeleton--home .boot-skeleton__body {
+        display: grid;
+        box-sizing: border-box;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 19px 20px 0;
+        gap: 22px;
+      }
+      .boot-skeleton__body span {
+        display: block;
+        border-radius: 18px;
+        background: #f4f5f7;
+      }
+      .boot-skeleton__body span:nth-child(1) {
+        height: 83px;
+      }
+      .boot-skeleton__body span:nth-child(2) {
+        height: 304px;
+      }
+      .boot-skeleton__body span:nth-child(3) {
+        height: 83px;
+        margin-top: -11px;
+      }
+      .boot-skeleton__body span:nth-child(4) {
+        height: 102px;
+        margin-top: 6px;
+      }
+      @media (min-width: 1024px) {
+        .boot-skeleton__header {
+          box-sizing: border-box;
+          height: 71px;
+          border-bottom: 1px solid #eceef1;
+        }
+        .boot-skeleton--home .boot-skeleton__body {
+          max-width: 1024px;
+          padding: 20px 32px 0;
+          grid-template-columns: minmax(0, 1fr) 304px;
+          column-gap: 32px;
+          row-gap: 22px;
+        }
+        .boot-skeleton__body span:nth-child(n) {
+          margin-top: 0;
+        }
+        .boot-skeleton__body span:nth-child(1) {
+          grid-area: 1 / 1;
+          height: 99px;
+        }
+        .boot-skeleton__body span:nth-child(2) {
+          grid-area: 2 / 1;
+          height: 384px;
+        }
+        .boot-skeleton__body span:nth-child(3) {
+          grid-area: 1 / 2;
+          height: 99px;
+        }
+        .boot-skeleton__body span:nth-child(4) {
+          grid-area: 2 / 2;
+          height: 210px;
+        }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-skeleton boot-skeleton--home" role="progressbar" aria-label="화면을 불러오는 중이에요.">
+        <div class="boot-skeleton__header"></div>
+        <div class="boot-skeleton__body"><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <script>
+      if (location.pathname !== '/') document.querySelector('.boot-skeleton').classList.remove('boot-skeleton--home');
+    </script>
   </body>
 </html>

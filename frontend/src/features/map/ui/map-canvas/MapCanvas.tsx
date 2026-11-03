@@ -273,9 +273,8 @@ const MapCanvas = ({
         </div>
       )}
       {isMapLoadingVisible && !hideLoading && (
-        <div className={styles.mapLoading} role="status">
+        <div className={styles.mapLoading}>
           <ProgressCircle size={24} label="지도를 불러오는 중이에요." />
-          지도를 불러오고 있어요
         </div>
       )}
       {sdkError && (

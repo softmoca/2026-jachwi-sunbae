@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
-import { Outlet, Route, Routes } from 'react-router-dom';
 
 import type { Member } from '@/features/auth/model/Member';
 import { weatherQueryKeys } from '@/features/weather/api/weatherApi';
 import type { WeatherForecastResponse, WeatherHour } from '@/features/weather/model/weather';
+import { currentMemberQueryKey } from '@/shared/api/queryClient';
 
 import MyMobilePage from './MyMobilePage';
 
@@ -37,7 +37,7 @@ const forecast: WeatherForecastResponse = {
 };
 
 /**
- * 휴대폰 마이. 앱에서는 로그인 레이아웃이 `Outlet` context로 회원을 넘기므로, 스토리도 같은 방식으로 회원을 넘긴다.
+ * 휴대폰 마이. 앱에서는 회원 조회 캐시에서 회원을 읽으므로, 스토리도 같은 캐시에 회원을 넣는다.
  * 날씨 카드는 알림 설정·예보 캐시로 채운다.
  */
 const meta = {
@@ -48,15 +48,6 @@ const meta = {
     layout: 'fullscreen',
     route: '/my',
   },
-  decorators: [
-    (Story) => (
-      <Routes>
-        <Route element={<Outlet context={member} />}>
-          <Route path="*" element={<Story />} />
-        </Route>
-      </Routes>
-    ),
-  ],
 } satisfies Meta<typeof MyMobilePage>;
 
 export default meta;
@@ -67,6 +58,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   parameters: {
     queryData: [
+      [currentMemberQueryKey, member],
       [weatherQueryKeys.settings, { enabled: true }],
       [weatherQueryKeys.forecast(coordinate), forecast],
       [weatherQueryKeys.place(coordinate), '관악구 신림동'],
@@ -87,6 +79,9 @@ export const Default: Story = {
 /** 날씨 알림을 꺼 두었다. */
 export const NotificationOff: Story = {
   parameters: {
-    queryData: [[weatherQueryKeys.settings, { enabled: false }]],
+    queryData: [
+      [currentMemberQueryKey, member],
+      [weatherQueryKeys.settings, { enabled: false }],
+    ],
   },
 };

@@ -107,3 +107,15 @@ it('푸터에 사용 방법과 개인정보 안내 링크를 둔다', () => {
   expect(footer.getByRole('link', { name: '개인정보·광고 측정 안내' })).toHaveAttribute('href', '/privacy');
   expect(footer.getByText('© 2026 자취선배')).toBeInTheDocument();
 });
+
+it('최근 기록은 제목을 처음부터 보이고, 빠른 응답에는 안내 문구나 카드 뼈대 없이 바로 목록을 보여 준다', async () => {
+  renderHome();
+  const section = screen.getByRole('heading', { name: '최근 기록한 방' }).closest('section') as HTMLElement;
+  // 몇 개가 올지 모르는 목록이라 카드 뼈대를 두지 않는다.
+  expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+  expect(section.querySelector('[class*="skeleton"]')).toBeNull();
+  // 데이터 전에도 문구 한 줄 높이는 잡아 둔다.
+  expect(section.querySelector('[class*="RecentRooms-body"]')).not.toBeNull();
+  expect(await within(section).findByText('신림역 원룸')).toBeInTheDocument();
+  expect(within(section).queryByText('기록을 불러오는 중이에요.')).not.toBeInTheDocument();
+});

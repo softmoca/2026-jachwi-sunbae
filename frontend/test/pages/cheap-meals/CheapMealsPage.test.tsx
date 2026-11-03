@@ -270,7 +270,9 @@ it('응답을 기다리는 동안 로딩을 보여주고 빈 필터 결과를 �
     }),
   );
   const user = setup('/cheap-meals?tab=convenience');
-  expect(await screen.findByText('행사상품을 불러오고 있어요')).toBeInTheDocument();
+  // 글자 없이 가운데에 Progress Circle(40)만 둔다.
+  expect(await screen.findByRole('progressbar', { name: '행사상품을 불러오고 있어요' })).toBeInTheDocument();
+  expect(screen.queryByText('행사상품을 불러오고 있어요')).not.toBeInTheDocument();
   complete();
   await screen.findByRole('list', { name: '행사상품 목록' });
   await user.click(screen.getByRole('radio', { name: '할인' }));
@@ -565,4 +567,12 @@ it('데스크탑은 공용 헤더 아래에서 가게 목록과 상세를 지도
   } finally {
     setMatchMedia(matchMedia);
   }
+});
+it('식당 탭을 처음 열어 보여 줄 목록이 없으면 늦추지 않고 그 자리에 Progress Circle을 바로 둔다', async () => {
+  server.use(http.get('http://localhost:8080/api/maps/good-price-stores', () => new Promise<never>(() => {})));
+  setup();
+  // 지연 로딩(300ms)이 걸려 있으면 이 시간 안에는 문구가 나오지 않는다.
+  expect(
+    await screen.findByRole('progressbar', { name: '주변 가게를 찾고 있어요.' }, { timeout: 200 }),
+  ).toBeInTheDocument();
 });

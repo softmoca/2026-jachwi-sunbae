@@ -28,6 +28,7 @@ import TopNavigationMenu from '@/shared/ui/top-navigation-menu/TopNavigationMenu
 
 import { type DetailTab, parseDetailTab, readLastDetailTab, writeLastDetailTab } from './model/detailTab';
 import type { PropertyEditField } from './model/editField';
+import PropertyDetailSkeleton from './PropertyDetailSkeleton';
 import PropertyAdditionalInfoSection from './ui/property-additional-info-section/PropertyAdditionalInfoSection';
 import PropertyBasicInfoSection from './ui/property-basic-info-section/PropertyBasicInfoSection';
 import PropertyChecklistSection from './ui/property-checklist-section/PropertyChecklistSection';
@@ -84,6 +85,7 @@ const ResolvedPropertyDetailPage = ({
     <QueryState
       query={property}
       loadingTitle="매물 상세를 불러오는 중이에요."
+      skeleton={<PropertyDetailSkeleton />}
       describeError={describeError}
       errorAction={<Link to={backTo}>{backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>}
     >

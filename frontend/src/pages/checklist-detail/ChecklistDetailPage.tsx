@@ -12,6 +12,7 @@ import ChecklistEditor from '@/features/checklist/ui/checklist-editor/ChecklistE
 import ChecklistEditorFrame, {
   ChecklistDesktopHeading,
 } from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorFrame';
+import ChecklistEditorSkeleton from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorSkeleton';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
@@ -27,7 +28,12 @@ const ChecklistDetailPage = ({ checklistId }: { checklistId: number }) => {
   const detail = useChecklistDetail(checklistId);
 
   return (
-    <QueryState query={detail} loadingTitle="체크리스트를 불러오는 중이에요." describeError={describeError}>
+    <QueryState
+      query={detail}
+      loadingTitle="체크리스트를 불러오는 중이에요."
+      skeleton={<ChecklistEditorSkeleton />}
+      describeError={describeError}
+    >
       {(checklist) => <ChecklistDetailView key={checklist.checklistId} checklist={checklist} />}
     </QueryState>
   );

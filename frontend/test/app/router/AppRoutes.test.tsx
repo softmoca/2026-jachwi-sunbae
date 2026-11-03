@@ -4,8 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { StrictMode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
+import { checklistHandlers } from '@/app/mocks/handlers/checklistHandlers';
+import { propertyHandlers } from '@/app/mocks/handlers/propertyHandlers';
+import { resetMockStore } from '@/app/mocks/mockStore';
 import AppRoutes from '@/app/router/AppRoutes';
 import { getAccessToken, setAuthentication } from '@/features/auth/model/authStore';
 import {
@@ -130,6 +133,118 @@ describe('익명 자동 인증 흐름', () => {
     expect(getAccessToken()).toBe('first-visit-token');
     expect(loginCalls).toBe(1);
   });
+  describe('자동 로그인을 기다리는 동안', () => {
+    afterEach(() => {
+      resetMockStore();
+    });
+
+    /** 로그인 응답을 직접 풀어 줄 때까지 붙잡아 둔다. */
+    const holdLogin = () => {
+      let release: () => void = () => undefined;
+      const released = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      server.use(
+        http.post(`${config.apiBaseUrl}/api/auth/login`, async () => {
+          await released;
+          return HttpResponse.json(
+            successEnvelope({
+              accessToken: 'held-token',
+              tokenType: 'Bearer',
+              expiresIn: 900,
+              newMember: true,
+              member: { memberId: 1 },
+            }),
+          );
+        }),
+      );
+      return () => release();
+    };
+
+    /** 화면이 받을 기록과 체크리스트는 개발용 모의 서버로 채운다. `renderRoutes`의 빈 목록보다 나중에 등록해 앞선다. */
+    const renderWithMockServer = (path: string) => {
+      const view = renderRoutes(path);
+      server.use(...propertyHandlers, ...checklistHandlers);
+      return view;
+    };
+
+    it('홈은 로그인을 기다리는 동안에도 빈 화면이나 준비 문구 없이 바로 그린다', async () => {
+      const release = holdLogin();
+      renderWithMockServer('/');
+
+      expect(await screen.findByRole('region', { name: '자취선배 주요 기능' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '최근 기록한 방' })).toBeInTheDocument();
+      expect(screen.queryByText('기록을 불러올 준비를 하고 있어요.')).not.toBeInTheDocument();
+
+      release();
+
+      expect(await screen.findByLabelText('최근 기록한 방 목록')).toBeInTheDocument();
+    });
+
+    it('체크리스트는 로그인과 체크리스트를 기다리는 동안 준비 문구 없이 편집 화면 뼈대를 보여 준다', async () => {
+      const release = holdLogin();
+      renderWithMockServer('/checklists');
+
+      // 화면 코드는 로그인을 기다리지 않고 받으므로, 로그인이 끝나기 전에 뼈대가 나온다.
+      expect(await screen.findByRole('heading', { name: '체크리스트 편집' })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('체크리스트를 불러오는 중이에요.');
+      expect(screen.queryByText('기록을 불러올 준비를 하고 있어요.')).not.toBeInTheDocument();
+
+      release();
+
+      expect(await screen.findByRole('button', { name: '체크 항목 추가' })).toBeInTheDocument();
+      expect(screen.queryByText('체크리스트를 불러오는 중이에요.')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['/properties/10', '매물 상세를 불러오는 중이에요.'],
+      ['/properties/10/edit', '매물 정보를 불러오는 중이에요.'],
+      ['/properties/10/photos', '사진 정보를 불러오는 중이에요.'],
+      ['/properties/10/memo', '부가 정보를 불러오는 중이에요.'],
+      ['/properties/10/active-checklists/ON_SITE', '체크리스트를 불러오는 중이에요.'],
+      ['/properties/10/checklists/51', '체크리스트를 불러오는 중이에요.'],
+    ])('%s는 기다리는 동안 글자 로딩 대신 페이지 뼈대를 보여 준다', async (path, label) => {
+      const release = holdLogin();
+      renderWithMockServer(path);
+
+      const status = await screen.findByRole('status');
+      // 안내는 읽기 프로그램에만 알리고, 화면에는 뼈대만 둔다.
+      expect(status).toHaveTextContent(label);
+      expect(status.querySelector('.sr-only')).toHaveTextContent(label);
+      expect(status.querySelectorAll('[aria-hidden="true"]').length).toBeGreaterThan(1);
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+
+      release();
+      await waitFor(() => expect(status).not.toBeInTheDocument());
+    });
+
+    it('마이는 회원 정보가 필요해 회원이 정해진 뒤 본문을 그린다', async () => {
+      const release = holdLogin();
+      renderRoutes('/me');
+
+      expect(screen.queryByText(/자취선배 MVP2/)).not.toBeInTheDocument();
+      expect(screen.queryByText('기록을 불러올 준비를 하고 있어요.')).not.toBeInTheDocument();
+      release();
+
+      expect(await screen.findByText(/자취선배 MVP2/)).toBeInTheDocument();
+    });
+  });
+
+  it('자동 로그인이 실패하면 화면 대신 회원 정보 오류와 다시 시도를 보여 준다', async () => {
+    server.use(
+      http.post(`${config.apiBaseUrl}/api/auth/login`, () =>
+        HttpResponse.json(errorEnvelope('INTERNAL_SERVER_ERROR', 'failed'), { status: 500 }),
+      ),
+    );
+
+    renderRoutes('/');
+
+    expect(await screen.findByText('회원 정보를 불러오지 못했어요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 시도하기' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '자취선배 주요 기능' })).not.toBeInTheDocument();
+    expect(getAccessToken()).toBeNull();
+  });
+
   it('랜딩은 로그인 없이 보고, 쿼리를 유지한 채 홈으로 잇는다', async () => {
     renderRoutes('/landing?utm_source=instagram');
     expect(await screen.findByRole('heading', { level: 1, name: /자취할 동네를 찾고/ })).toBeInTheDocument();

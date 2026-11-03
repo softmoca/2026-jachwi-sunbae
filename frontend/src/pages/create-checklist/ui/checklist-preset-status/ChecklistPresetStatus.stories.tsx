@@ -26,11 +26,15 @@ const meta = {
     preset: {
       control: false,
       description:
-        '프리셋 조회 결과(useChecklistPreset). 불러오는 중이면 안내를, 실패하면 오류와 다시 시도 버튼을 보여 준다.',
+        '프리셋 조회 결과(useChecklistPreset). 실패하면 오류와 다시 시도 버튼을 보여 준다. 불러오는 동안은 화면이 뼈대를 그린다.',
     },
   },
   args: {
-    preset: createPresetQuery({}),
+    preset: createPresetQuery({
+      isPending: false,
+      isError: true,
+      error: new ApiError({ kind: 'server', status: 404, code: 'CHECKLIST_PRESET_NOT_FOUND' }),
+    }),
   },
   decorators: [
     (Story) => (
@@ -45,14 +49,4 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Loading: Story = {};
-
-export const WithError: Story = {
-  args: {
-    preset: createPresetQuery({
-      isPending: false,
-      isError: true,
-      error: new ApiError({ kind: 'server', status: 404, code: 'CHECKLIST_PRESET_NOT_FOUND' }),
-    }),
-  },
-};
+export const WithError: Story = {};

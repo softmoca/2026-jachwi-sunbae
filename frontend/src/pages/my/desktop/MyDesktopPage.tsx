@@ -1,7 +1,6 @@
 import { css } from '@emotion/css';
-import { useOutletContext } from 'react-router-dom';
 
-import type { Member } from '@/features/auth/model/Member';
+import { useMember } from '@/features/auth/api/useCurrentMember';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
@@ -14,7 +13,7 @@ import * as shared from '../MyPage.styles';
 /** 데스크탑 마이. 공용 헤더로 이동하므로 뒤로 가기 없이 제목만 두고, 홈과 같은 64rem 본문에 카드를 늘이지 않고 나란히 둔다. */
 const MyDesktopPage = () => {
   const config = usePublicConfig();
-  const member = useOutletContext<Member>();
+  const member = useMember();
 
   return (
     <main className={shared.page}>

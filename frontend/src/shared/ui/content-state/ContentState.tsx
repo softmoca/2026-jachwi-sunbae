@@ -6,8 +6,6 @@ type ContentStateProps = {
   /** 화면 전체를 차지하는 상태인지. 목록 안에 끼워 넣을 때는 끈다. */
   page?: boolean;
   tone?: 'info' | 'error';
-  /** 켜면 spinner와 함께 제목을 본문으로 읽어 준다. */
-  loading?: boolean;
   title?: string;
   description?: ReactNode;
   onRetry?: () => void;
@@ -16,11 +14,10 @@ type ContentStateProps = {
   children?: ReactNode;
 };
 
-/** 로딩·오류·빈 주소처럼 화면 대신 보여 주는 안내를 한 곳에서 그린다. */
+/** 오류나 빈 주소처럼 화면 대신 보여 주는 안내를 한 곳에서 그린다. 로딩은 뼈대나 Progress Circle로 그리고 여기서 맡지 않는다. */
 const ContentState = ({
   page = true,
   tone = 'info',
-  loading = false,
   title,
   description,
   onRetry,
@@ -29,19 +26,11 @@ const ContentState = ({
 }: ContentStateProps) => {
   const body = (
     <div
-      className={`content-state ${tone === 'error' ? 'content-state--error' : ''} ${loading ? 'content-state--loading' : ''}`.trim()}
-      role={tone === 'error' ? 'alert' : loading ? 'status' : undefined}
+      className={`content-state ${tone === 'error' ? 'content-state--error' : ''}`.trim()}
+      role={tone === 'error' ? 'alert' : undefined}
     >
-      {tone === 'error' && !loading ? (
-        <StateIllustration name="error" size={5.5} />
-      ) : loading ? (
-        <span className="content-state__skeleton" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
-      ) : null}
-      {title !== undefined && (loading ? title : <strong>{title}</strong>)}
+      {tone === 'error' && <StateIllustration name="error" size={5.5} />}
+      {title !== undefined && <strong>{title}</strong>}
       {description !== undefined && <span>{description}</span>}
       {onRetry !== undefined && (
         <button type="button" className="inline-button" onClick={onRetry}>

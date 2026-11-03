@@ -20,6 +20,8 @@ import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
+import EditPropertySkeleton from './EditPropertySkeleton';
+
 const backToList = <Link to={HOME_PATH}>홈으로 돌아가기</Link>;
 const describeError = describePropertyLoadError('매물 정보를 불러오지 못했어요.');
 
@@ -36,6 +38,7 @@ const ResolvedEditPropertyPage = ({ propertyId }: { propertyId: number }) => {
     <QueryState
       query={property}
       loadingTitle="매물 정보를 불러오는 중이에요."
+      skeleton={<EditPropertySkeleton />}
       describeError={describeError}
       errorAction={backToList}
     >

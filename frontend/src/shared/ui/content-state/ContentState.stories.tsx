@@ -20,7 +20,6 @@ const meta = {
   args: {
     page: true,
     tone: 'info',
-    loading: false,
     retryLabel: '다시 시도',
     children: '없음',
   },
@@ -44,13 +43,6 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-
-export const Loading: Story = {
-  args: {
-    loading: true,
-    title: '매물 정보를 불러오는 중이에요.',
-  },
-};
 
 export const WithError: Story = {
   args: {

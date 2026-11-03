@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-do
 
 import PropertyAppLayout from '@/app/layouts/property-app-layout/PropertyAppLayout';
 import PublicExploreLayout from '@/app/layouts/public-explore-layout/PublicExploreLayout';
+import HomePageSkeleton from '@/pages/design-home/HomePageSkeleton';
 import RecordsPageSkeleton from '@/pages/design-records/RecordsPageSkeleton';
 import NeighborhoodPageSkeleton from '@/pages/neighborhood-preview/NeighborhoodPageSkeleton';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
@@ -128,10 +129,10 @@ const AppRoutes = () => (
     <Route path={LOGIN_PATH} element={<Navigate to={HOME_PATH} replace />} />
     {/* 매물은 본 방 기록 지도에서 바로 등록한다. 예전 매물 등록 주소로 들어오면 기록 지도로 보낸다. */}
     <Route path={PROPERTY_NEW_PATH} element={<Navigate to={RECORDS_MAP_PATH} replace />} />
-    {/* 첫 주소(`/`)를 포함한 회원 화면은 자동 로그인(복원 또는 익명 회원 생성)을 마친 뒤 그린다. */}
+    {/* 첫 주소(`/`)를 포함한 회원 화면. 자동 로그인(복원 또는 익명 회원 생성)을 기다리는 동안에도 화면 뼈대를 바로 그린다. */}
     <Route element={<ProtectedRoute />}>
       <Route path={CHEAP_MEALS_PATH} element={lazyPage(<CheapMealsPage />)} />
-      <Route path={HOME_PATH} element={lazyPage(<DesignHomePage />)} />
+      <Route path={HOME_PATH} element={lazyPage(<DesignHomePage />, <HomePageSkeleton />)} />
       <Route path={ROUTE_PATTERNS.propertyRecords} element={<RecordsRoute />}>
         <Route index element={lazyPage(<PropertyDetailPage />)} />
       </Route>

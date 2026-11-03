@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import Icon from '@/shared/ui/icon/Icon';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 
 import { getPropertyErrorMessage } from '../../api/propertyErrorMessages';
 import { usePropertyPhotos } from '../../api/useProperties';
@@ -68,8 +69,8 @@ const PropertyPhotoViewer = ({ propertyId, propertyName, initialIndex, onClose }
         <div className={styles.photoArea}>
           {photos.isPending || isLoadingVisible ? (
             isLoadingVisible && (
-              <div className={styles.state} role="status">
-                사진을 불러오는 중이에요.
+              <div className={styles.state}>
+                <ProgressCircle size={24} label="사진을 불러오는 중이에요." />
               </div>
             )
           ) : photos.isError ? (

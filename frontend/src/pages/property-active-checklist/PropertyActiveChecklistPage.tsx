@@ -19,6 +19,7 @@ import QueryState from '@/shared/ui/query-state/QueryState';
 
 import useAutoOpenAppliedChecklist from './hooks/useAutoOpenAppliedChecklist';
 import useChecklistSelection, { SYSTEM_DEFAULT_ID } from './hooks/useChecklistSelection';
+import PropertyActiveChecklistSkeleton from './PropertyActiveChecklistSkeleton';
 import ActiveChecklistOptions from './ui/active-checklist-options/ActiveChecklistOptions';
 
 const readNewChecklistId = (state: unknown): number | null => {
@@ -93,6 +94,7 @@ const ResolvedPropertyActiveChecklist = ({ propertyId, stage }: { propertyId: nu
     <QueryState
       query={pageQuery}
       loadingTitle="체크리스트를 불러오는 중이에요."
+      skeleton={<PropertyActiveChecklistSkeleton />}
       describeError={describeError}
       errorAction={backToList}
     >

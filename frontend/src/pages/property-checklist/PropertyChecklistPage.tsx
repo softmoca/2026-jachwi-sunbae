@@ -6,7 +6,6 @@ import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
 import ChecklistPageLayout from '@/features/checklist/ui/checklist-page-layout/ChecklistPageLayout';
 import { usePropertyChecklistDetail, usePropertyDetail } from '@/features/property/api/useProperties';
 import { getChecklistStageLabel, parsePositiveId } from '@/features/property/lib/propertyFormat';
-import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import {
   CHECKLISTS_PATH,
   HOME_PATH,
@@ -17,7 +16,9 @@ import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import Icon from '@/shared/ui/icon/Icon';
 import IconButton from '@/shared/ui/icon-button/IconButton';
+import LoadingRegion from '@/shared/ui/skeleton/LoadingRegion';
 
+import PropertyChecklistSkeleton from './PropertyChecklistSkeleton';
 import PropertyChecklistItemControl from './ui/property-checklist-item-control/PropertyChecklistItemControl';
 
 import * as styles from './PropertyChecklistPage.styles';
@@ -56,8 +57,6 @@ const ResolvedPropertyChecklistPage = ({
   propertyChecklistId: number;
 }) => {
   const checklist = usePropertyChecklistDetail(propertyId, propertyChecklistId);
-  const isLoadingVisible = useDelayedLoading(checklist.isPending);
-  const isLoading = checklist.isPending || isLoadingVisible;
   const property = usePropertyDetail(propertyId);
   const [editingMemoItemId, setEditingMemoItemId] = useState<number | null>(null);
   const location = useLocation();
@@ -67,8 +66,13 @@ const ResolvedPropertyChecklistPage = ({
     fallback: propertyDetailPath(propertyId),
   });
 
-  if (isLoading) {
-    return isLoadingVisible ? <ContentState loading title="체크리스트를 불러오는 중이에요." /> : null;
+  // 페이지 전체를 바꾸는 중이라 남겨 둘 내용이 없으므로 로딩을 늦추지 않고 바로 보여 준다.
+  if (checklist.isPending) {
+    return (
+      <LoadingRegion label="체크리스트를 불러오는 중이에요.">
+        <PropertyChecklistSkeleton />
+      </LoadingRegion>
+    );
   }
 
   if (checklist.isError) {

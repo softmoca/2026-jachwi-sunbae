@@ -12,6 +12,8 @@ import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
+import PropertyPhotosSkeleton from './PropertyPhotosSkeleton';
+
 const backToList = <Link to={HOME_PATH}>홈으로 돌아가기</Link>;
 const describeError = describePropertyLoadError('사진 목록을 불러오지 못했어요.');
 
@@ -33,6 +35,7 @@ const ResolvedPropertyPhotosPage = ({ propertyId }: { propertyId: number }) => {
     <QueryState
       query={property}
       loadingTitle="사진 정보를 불러오는 중이에요."
+      skeleton={<PropertyPhotosSkeleton />}
       describeError={describeError}
       errorAction={backToList}
     >

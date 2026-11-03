@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
-import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
-
 import ContentState from '../content-state/ContentState';
+import PageLoading from '../page-loading/PageLoading';
+import LoadingRegion from '../skeleton/LoadingRegion';
 
 type QueryLike<TData> = {
   isPending: boolean;
@@ -21,7 +21,10 @@ export type QueryErrorView = {
 
 type QueryStateProps<TData> = {
   query: QueryLike<TData>;
+  /** 기다리는 동안 읽기 프로그램에만 알리는 안내. 화면에는 글자를 띄우지 않는다. */
   loadingTitle: string;
+  /** 페이지 레이아웃 뼈대. 주면 기다리는 동안 뼈대를 그리고, 없으면 가운데에 Progress Circle(40)을 둔다. */
+  skeleton?: ReactNode;
   describeError: (error: unknown) => QueryErrorView;
   /** 오류 화면에 함께 보여 줄 돌아가기 링크 같은 동작. */
   errorAction?: ReactNode;
@@ -29,19 +32,22 @@ type QueryStateProps<TData> = {
 };
 
 /**
- * 조회 결과를 기다리는 동안과 실패했을 때의 화면을 대신 그린다.
- * 짧은 요청에는 로딩을 생략하고, 한 번 보인 로딩은 잠깐 유지해 깜빡임을 줄인다.
+ * 페이지 전체를 조회 결과로 그릴 때, 기다리는 동안과 실패했을 때의 화면을 대신 그린다.
+ * 페이지를 바꾸는 중이라 남겨 둘 내용이 없으므로 로딩을 늦추지 않고 바로 보여 준다. 글자로만 된 로딩은 두지 않는다.
  */
-const QueryState = <TData,>({ query, loadingTitle, describeError, errorAction, children }: QueryStateProps<TData>) => {
-  const isLoadingVisible = useDelayedLoading(query.isPending);
-
-  if (query.isPending || isLoadingVisible) {
-    return isLoadingVisible ? (
-      <ContentState loading title={loadingTitle} />
+const QueryState = <TData,>({
+  query,
+  loadingTitle,
+  skeleton,
+  describeError,
+  errorAction,
+  children,
+}: QueryStateProps<TData>) => {
+  if (query.isPending) {
+    return skeleton === undefined ? (
+      <PageLoading label={loadingTitle} />
     ) : (
-      <main className="property-page">
-        <div className="page-container" />
-      </main>
+      <LoadingRegion label={loadingTitle}>{skeleton}</LoadingRegion>
     );
   }
 
