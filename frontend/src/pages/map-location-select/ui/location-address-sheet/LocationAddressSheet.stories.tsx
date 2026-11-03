@@ -44,18 +44,12 @@ const meta = {
       options: ['locating', 'geocoding', 'ready', 'error'],
       description: '위치 확인 단계. ready일 때만 확정 버튼을 누를 수 있다.',
     },
-    isEditing: { description: '이미 등록한 매물의 위치를 고치는 중인지. 버튼 문구가 바뀐다.' },
-    isCreating: { description: '매물을 등록하는 중인지. 등록하는 동안 버튼을 막는다.' },
-    hasCreateError: { description: '매물 만들기에 실패했는지.' },
     onOpenSearch: { description: '주소 검색 열기' },
     onConfirm: { description: '이 위치로 확정' },
   },
   args: {
     selected: selectedAddress,
     status: 'ready',
-    isEditing: false,
-    isCreating: false,
-    hasCreateError: false,
     onOpenSearch: fn(),
     onConfirm: fn(),
   },
@@ -66,12 +60,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-export const Editing: Story = {
-  args: {
-    isEditing: true,
-  },
-};
 
 export const Geocoding: Story = {
   args: {
@@ -84,11 +72,5 @@ export const WithError: Story = {
   args: {
     selected: emptyAddress,
     status: 'error',
-  },
-};
-
-export const CreateFailed: Story = {
-  args: {
-    hasCreateError: true,
   },
 };

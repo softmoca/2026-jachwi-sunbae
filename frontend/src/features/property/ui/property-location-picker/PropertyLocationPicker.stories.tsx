@@ -42,7 +42,7 @@ const search = {
 };
 
 const meta = {
-  title: '페이지/매물 등록/PropertyLocationPicker',
+  title: '기능/매물/PropertyLocationPicker',
   component: PropertyLocationPicker,
   argTypes: {
     location: {

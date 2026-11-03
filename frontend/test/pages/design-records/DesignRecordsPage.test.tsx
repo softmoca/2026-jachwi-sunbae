@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { mapHandlers } from '@/app/mocks/handlers/mapHandlers';
@@ -57,16 +57,6 @@ vi.mock('@/features/map/ui/map-canvas/MapCanvas', () => ({
   ),
 }));
 
-const CreateRoute = () => {
-  const state = useLocation().state as { selectedLocation?: { latitude: number; roadAddress: string | null } } | null;
-  return (
-    <>
-      <h1>매물 등록 화면</h1>
-      <output aria-label="넘겨받은 위치">{JSON.stringify(state?.selectedLocation ?? null)}</output>
-    </>
-  );
-};
-
 beforeEach(() => {
   setAuthentication({ accessToken: 'valid-token', tokenType: 'Bearer', expiresIn: 60 });
   server.use(...propertyHandlers, ...mapHandlers, ...createStreetMemoHandlers());
@@ -84,7 +74,6 @@ const renderRecords = (initialEntry = '/properties') =>
         <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
             <Route path="/properties/:propertyId?" element={<DesignRecordsPage />} />
-            <Route path="/properties/new" element={<CreateRoute />} />
           </Routes>
         </MemoryRouter>
       </PublicConfigProvider>
@@ -352,7 +341,6 @@ it('휴대폰도 데스크탑처럼 빈 곳을 찍은 말풍선에서 매물을 
     await user.click(screen.getByRole('button', { name: '말풍선 🏠 여기에 매물 등록' }));
     // 등록 화면을 거치지 않고 찍은 위치의 주소로 바로 만든다.
     await waitFor(() => expect(created.bodies).toEqual([expect.objectContaining(quickCreatedBody)]));
-    expect(screen.queryByRole('heading', { name: '매물 등록 화면' })).not.toBeInTheDocument();
     // 지도에 머물러 만든 자리로 다가가고, 새 매물을 아래 시트에 열어 둔다.
     expect(await screen.findByText(/매물을 기록했어요/)).toBeInTheDocument();
     expect(screen.getByLabelText('지도 중심')).toHaveTextContent('37.5662,126.9785');

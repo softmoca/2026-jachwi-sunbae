@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { fn } from 'storybook/test';
 
+import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+
 import PageAction from './PageAction';
 
 // to/onClick 유니언 props라 satisfies 대신 타입을 직접 지정한다.
@@ -35,7 +37,7 @@ type Story = StoryObj<typeof PageAction>;
 
 export const FloatingLink: Story = {
   args: {
-    to: '/properties/new',
+    to: RECORDS_PATH,
     onClick: undefined,
   },
 };

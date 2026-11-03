@@ -2,7 +2,7 @@ import { css } from '@emotion/css';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-import { CHECKLISTS_PATH, NEIGHBORHOODS_PATH, PROPERTY_NEW_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import { CHECKLISTS_PATH, NEIGHBORHOODS_PATH, RECORDS_MAP_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 
 import checklistVideo from '../../assets/guide-checklist.mp4';
@@ -45,8 +45,8 @@ const SCENARIOS: Scenario[] = [
   },
   {
     title: '매물 추가',
-    steps: ['+ 누르고 매물', '지도에서 자리 고르기', '이름, 보증금, 월세 채우기'],
-    action: { to: PROPERTY_NEW_PATH, label: '매물 등록하기' },
+    steps: ['기록 지도에서 자리 누르기', '여기에 매물 등록 고르기', '이름, 보증금, 월세 채우기'],
+    action: { to: RECORDS_MAP_PATH, label: '기록 지도에서 등록하기' },
     video: {
       src: propertyVideo,
       poster: propertyPoster,

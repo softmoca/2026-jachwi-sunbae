@@ -89,7 +89,7 @@ let visitNumber = 0;
 
 const LocationProbe = () => <output data-testid="location">{useLocation().pathname}</output>;
 
-const renderAuthenticated = (path: string) => {
+const renderAuthenticated = (path: string, state?: unknown) => {
   setAuthentication({ accessToken: 'demo-token', tokenType: 'Bearer', expiresIn: 60 });
   server.use(
     http.get(`${config.apiBaseUrl}/api/members/me`, () =>
@@ -100,7 +100,7 @@ const renderAuthenticated = (path: string) => {
   return render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[{ pathname: path, key: `map-route-visit-${++visitNumber}` }]}>
+        <MemoryRouter initialEntries={[{ pathname: path, state, key: `map-route-visit-${++visitNumber}` }]}>
           <PublicConfigProvider config={config}>
             <AppRoutes />
             <LocationProbe />
@@ -199,7 +199,7 @@ describe('지도 주소', () => {
       }),
     );
 
-    renderAuthenticated('/map/select-location');
+    renderAuthenticated('/map/select-location', { returnTo: '/properties/1/edit' });
     const openSearchButton = await screen.findByRole('button', { name: '주소 검색 열기' });
     expect(navigator.geolocation.getCurrentPosition).not.toHaveBeenCalled();
     expect(screen.queryByRole('textbox', { name: '주소 검색' })).not.toBeInTheDocument();
@@ -213,7 +213,13 @@ describe('지도 주소', () => {
     expect(within(results).getByText(mapAddress.roadAddress)).toBeInTheDocument();
     expect(within(results).getByText(mapAddress.jibunAddress)).toBeInTheDocument();
     await user.click(within(results).getByRole('button'));
-    expect(screen.getByRole('button', { name: '이 위치로 매물 등록하기' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '이 위치 적용하기' })).toBeEnabled();
+  });
+
+  it('돌아갈 수정 화면 없이 위치 선택 주소로 들어오면 본 방 기록으로 보낸다', async () => {
+    renderAuthenticated('/map/select-location');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/properties$/));
+    expect(screen.queryByRole('region', { name: '매물 위치 선택 지도' })).not.toBeInTheDocument();
   });
 
   it.each([

@@ -20,22 +20,22 @@
 
 모든 이벤트의 공통 속성은 `environment`, `app_version`, `platform`이다. 익명 여부는 SDK의 `$is_identified`를 사용하며 별도 로그인 상태 속성을 중복 추가하지 않는다.
 
-| 이벤트                             | 발생 시점                                                                        | 추가 속성                                                    | 성공으로 해석해도 되는가?                                                    |
-| ---------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| `$pageview`                        | 경로 변경                                                                        | `path`                                                       | 방문이지 기능 사용은 아니다.                                                 |
-| `usage_guide_viewed`               | 사용 방법 진입                                                                   | 없음                                                         | 안내를 봤다는 뜻이다. 기능 사용은 아니다.                                    |
-| `property_creation_started`        | 등록 화면 진입, StrictMode 중복 제외. 기록 지도에서 바로 만들 때는 보내지 않는다 | `entrypoint: form/map`                                       | 아직 등록하지 않았다.                                                        |
-| `property_creation_submitted`      | API 저장 요청 시작                                                               | `entrypoint`                                                 | 저장 성공이 아니다.                                                          |
-| `property_created`                 | 매물 생성 API 성공                                                               | `entrypoint`, `property_id`, 알고 있을 때만 `first_property` | 서버 저장 성공이다. 목록 캐시가 없으면 첫 매물 여부는 모른다.                |
-| `property_creation_failed`         | 매물 생성 API 실패                                                               | `entrypoint`, `error_kind: request`                          | 실패다.                                                                      |
-| `checklist_item_checked`           | 확인 상태 변경 API 성공, 미확인 상태 제외                                        | 기존 매물·항목 ID, `status`                                  | 기록 행동이다. 반복 변경 수가 완료 항목 수는 아니다.                         |
-| `property_memo_saved`              | 메모 저장 API 성공                                                               | `property_id`                                                | 저장 행동이다. 빈 메모 저장·기존 내용 수정도 포함하며 새 메모 개수는 아니다. |
-| `property_memo_save_failed`        | 메모 저장 API 실패                                                               | `property_id`, `error_kind: request`                         | 실패다.                                                                      |
-| `property_comparison_pdf_exported` | PDF 내보내기 처리 완료                                                           | 기존 비교 속성                                               | 비교 결과 활용의 보조 지표다.                                                |
+| 이벤트                             | 발생 시점                                                               | 추가 속성                                                    | 성공으로 해석해도 되는가?                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `$pageview`                        | 경로 변경                                                               | `path`                                                       | 방문이지 기능 사용은 아니다.                                                 |
+| `usage_guide_viewed`               | 사용 방법 진입                                                          | 없음                                                         | 안내를 봤다는 뜻이다. 기능 사용은 아니다.                                    |
+| `property_creation_started`        | 등록 화면을 지워 지금은 보내지 않는다. 매물은 기록 지도에서 바로 만든다 | `entrypoint: form/map`                                       | 아직 등록하지 않았다.                                                        |
+| `property_creation_submitted`      | API 저장 요청 시작                                                      | `entrypoint`                                                 | 저장 성공이 아니다.                                                          |
+| `property_created`                 | 매물 생성 API 성공                                                      | `entrypoint`, `property_id`, 알고 있을 때만 `first_property` | 서버 저장 성공이다. 목록 캐시가 없으면 첫 매물 여부는 모른다.                |
+| `property_creation_failed`         | 매물 생성 API 실패                                                      | `entrypoint`, `error_kind: request`                          | 실패다.                                                                      |
+| `checklist_item_checked`           | 확인 상태 변경 API 성공, 미확인 상태 제외                               | 기존 매물·항목 ID, `status`                                  | 기록 행동이다. 반복 변경 수가 완료 항목 수는 아니다.                         |
+| `property_memo_saved`              | 메모 저장 API 성공                                                      | `property_id`                                                | 저장 행동이다. 빈 메모 저장·기존 내용 수정도 포함하며 새 메모 개수는 아니다. |
+| `property_memo_save_failed`        | 메모 저장 API 실패                                                      | `property_id`, `error_kind: request`                         | 실패다.                                                                      |
+| `property_comparison_pdf_exported` | PDF 내보내기 처리 완료                                                  | 기존 비교 속성                                               | 비교 결과 활용의 보조 지표다.                                                |
 
 `checklist_created`는 사용자 정의 체크리스트 생성이다. 매물에 기본 체크리스트가 연결되는 것 또는 체크리스트 사용 전체를 의미하지 않는다. `property_detail_viewed`는 성공적으로 열린 상세 화면의 조회이며 기록 재사용과 구분한다.
 
-지도 경로에 주소 입력 완료 이벤트를 가짜로 보내지 않는다. 공통 등록 퍼널은 주소 단계 없이 구성하고, 필요할 때 `entrypoint`로 비교한다. 위치 확인 화면의 등록 초안 저장은 폼 진입 경로로 취급한다.
+지도 경로에 주소 입력 완료 이벤트를 가짜로 보내지 않는다. 공통 등록 퍼널은 주소 단계 없이 구성하고, 필요할 때 `entrypoint`로 비교한다.
 
 ## PostHog에서 보는 방법
 

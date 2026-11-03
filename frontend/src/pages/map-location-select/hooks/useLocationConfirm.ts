@@ -1,44 +1,17 @@
 import { useNavigate } from 'react-router-dom';
 
 import type { MapAddress } from '@/features/map/model/Map';
-import type { PropertyInputDto } from '@/features/property/api/dtos/PropertyDto';
-import { useCreateProperty } from '@/features/property/api/usePropertyMutations';
-import { propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
-type UseLocationConfirmOptions = {
-  returnTo: string;
-  registrationDraft: PropertyInputDto | undefined;
-};
-
-/**
- * 고른 위치를 확정한다.
- * 등록 초안을 들고 왔다면 바로 매물을 만들고, 아니면 위치를 들고 이전 폼으로 돌아간다.
- */
-const useLocationConfirm = ({ returnTo, registrationDraft }: UseLocationConfirmOptions) => {
+/** 고른 위치를 확정하고, 그 주소와 좌표를 들고 수정 화면(`returnTo`)으로 돌아간다. */
+const useLocationConfirm = (returnTo: string) => {
   const navigate = useNavigate();
-  const createProperty = useCreateProperty();
 
-  const confirm = (selected: MapAddress) => {
+  return (selected: MapAddress) => {
     const address = selected.roadAddress ?? selected.jibunAddress ?? selected.address;
-    if (registrationDraft !== undefined) {
-      void createProperty
-        .mutateAsync({ ...registrationDraft, address, latitude: selected.latitude, longitude: selected.longitude })
-        .then((created) => {
-          navigate(propertyDetailPath(created.propertyId), { replace: true });
-        })
-        .catch(() => undefined);
-      return;
-    }
     navigate(returnTo, {
       replace: true,
       state: { address: address ?? '', latitude: selected.latitude, longitude: selected.longitude },
     });
-  };
-
-  return {
-    confirm,
-    isCreating: createProperty.isPending,
-    hasCreateError: createProperty.isError,
   };
 };
 

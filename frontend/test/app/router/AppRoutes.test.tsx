@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { StrictMode } from 'react';
@@ -155,7 +155,10 @@ describe('익명 자동 인증 흐름', () => {
     expect(screen.getByRole('heading', { name: '로그인 없이 바로 시작해요' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '이렇게 사용해요' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '동네 찾아보기' })).toHaveAttribute('href', '/neighborhoods');
-    expect(screen.getByRole('link', { name: '매물 등록하기' })).toHaveAttribute('href', '/properties/new');
+    expect(screen.getByRole('link', { name: '기록 지도에서 등록하기' })).toHaveAttribute(
+      'href',
+      '/properties?view=map',
+    );
     expect(screen.getByRole('link', { name: '기록 지도 열기' })).toHaveAttribute('href', '/properties');
     expect(screen.getByRole('link', { name: '체크리스트 보기' })).toHaveAttribute('href', '/checklists');
     expect(screen.getByRole('link', { name: '홈에서 시작하기' })).toHaveAttribute('href', '/');
@@ -167,6 +170,12 @@ describe('익명 자동 인증 흐름', () => {
     renderRoutes('/about');
     expect(await screen.findByRole('heading', { level: 1, name: '사용 방법' })).toBeInTheDocument();
     expect(screen.getByTestId('route-path')).toHaveTextContent('/guide');
+  });
+  it('예전 매물 등록 주소는 등록 화면 대신 본 방 기록 지도로 보낸다', async () => {
+    renderRoutes('/properties/new');
+    await waitFor(() => expect(screen.getByTestId('route-path')).toHaveTextContent(/^\/properties$/));
+    expect(screen.getByTestId('route-search').textContent).toBe('?view=map');
+    expect(screen.queryByRole('region', { name: '매물 위치 선택' })).not.toBeInTheDocument();
   });
   it('예전 로그인 주소로 들어오면 자동 로그인 뒤 홈으로 이어진다', async () => {
     renderRoutes('/login');

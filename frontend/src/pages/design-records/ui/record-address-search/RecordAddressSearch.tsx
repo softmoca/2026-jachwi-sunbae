@@ -1,8 +1,8 @@
 import { css } from '@emotion/css';
 import { useEffect, useRef } from 'react';
 
-import useAddressSearch from '@/pages/create-property/hooks/useAddressSearch';
 import type { MapAddress } from '@/features/map/model/Map';
+import useAddressSearch from '@/features/property/hooks/useAddressSearch';
 import SearchField from '@/shared/ui/search-field/SearchField';
 
 type Props = {

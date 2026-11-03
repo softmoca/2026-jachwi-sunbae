@@ -7,22 +7,11 @@ import type { LocationSelectionStatus } from '../../hooks/useLocationSelection';
 type LocationAddressSheetProps = {
   selected: MapAddress;
   status: LocationSelectionStatus;
-  isEditing: boolean;
-  isCreating: boolean;
-  hasCreateError: boolean;
   onOpenSearch: () => void;
   onConfirm: () => void;
 };
 
-const LocationAddressSheet = ({
-  selected,
-  status,
-  isEditing,
-  isCreating,
-  hasCreateError,
-  onOpenSearch,
-  onConfirm,
-}: LocationAddressSheetProps) => {
+const LocationAddressSheet = ({ selected, status, onOpenSearch, onConfirm }: LocationAddressSheetProps) => {
   const selectedAddress = selected.roadAddress ?? selected.jibunAddress;
 
   return (
@@ -45,16 +34,11 @@ const LocationAddressSheet = ({
       <button
         className={styles.confirmButton}
         type="button"
-        disabled={status !== 'ready' || selectedAddress === null || isCreating}
+        disabled={status !== 'ready' || selectedAddress === null}
         onClick={onConfirm}
       >
-        {isCreating ? '매물을 등록하는 중…' : isEditing ? '이 위치 적용하기' : '이 위치로 매물 등록하기'}
+        이 위치 적용하기
       </button>
-      {hasCreateError && (
-        <p className={styles.addressError} role="alert">
-          매물을 등록하지 못했어요. 입력한 정보는 유지되니 다시 시도해 주세요.
-        </p>
-      )}
     </section>
   );
 };
@@ -117,14 +101,6 @@ const styles = {
     font-size: 0.7rem;
     font-weight: 700;
     text-align: center;
-  `,
-
-  addressError: css`
-    label: LocationAddressSheet-addressError;
-    margin: 0.5rem 0 0;
-    color: var(--color-error);
-    font-size: 0.66rem;
-    line-height: 1.45;
   `,
 
   confirmButton: css`

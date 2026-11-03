@@ -10,7 +10,6 @@
 export const HOME_PATH = '/';
 /** 본 방 기록(지도·리스트) 화면. */
 export const RECORDS_PATH = '/properties';
-export const PROPERTY_NEW_PATH = '/properties/new';
 export const CHECKLISTS_PATH = '/checklists';
 export const MY_PATH = '/me';
 export const COMPARE_PATH = '/compare';
@@ -30,6 +29,8 @@ export const EXPLORE_NEARBY_PATH = '/explore/nearby';
 export const LOGIN_PATH = '/login';
 export const LANDING_PATH = '/landing';
 export const ABOUT_PATH = '/about';
+/** 예전 매물 등록 화면. 매물은 본 방 기록 지도에서 등록하므로 기록 지도로 보낸다. */
+export const PROPERTY_NEW_PATH = '/properties/new';
 
 /** 라우터 정의에만 쓰는 패턴. `area`, `areaDetails`는 동네 찾기 주소 아래에 붙는 상대 패턴이다. */
 export const ROUTE_PATTERNS = {
@@ -71,5 +72,7 @@ export const neighborhoodAreaDetailsPath = (base: string, adminDongCode: PathId)
 export const PROPERTY_DETAIL_TAB_PARAM = 'tab';
 /** 본 방 기록 보기 방식(`?view=`). */
 export const RECORDS_VIEW_PARAM = 'view';
+/** 본 방 기록을 지도 보기로 연다. 매물은 지도의 빈 곳을 눌러 등록한다. */
+export const RECORDS_MAP_PATH = `${RECORDS_PATH}?${RECORDS_VIEW_PARAM}=map`;
 /** 저렴한 한 끼 탭(`?tab=`). */
 export const CHEAP_MEALS_TAB_PARAM = 'tab';

@@ -97,24 +97,23 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 
 첫 진입은 홈(`/`)이며 자동 로그인합니다. 랜딩(`/landing`, `src/pages/landing`)은 광고로 들어오는 사람에게 서비스와 프로젝트를 소개하는 페이지로, 로그인 없이 보고 앱 스토어와 웹 바로가기로 잇습니다. 사용법은 사용 방법(`/guide`, `src/pages/usage-guide`)이 맡고, `/about`은 `/guide`로 이동합니다. 두 화면의 구성은 [사용 방법과 비로그인 동네 탐색](docs/public-exploration.md)에 정리했습니다.
 
-| 화면                 | 경로                                                      | 기능                                            |
-| -------------------- | --------------------------------------------------------- | ----------------------------------------------- |
-| 공개 안내            | `/privacy`                                                | 광고 측정 동의·철회                             |
-| 매물 목록            | `/properties`                                             | 매물 목록, 단계별 진행 현황, PDF 비교 진입      |
-| 매물 비교            | `/compare`                                                | 2~5개 매물 선택과 전체 기록 PDF 다운로드        |
-| 매물 등록            | `/properties/new`                                         | 위치만 골라 `새 매물`로 바로 등록               |
-| 매물 상세            | `/properties/:propertyId`                                 | 항목 줄을 눌러 하나씩 수정, 사진·메모·체크 요약 |
-| 매물 사진            | `/properties/:propertyId/photos`                          | 업로드·대표 지정·삭제                           |
-| 매물 메모            | `/properties/:propertyId/memo`                            | 자유 메모 저장                                  |
-| 매물 정보 수정       | `/properties/:propertyId/edit`                            | 위치가 없는 매물의 주소·좌표 보정               |
-| 적용 체크리스트 선택 | `/properties/:propertyId/active-checklists/:stage`        | 기본 또는 내 체크리스트 적용·교체               |
-| 매물 체크 진행       | `/properties/:propertyId/checklists/:propertyChecklistId` | 상태 즉시 저장·항목 메모 저장·진행 집계         |
-| 내 체크리스트 목록   | `/checklists`                                             | 단계별 내 체크리스트 목록                       |
-| 체크리스트 상세·수정 | `/checklists/:checklistId`                                | 체크리스트 상세·수정                            |
-| 체크리스트 생성      | `/checklists/new`                                         | 기본·선택 항목 조합 생성                        |
-| 마이페이지           | `/me`                                                     | 계정·모드·주요 기능 이동·로그아웃               |
-| 지도에서 위치 선택   | `/map/select-location`                                    | 현재 위치·접힌 주소 검색·역지오코딩             |
-| 매물 주변 분석       | `/properties/:propertyId/nearby`                          | 반경별 시설 개수·선택 시설 핀 상세·스크롤 목록  |
+| 화면                 | 경로                                                      | 기능                                             |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| 공개 안내            | `/privacy`                                                | 광고 측정 동의·철회                              |
+| 매물 목록            | `/properties`                                             | 매물 목록, 단계별 진행 현황, PDF 비교 진입       |
+| 매물 비교            | `/compare`                                                | 2~5개 매물 선택과 전체 기록 PDF 다운로드         |
+| 매물 상세            | `/properties/:propertyId`                                 | 항목 줄을 눌러 하나씩 수정, 사진·메모·체크 요약  |
+| 매물 사진            | `/properties/:propertyId/photos`                          | 업로드·대표 지정·삭제                            |
+| 매물 메모            | `/properties/:propertyId/memo`                            | 자유 메모 저장                                   |
+| 매물 정보 수정       | `/properties/:propertyId/edit`                            | 위치가 없는 매물의 주소·좌표 보정                |
+| 적용 체크리스트 선택 | `/properties/:propertyId/active-checklists/:stage`        | 기본 또는 내 체크리스트 적용·교체                |
+| 매물 체크 진행       | `/properties/:propertyId/checklists/:propertyChecklistId` | 상태 즉시 저장·항목 메모 저장·진행 집계          |
+| 내 체크리스트 목록   | `/checklists`                                             | 단계별 내 체크리스트 목록                        |
+| 체크리스트 상세·수정 | `/checklists/:checklistId`                                | 체크리스트 상세·수정                             |
+| 체크리스트 생성      | `/checklists/new`                                         | 기본·선택 항목 조합 생성                         |
+| 마이페이지           | `/me`                                                     | 계정·모드·주요 기능 이동·로그아웃                |
+| 지도에서 위치 선택   | `/map/select-location`                                    | 매물 수정에서 위치 고치기, 주소 검색, 역지오코딩 |
+| 매물 주변 분석       | `/properties/:propertyId/nearby`                          | 반경별 시설 개수·선택 시설 핀 상세·스크롤 목록   |
 
 하단 메뉴는 홈·체크리스트·지도·마이를 제공합니다. 모든 보호 화면은 조회 중·저장 중·빈 결과·오류·재시도 상태를 제공하고 키보드 포커스와 명시적 label을 유지합니다.
 

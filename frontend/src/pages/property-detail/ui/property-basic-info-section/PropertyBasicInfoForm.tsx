@@ -1,12 +1,11 @@
 import { css } from '@emotion/css';
 import { type FocusEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 
-import useAddressSearch from '@/pages/create-property/hooks/useAddressSearch';
-import usePropertyLocation from '@/pages/create-property/hooks/usePropertyLocation';
-import PropertyLocationPicker from '@/pages/create-property/ui/property-location-picker/PropertyLocationPicker';
 import { requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import type { MapAddress } from '@/features/map/model/Map';
 import { useUpdateProperty } from '@/features/property/api/usePropertyMutations';
+import useAddressSearch from '@/features/property/hooks/useAddressSearch';
+import usePropertyLocation from '@/features/property/hooks/usePropertyLocation';
 import {
   formatAmountForInput,
   parseMoneyInput,
@@ -16,6 +15,7 @@ import {
 } from '@/features/property/lib/propertyForm';
 import type { PropertyDetail } from '@/features/property/model/Property';
 import MoneyField from '@/features/property/ui/money-field/MoneyField';
+import PropertyLocationPicker from '@/features/property/ui/property-location-picker/PropertyLocationPicker';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 import { Button } from '@/shared/ui/button/Button';
 

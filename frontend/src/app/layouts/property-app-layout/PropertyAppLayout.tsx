@@ -9,7 +9,6 @@ import {
   MY_PATH,
   NEIGHBORHOODS_NEARBY_PATH,
   NEIGHBORHOODS_PATH,
-  PROPERTY_NEW_PATH,
 } from '@/shared/lib/navigation/appPaths';
 import { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
 
@@ -33,7 +32,6 @@ const PropertyAppLayout = () => {
   const shell: AppShellState = {
     fullScreen:
       location.pathname === MAP_SELECT_LOCATION_PATH ||
-      location.pathname.startsWith(PROPERTY_NEW_PATH) ||
       isPropertyDetailPath ||
       // 체크리스트 편집은 자체 상단 내비게이션을 쓴다.
       location.pathname === CHECKLISTS_PATH ||

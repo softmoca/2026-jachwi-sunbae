@@ -106,11 +106,11 @@ describe('공용 UI 컴포넌트', () => {
   it('ButtonLink는 이동 목적지를 명시한다', () => {
     render(
       <MemoryRouter>
-        <ButtonLink to="/properties/new">새 매물 등록</ButtonLink>
+        <ButtonLink to="/properties">본 방 기록</ButtonLink>
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: '새 매물 등록' })).toHaveAttribute('href', '/properties/new');
+    expect(screen.getByRole('link', { name: '본 방 기록' })).toHaveAttribute('href', '/properties');
   });
 
   it('TopNavigation은 제목·보조정보·뒤로가기·우측 슬롯을 함께 표시한다', () => {
