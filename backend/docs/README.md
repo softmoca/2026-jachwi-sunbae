@@ -16,6 +16,8 @@
 - [백엔드 패키지 구조](conventions/backend-package-structure.md)
 - [API 컨벤션](conventions/api-convention.md)
 - [예외 컨벤션](conventions/exception-convention.md)
+- [테스트 컨벤션](conventions/test-convention.md)
+- [테스트 전략](conventions/test-strategy.md)
 - [Backend CI](operations/ci.md)
 - [백엔드 배포](operations/deployment.md)
 - [DB 마이그레이션](operations/database-migrations.md)
