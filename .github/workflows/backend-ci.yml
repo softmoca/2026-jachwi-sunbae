@@ -46,12 +46,13 @@ jobs:
           fi
 
           if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-            CHANGED_FILES="$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}")"
+            CHANGED_FILES="$(git diff --name-only --no-renames "${BASE_SHA}...${HEAD_SHA}")"
           else
-            CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+            CHANGED_FILES="$(git diff --name-only --no-renames "${BASE_SHA}" "${HEAD_SHA}")"
           fi
 
-          if grep -Eq '^(backend/|\.github/workflows/backend-ci\.yml$)' <<< "${CHANGED_FILES}"; then
+          BUILD_FILES="$(grep -Ev '^backend/(docs/|[^/]+\.md$)' <<< "${CHANGED_FILES}" || true)"
+          if grep -Eq '^(backend/|\.github/gradle/|\.github/workflows/backend-ci\.yml$)' <<< "${BUILD_FILES}"; then
             echo "backend=true" >> "${GITHUB_OUTPUT}"
           else
             echo "backend=false" >> "${GITHUB_OUTPUT}"
@@ -60,7 +61,7 @@ jobs:
 
       - name: Report skipped backend check
         if: steps.changes.outputs.backend != 'true'
-        run: echo "백엔드 변경이 없어 검사를 생략한다."
+        run: echo "빌드에 영향을 주는 백엔드 변경이 없어 검사를 생략한다."
         working-directory: .
 
       - name: Set up Java
@@ -74,8 +75,61 @@ jobs:
         if: steps.changes.outputs.backend == 'true'
         uses: gradle/actions/setup-gradle@v6
         with:
-          cache-provider: basic
+          cache-provider: external
+
+      - name: Detect cache architecture
+        if: steps.changes.outputs.backend == 'true'
+        id: cache-config
+        run: echo "arch=${RUNNER_ARCH,,}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore Gradle dependencies
+        if: steps.changes.outputs.backend == 'true'
+        id: dependencies
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: backend-gradle-dependencies-v2-${{ runner.os }}-${{ runner.arch }}-java21-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties', 'backend/**/gradle.properties', 'backend/gradle/**/*.toml') }}
+          restore-keys: |
+            backend-gradle-dependencies-v2-${{ runner.os }}-${{ runner.arch }}-java21-
+            setup-java-${{ runner.os }}-${{ steps.cache-config.outputs.arch }}-gradle-
+
+      - name: Restore Gradle task outputs
+        if: steps.changes.outputs.backend == 'true'
+        id: task-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ runner.temp }}/backend-gradle-task-cache
+          key: backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties', 'backend/**/gradle.properties', 'backend/gradle/**/*.toml', '.github/gradle/backend-ci.init.gradle') }}-${{ github.sha }}
+          restore-keys: |
+            backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-${{ hashFiles('backend/**/*.gradle*', 'backend/**/gradle-wrapper.properties', 'backend/**/gradle.properties', 'backend/gradle/**/*.toml', '.github/gradle/backend-ci.init.gradle') }}-
+            backend-gradle-tasks-v1-${{ runner.os }}-${{ runner.arch }}-java21-
 
       - name: Build
         if: steps.changes.outputs.backend == 'true'
-        run: ./gradlew clean build --no-daemon
+        env:
+          CI_GRADLE_BUILD_CACHE: ${{ runner.temp }}/backend-gradle-task-cache
+        run: ./gradlew clean build --no-daemon --build-cache --console=plain --init-script ../.github/gradle/backend-ci.init.gradle
+
+      - name: Save Gradle dependencies
+        if: >-
+          steps.changes.outputs.backend == 'true' &&
+          steps.dependencies.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.GRADLE_USER_HOME }}/caches
+            ${{ env.GRADLE_USER_HOME }}/wrapper
+          key: ${{ steps.dependencies.outputs.cache-primary-key }}
+
+      - name: Save Gradle task outputs
+        if: >-
+          steps.changes.outputs.backend == 'true' &&
+          steps.task-cache.outputs.cache-hit != 'true' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ runner.temp }}/backend-gradle-task-cache
+          key: ${{ steps.task-cache.outputs.cache-primary-key }}
