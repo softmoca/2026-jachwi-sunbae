@@ -183,7 +183,7 @@ const DesignHomePage = () => (useIsDesktop() ? <HomeDesktopPage /> : <HomeMobile
 - 화면 일부만 불러올 때는 `shared/ui/delayed-fallback/DelayedFallback`으로 감쌉니다. 300ms 안에 끝나면 로딩 UI 없이 빈자리(`placeholder`)만 두었다가 바로 내용을 보여 주고, 그보다 길어지면 `fallback`을 띄워 최소 250ms는 남깁니다. 오류 처리는 맡지 않습니다. 감싸기 어려운 곳(스켈레톤, 지도 안내 등)은 같은 규칙의 `useDelayedLoading`을 씁니다.
 - 공용 `Button`의 `isLoading`은 켜지는 즉시 두 번째 클릭을 막고 `aria-busy`를 달지만, 스피너와 문구, 비활성 모양은 300ms가 지나야 보여 줍니다. 라우트 Suspense 대체 화면(`RouteLoading`)도 처음엔 투명하게 두고 300ms 뒤 CSS 애니메이션으로 나타냅니다.
 - 오류 코드는 `isApiErrorCode(error, 'CODE')`로 확인합니다.
-- 처음 여는 화면은 남겨 둘 내용이 없으므로 늦추지 않고 그 화면의 뼈대를 바로 보여 줘도 됩니다. 이때 라우트 Suspense 대체 화면과 데이터 로딩에 같은 뼈대를 써서, 뼈대에서 내용으로 한 번만 바뀌게 합니다. 예: 본 방 기록의 `RecordsPageSkeleton`
+- 처음 여는 화면은 남겨 둘 내용이 없으므로 늦추지 않고 그 화면의 뼈대를 바로 보여 줘도 됩니다. 이때 라우트 Suspense 대체 화면과 데이터 로딩에 같은 뼈대를 써서, 뼈대에서 내용으로 한 번만 바뀌게 합니다. 뼈대는 실제 배치를 따릅니다. 지도 화면(본 방 기록 `RecordsPageSkeleton`, 동네 찾기 `NeighborhoodPageSkeleton`)은 목록 영역과 지도 영역의 배치만 `AreaSkeleton`으로 채우고 카드, 칩, 필터 모양은 그리지 않습니다. 휴대폰은 지금 보기 방식의 한 영역만, 데스크탑은 실제 화면과 같은 `ListDetailLayout`으로 두 영역을 채워 폭 규칙을 함께 씁니다.
 - 서버 상태와 UI 상태를 구분합니다. 서버에서 가져온 데이터를 불필요하게 여러 컴포넌트의 로컬 상태로 복사하지 않습니다.
 
 ## 8. 접근성

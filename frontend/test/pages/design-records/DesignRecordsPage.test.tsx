@@ -459,11 +459,33 @@ it('시설 카테고리를 켜면 반경 원 없이 지도 화면 안의 시설�
   expect(await screen.findByRole('button', { name: /^병원 숨기기, \d+개$/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
-it('기록을 받는 동안에는 기다리지 않고 바로 리스트 뼈대를 보여 준다', () => {
+it('기록을 받는 동안에는 기다리지 않고 바로 지금 보기 방식의 영역 하나만 뼈대로 채운다', () => {
   server.use(http.get('*/api/properties', () => new Promise<never>(() => undefined)));
-  renderRecords();
+  const view = renderRecords('/properties?view=map');
   // 화면 코드를 받는 동안의 뼈대에서 이어지도록, 빈 칸으로 두었다가 늦게 띄우지 않는다.
   expect(screen.getByRole('status')).toHaveTextContent('기록을 불러오는 중이에요.');
+  expect(screen.getByTestId('map-area-skeleton')).toBeInTheDocument();
+  expect(screen.queryByTestId('list-area-skeleton')).not.toBeInTheDocument();
+  // 카드와 동네 칩 모양은 그리지 않는다.
+  expect(screen.queryByRole('list', { hidden: true })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /전체/ })).not.toBeInTheDocument();
+  view.unmount();
+
+  renderRecords('/properties?view=list');
+  expect(screen.getByTestId('list-area-skeleton')).toBeInTheDocument();
+  expect(screen.queryByTestId('map-area-skeleton')).not.toBeInTheDocument();
+  expect(screen.queryByRole('list', { hidden: true })).not.toBeInTheDocument();
+});
+
+it('데스크탑에서 기록을 받는 동안 목록 영역과 지도 영역을 함께 뼈대로 채우고 한 번만 알린다', () => {
+  const matchMedia = useDesktopViewport();
+  server.use(http.get('*/api/properties', () => new Promise<never>(() => undefined)));
+  renderRecords();
+  expect(screen.getByRole('status')).toHaveTextContent('기록을 불러오는 중이에요.');
+  expect(screen.getByTestId('list-area-skeleton')).toHaveAttribute('role', 'status');
+  expect(screen.getByTestId('map-area-skeleton')).toHaveAttribute('aria-hidden', 'true');
+  expect(screen.queryByRole('list', { hidden: true })).not.toBeInTheDocument();
+  matchMedia.mockRestore();
 });
 
 it('기록을 불러오지 못하면 지도 위 헤더 없이 오류 안내와 다시 시도를 보여 준다', async () => {

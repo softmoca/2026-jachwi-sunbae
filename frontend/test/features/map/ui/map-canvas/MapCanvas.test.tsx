@@ -157,6 +157,27 @@ describe('Naver 지도 상태 동기화', () => {
     await waitFor(() => expect(view.queryByRole('status')).not.toBeInTheDocument(), { timeout: 1500 });
   });
 
+  it('GL 지도는 준비를 마친 뒤에 마커와 좌표 버튼을 넣어 가운데 쪽에 먼저 그렸다가 옮기지 않는다', async () => {
+    const center = { latitude: 37.5, longitude: 127 };
+    renderWithConfig(
+      <MapCanvas
+        center={center}
+        customStyleId="style"
+        markers={[{ id: 'property-10', latitude: 37.51, longitude: 127.01, label: '테스트 매물', tone: 'property' }]}
+        coordinateAction={{ ...center, label: '조회', onClick: vi.fn() }}
+      />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    // 준비 전 좌표 변환으로 그린 마커는 준비가 끝나면 제자리로 옮겨 가므로, 이때는 넣지 않는다.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(overlayInstances).toHaveLength(0);
+
+    (maps[0] as FakeMapInstance & { _glReady?: boolean })._glReady = true;
+
+    await waitFor(() => expect(overlayInstances).toHaveLength(2));
+    expect(overlayInstances.some((overlay) => overlay.pane.querySelector('[aria-label="테스트 매물"]'))).toBe(true);
+  });
+
   it('화면이 자체 로딩으로 지도를 덮으면 지도 준비 안내를 띄우지 않는다', () => {
     const view = renderWithConfig(
       <MapCanvas center={{ latitude: 37.5, longitude: 127 }} customStyleId="style" interactive hideLoading />,

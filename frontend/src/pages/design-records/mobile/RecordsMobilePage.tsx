@@ -1,15 +1,16 @@
 import { useState } from 'react';
 
 import type { MapAddress } from '@/features/map/model/Map';
+import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
 
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
 import useRecords from '../hooks/useRecords';
 import useRecordsMapLayers from '../hooks/useRecordsMapLayers';
 import useRecordsView from '../hooks/useRecordsView';
+import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
 import RecordList from '../ui/record-list/RecordList';
-import RecordListSkeleton from '../ui/record-list/RecordListSkeleton';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
 import RecordsMobileHeader from './RecordsMobileHeader';
@@ -79,8 +80,8 @@ const RecordsMobilePage = () => {
           ) : (
             <RecordsMobileHeader view={view} onViewChange={setView} onSearchOpen={() => setIsSearching(true)} />
           )}
-          {/* 목적지 모드에서는 동네 뱃지도 거둬 목적지 고르기만 남긴다. */}
-          {!(showsMap && layers.destination.isPicking) && (
+          {/* 목적지 모드에서는 동네 뱃지도 거둬 목적지 고르기만 남긴다. 기록을 받는 동안은 뼈대처럼 칩 줄을 두지 않는다. */}
+          {!records.properties.isPending && !(showsMap && layers.destination.isPicking) && (
             <RecordDistricts
               districts={records.districts}
               district={records.district}
@@ -90,9 +91,10 @@ const RecordsMobilePage = () => {
           )}
         </div>
         <div className={styles.body}>
-          {/* 처음 여는 화면이라 남겨 둘 목록이 없다. 늦추지 않고 바로 뼈대를 보여, 화면 코드를 받는 동안의 뼈대에서 이어지게 한다. */}
+          {/* 처음 여는 화면이라 남겨 둘 목록이 없다. 늦추지 않고 바로 뼈대를 보여, 화면 코드를 받는 동안의 뼈대에서 이어지게 한다.
+              뼈대는 지금 보기 방식의 영역(지도, 리스트) 하나만 채운다. */}
           {records.properties.isPending ? (
-            <RecordListSkeleton className={styles.list} />
+            <AreaSkeleton area={showsMap ? 'map' : 'list'} label={RECORDS_LOADING_LABEL} />
           ) : records.properties.isError ? (
             <RecordLoadError
               className={styles.list}

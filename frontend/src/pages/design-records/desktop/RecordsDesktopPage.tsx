@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
 import type { MapAddress } from '@/features/map/model/Map';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
 import DesktopHeader from '@/shared/ui/desktop-header/DesktopHeader';
 import DesktopHeaderSlot, { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
 import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
@@ -11,10 +12,10 @@ import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
 import useRecords from '../hooks/useRecords';
 import useRecordsMapLayers from '../hooks/useRecordsMapLayers';
+import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
 import RecordList from '../ui/record-list/RecordList';
-import RecordListSkeleton from '../ui/record-list/RecordListSkeleton';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
 import RecordsDesktopMap from './RecordsDesktopMap';
@@ -64,7 +65,7 @@ const RecordsDesktopPage = () => {
 
   // 처음 여는 화면이라 남겨 둘 목록이 없다. 늦추지 않고 바로 뼈대를 보여, 화면 코드를 받는 동안의 뼈대(`RecordsPageSkeleton`)에서 이어지게 한다.
   const list = records.properties.isPending ? (
-    <RecordListSkeleton className={styles.list} />
+    <AreaSkeleton area="list" label={RECORDS_LOADING_LABEL} />
   ) : records.properties.isError ? (
     <RecordLoadError
       className={styles.list}
@@ -111,6 +112,8 @@ const RecordsDesktopPage = () => {
             onCloseDetail={closeDetail}
             closeLabel="매물 상세 칸 닫기"
           >
+            {/* 기록을 받는 동안 지도 칸도 화면 코드를 받는 동안의 뼈대와 같은 지도 영역 뼈대로 채운다. 알림은 목록 영역이 맡는다. */}
+            {records.properties.isPending && <AreaSkeleton area="map" />}
             {!records.properties.isPending && !records.properties.isError && (
               <RecordsDesktopMap
                 records={records}

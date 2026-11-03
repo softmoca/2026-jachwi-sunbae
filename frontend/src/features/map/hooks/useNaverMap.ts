@@ -81,6 +81,9 @@ const useNaverMap = ({
   const [mapReady, setMapReady] = useState(false);
   // SDK 로드와 GL 준비 사이에는 지도를 눌러도 반응이 없으므로 화면에 준비 중임을 알린다.
   const [renderReady, setRenderReady] = useState(false);
+  // GL 지도는 준비를 마치기 전 좌표 변환이 한 단계 멀리 본 배율이라, 그때 넣은 마커는 모두 지도 가운데 쪽 절반 거리에
+  // 그려졌다가 준비가 끝나면 제자리로 옮겨 간다. 마커, 좌표 버튼, 좌표 메뉴 같은 DOM 오버레이는 준비를 마친 뒤에 넣는다.
+  const overlayReady = mapReady && renderReady;
   const canvasRef = useRef<HTMLDivElement>(null);
   const gestureActiveRef = useRef(false);
   // 화면이 시점을 옮기는 애니메이션(morph) 도중 지도 크기를 다시 맞추면 SDK가 애니메이션을 그 자리에서 멈춘다.
@@ -290,7 +293,7 @@ const useNaverMap = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!liveMode || !mapReady || map === null || gestureActiveRef.current || !isNaverSdkAvailable()) return;
+    if (!liveMode || !overlayReady || map === null || gestureActiveRef.current || !isNaverSdkAvailable()) return;
     // 달라진 마커만 다시 그린다. 전부 지웠다 만들면 지도를 옮길 때마다 깜빡인다.
     const previous = overlaysRef.current;
     const next = new Map<string, { signature: string; overlay: LiveOverlay; content: HTMLElement }>();
@@ -321,7 +324,7 @@ const useNaverMap = ({
 
     previous.forEach(({ overlay }) => overlay.setMap(null));
     overlaysRef.current = next;
-  }, [engine, level, liveMode, mapReady, markers, selectedMarkerId, settledVersion]);
+  }, [engine, level, liveMode, overlayReady, markers, selectedMarkerId, settledVersion]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -337,7 +340,7 @@ const useNaverMap = ({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!liveMode || !mapReady || map === null || !coordinateAction || !isNaverSdkAvailable()) return;
+    if (!liveMode || !overlayReady || map === null || !coordinateAction || !isNaverSdkAvailable()) return;
     const content = document.createElement('div');
     const button = document.createElement('button');
     button.type = 'button';
@@ -364,11 +367,11 @@ const useNaverMap = ({
     return () => {
       if (isNaverSdkAvailable()) overlay.setMap(null);
     };
-  }, [coordinateAction, engine, liveMode, mapReady]);
+  }, [coordinateAction, engine, liveMode, overlayReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!liveMode || !mapReady || map === null || !coordinateMenu || !isNaverSdkAvailable()) return;
+    if (!liveMode || !overlayReady || map === null || !coordinateMenu || !isNaverSdkAvailable()) return;
     const overlay = engine.createOverlay(
       map,
       {
@@ -385,7 +388,7 @@ const useNaverMap = ({
     return () => {
       if (isNaverSdkAvailable()) overlay.setMap(null);
     };
-  }, [coordinateMenu, engine, liveMode, mapReady]);
+  }, [coordinateMenu, engine, liveMode, overlayReady]);
 
   useEffect(() => {
     const map = mapRef.current;

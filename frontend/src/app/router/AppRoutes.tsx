@@ -5,6 +5,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-do
 import PropertyAppLayout from '@/app/layouts/property-app-layout/PropertyAppLayout';
 import PublicExploreLayout from '@/app/layouts/public-explore-layout/PublicExploreLayout';
 import RecordsPageSkeleton from '@/pages/design-records/RecordsPageSkeleton';
+import NeighborhoodPageSkeleton from '@/pages/neighborhood-preview/NeighborhoodPageSkeleton';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import {
   ABOUT_PATH,
@@ -99,7 +100,7 @@ const LegacyNeighborhoodRoute = ({ base }: { base: NeighborhoodBasePath }) => {
 const AppRoutes = () => (
   <Routes>
     <Route element={<PublicExploreLayout />}>
-      <Route path={EXPLORE_PATH} element={lazyPage(<NeighborhoodPreviewPage />)}>
+      <Route path={EXPLORE_PATH} element={lazyPage(<NeighborhoodPreviewPage />, <NeighborhoodPageSkeleton />)}>
         <Route path={ROUTE_PATTERNS.area} element={lazyPage(<NeighborhoodRoutePage />)} />
         <Route path={ROUTE_PATTERNS.areaDetails} element={lazyPage(<NeighborhoodRoutePage />)} />
       </Route>
@@ -109,7 +110,7 @@ const AppRoutes = () => (
     </Route>
     <Route element={<PropertyAppLayout />}>
       <Route path={GUIDE_PATH} element={lazyPage(<UsageGuidePage />)} />
-      <Route path={NEIGHBORHOODS_PATH} element={lazyPage(<NeighborhoodPreviewPage />)}>
+      <Route path={NEIGHBORHOODS_PATH} element={lazyPage(<NeighborhoodPreviewPage />, <NeighborhoodPageSkeleton />)}>
         <Route path={ROUTE_PATTERNS.area} element={lazyPage(<NeighborhoodRoutePage />)} />
         <Route path={ROUTE_PATTERNS.areaDetails} element={lazyPage(<NeighborhoodRoutePage />)} />
       </Route>

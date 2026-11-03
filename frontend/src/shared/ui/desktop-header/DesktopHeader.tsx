@@ -112,6 +112,8 @@ const styles = {
   nav: css`
     label: DesktopHeader-nav;
     display: flex;
+    /* 좁은 데스크탑(1024px)에서도 메뉴 이름이 두 줄로 꺾이지 않게 메뉴는 줄이지 않고 가운데 검색 자리가 줄어든다. */
+    flex: none;
     gap: 0;
     margin-left: auto;
 
@@ -123,6 +125,7 @@ const styles = {
       font-size: 0.95em;
       font-weight: 600;
       text-decoration: none;
+      white-space: nowrap;
       transition:
         background-color 0.18s ease,
         color 0.18s ease;

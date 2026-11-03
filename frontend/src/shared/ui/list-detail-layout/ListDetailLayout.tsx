@@ -48,8 +48,9 @@ const ListDetailLayout = ({
 const styles = {
   layout: css`
     label: ListDetailLayout-layout;
-    --list-detail-list-width: 24rem;
-    --list-detail-detail-width: 26rem;
+    /* 목록과 상세 칸은 고정 폭 대신 화면 폭에 따라 최소와 최대 사이에서 줄어든다. 뼈대도 이 배치를 그대로 써서 폭이 같다. */
+    --list-detail-list-width: clamp(20rem, 28%, 24rem);
+    --list-detail-detail-width: clamp(22rem, 28%, 26rem);
     display: grid;
     grid-template-columns: var(--list-detail-list-width) minmax(0, 1fr);
     height: 100%;
@@ -57,12 +58,6 @@ const styles = {
 
     &[data-detail-open='true'] {
       grid-template-columns: var(--list-detail-list-width) var(--list-detail-detail-width) minmax(0, 1fr);
-    }
-
-    /* 좁은 데스크탑에서는 세 칸을 모두 열어도 본문이 너무 좁아지지 않게 두 칸을 줄인다. */
-    @media (max-width: 1279px) {
-      --list-detail-list-width: 20rem;
-      --list-detail-detail-width: 23rem;
     }
   `,
 

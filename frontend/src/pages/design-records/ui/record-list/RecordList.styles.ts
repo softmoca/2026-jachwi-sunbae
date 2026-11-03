@@ -1,10 +1,4 @@
-import { css, cx, keyframes } from '@emotion/css';
-
-const recordSkeletonShimmerKeyframes = keyframes`
-  to {
-    background-position: -200% 0;
-  }
-`;
+import { css } from '@emotion/css';
 
 /* 리스트 위 필터 줄. 아직 기능 구현 전이라 칩은 흐리게 두고 '필터 준비 중'을 붙인다. */
 export const toolbar = css`
@@ -129,6 +123,8 @@ export const items = css`
   padding: 0;
   margin: 0;
   display: grid;
+  /* 목록 칸이 화면 폭에 따라 좁아져도 카드가 칸을 넘지 않게, 긴 주소는 줄여 보이고 오른쪽 메뉴는 칸 안에 남긴다. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 `;
 
@@ -205,60 +201,5 @@ export const menu = css`
 
   & button:hover {
     background: #fff3f3;
-  }
-`;
-
-/* 불러오는 동안의 스켈레톤: 사진 칸과 이름·가격·주소 줄 자리를 은은하게 반짝인다. */
-// 다른 요소의 선택자에서 `.RecordList-skeleton`로 가리킨다.
-export const skeleton = cx(
-  css`
-    label: RecordList-skeleton;
-    display: block;
-    border-radius: 0.4rem;
-    background: linear-gradient(90deg, #eff1f5 25%, #e3e6eb 50%, #eff1f5 75%);
-    background-size: 200% 100%;
-    animation: ${recordSkeletonShimmerKeyframes} 1.2s ease-in-out infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-  'RecordList-skeleton',
-);
-
-/* 스켈레톤 줄은 공용 매물 카드(PropertyCard)와 같은 크기로 둔다. */
-export const skeletonRoom = css`
-  label: RecordList-skeletonRoom;
-  display: grid;
-  grid-template-columns: 6.7rem minmax(0, 1fr);
-  gap: 0.875rem;
-`;
-
-export const skeletonPhoto = css`
-  label: RecordList-skeletonPhoto;
-  height: 8.5rem;
-`;
-
-export const skeletonLines = css`
-  label: RecordList-skeletonLines;
-  display: grid;
-  align-content: start;
-  gap: 0.5rem;
-  padding-top: 0.25rem;
-
-  & .RecordList-skeleton {
-    height: 0.8rem;
-  }
-
-  & .RecordList-skeleton:nth-child(1) {
-    width: 45%;
-  }
-
-  & .RecordList-skeleton:nth-child(2) {
-    width: 70%;
-  }
-
-  & .RecordList-skeleton:nth-child(3) {
-    width: 85%;
   }
 `;
