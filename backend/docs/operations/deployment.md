@@ -211,6 +211,15 @@ FCM 토큰은 발급한 Firebase 프로젝트의 서비스 계정으로만 발�
 
 발송을 긴급 중단하려면 Vault의 해당 환경 `app_env`에 `WEATHER_NOTIFICATION_ENABLED=false`를 추가하고 `fetch_env.sh` 실행 후 재시작한다. 환경변수가 YAML보다 우선하므로 코드 배포 없이 적용된다. 원인 해결 후 이 줄을 제거하고 같은 절차로 다시 적용한다.
 
+운영자 테스트 알림 `POST /internal/weather-notifications/test`는 `app_env`의 `WEATHER_TEST_PUSH_KEY`와 같은 값을 `X-Test-Push-Key` 헤더로 보낼 때만 `{"memberId": <회원 ID>}`의 등록 기기로 고정 문구를 보낸다. 키가 없으면 API는 항상 404다. 키는 `openssl rand -base64 32`로 환경마다 다르게 만들고 문서·채팅·셸 기록에 남기지 않는다. 회원 ID는 DB `weather_notification_devices`의 `member_id`와 등록 시각 `updated_at`(UTC)으로 찾는다.
+
+```bash
+read -rs KEY
+curl -fsS -X POST https://dev-api.jachwi-sunbae.kr/internal/weather-notifications/test \
+  -H "X-Test-Push-Key: ${KEY}" -H 'Content-Type: application/json' -d '{"memberId": 1}'
+unset KEY
+```
+
 Vault 값 변경은 실행 중인 앱에 즉시 반영되지 않는다. 이 리비전 배포 후 파일을 갱신하고 성공했을 때만 재시작한다. prod에서는 인자를 `prod`로 바꾼다.
 
 ```bash
