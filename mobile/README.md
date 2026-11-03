@@ -58,6 +58,7 @@ npm run format:docs:check
 - iOS는 `.xcworkspace`로 열고 Push Notifications entitlement를 포함한 올바른 팀/프로파일로 서명한다. APNs 키를 Firebase에 연결한 후 실기기에서 확인한다.
 - Android는 기존 업로드 키를 유지한다. 환경 변수 또는 개인 Gradle 설정에 `JACHWI_UPLOAD_STORE_FILE`, `JACHWI_UPLOAD_STORE_PASSWORD`, `JACHWI_UPLOAD_KEY_ALIAS`, `JACHWI_UPLOAD_KEY_PASSWORD`를 제공한 뒤 `cd android && ./gradlew bundleRelease`로 만든다.
 - Play Store 등록용 아이콘은 `store-assets/android/play-store-icon-512.png`, App Store 아이콘은 iOS AppIcon asset catalog에 있다.
+- 스토어 스크린샷은 `store-assets/ios/6.7-inch/`와 `store-assets/android/phone/`에 있고, `store-assets/template/render.sh`로 다시 만든다. 자세한 방법은 [스토어 스크린샷](store-assets/ios/README.md)을 따른다.
 - 키스토어, APNs 키, 서비스 계정 키, IPA/AAB/아카이브는 커밋하지 않는다. 기존 스토어 앱 ID를 바꾸지 않는다.
 - 푸시 목적·토큰 처리에 맞춰 개인정보처리방침과 스토어 수집 데이터 답변을 출시 전에 검토한다.
 
