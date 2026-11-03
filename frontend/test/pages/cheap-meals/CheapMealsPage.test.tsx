@@ -159,6 +159,112 @@ it('상품은 24개씩 표시하고 추가 행사 유형과 UNKNOWN 상품도 �
   expect(within(list).getAllByText('3+1')).toHaveLength(12);
   expect(within(list).getAllByText('골라담기')).toHaveLength(12);
 });
+// 이름은 콜라·라면이 번갈아 나오고, 판매가격은 응답 순서와 반대로 내려가 정렬 여부가 첫 상품에서 드러난다.
+const searchableProducts = Array.from({ length: 60 }, (_, index) => ({
+  ...products[0],
+  name: index % 2 === 0 ? `콜라 ${index}` : `라면 ${index}`,
+  price: 10000 - index * 10,
+  promotionType: index < 40 ? 'ONE_PLUS_ONE' : 'TWO_PLUS_ONE',
+}));
+const useSearchableProducts = () =>
+  server.use(http.get('http://localhost:8080/api/promotions', () => success(promotion('EMART24', searchableProducts))));
+const cardNames = (list: HTMLElement) =>
+  within(list)
+    .getAllByRole('button')
+    .map((card) => card.getAttribute('aria-label')?.replace(' 상세 보기', ''));
+const searchInput = () => screen.getByRole('textbox', { name: '상품명 검색' });
+const sortSelect = () => screen.getByRole('combobox', { name: '가격 정렬' });
+
+it('상품명 검색은 전체 상품에서 대소문자·공백을 무시해 찾고, 결과 수와 더 보기를 함께 적용한다', async () => {
+  useSearchableProducts();
+  const user = setup('/cheap-meals?tab=convenience');
+  const list = await screen.findByRole('list', { name: '행사상품 목록' });
+  expect(sortSelect()).toHaveValue('DEFAULT');
+  await user.type(searchInput(), ' 콜 라');
+  expect(screen.getByText('이마트24 · 검색 결과 30개 상품')).toBeInTheDocument();
+  expect(cardNames(list)).toHaveLength(24);
+  expect(cardNames(list).every((name) => name?.startsWith('콜라'))).toBe(true);
+  await user.click(screen.getByRole('button', { name: '상품 더 보기 (24/30)' }));
+  expect(cardNames(list)).toHaveLength(30);
+  expect(screen.queryByRole('button', { name: /상품 더 보기/ })).not.toBeInTheDocument();
+  // 기존 행사 유형 필터와 함께 걸리고, 조건이 바뀌면 다시 24개부터 보여 준다.
+  await user.click(screen.getByRole('radio', { name: '2+1' }));
+  expect(screen.getByText('이마트24 · 검색 결과 10개 상품')).toBeInTheDocument();
+  expect(cardNames(list)).toEqual([
+    '콜라 40',
+    '콜라 42',
+    '콜라 44',
+    '콜라 46',
+    '콜라 48',
+    '콜라 50',
+    '콜라 52',
+    '콜라 54',
+    '콜라 56',
+    '콜라 58',
+  ]);
+  await user.click(screen.getByRole('radio', { name: '전체' }));
+  expect(cardNames(list)).toHaveLength(24);
+  await user.clear(searchInput());
+  expect(screen.getByText('이마트24 · 60개 상품')).toBeInTheDocument();
+});
+it('가격순 정렬은 보이는 24개가 아니라 검색·필터를 거친 전체 결과에 적용되고 더 보기에서도 이어진다', async () => {
+  useSearchableProducts();
+  const user = setup('/cheap-meals?tab=convenience');
+  const list = await screen.findByRole('list', { name: '행사상품 목록' });
+  await user.click(screen.getByRole('button', { name: /상품 더 보기/ }));
+  expect(cardNames(list)).toHaveLength(48);
+  await user.selectOptions(sortSelect(), '가격 낮은 순');
+  // 응답의 마지막 상품이 가장 싸므로, 전체를 정렬해야만 첫 자리에 온다. 정렬을 바꾸면 24개로 돌아간다.
+  expect(cardNames(list)).toHaveLength(24);
+  expect(cardNames(list).slice(0, 3)).toEqual(['라면 59', '콜라 58', '라면 57']);
+  await user.click(screen.getByRole('button', { name: /상품 더 보기/ }));
+  expect(cardNames(list).slice(23, 26)).toEqual(['콜라 36', '라면 35', '콜라 34']);
+  await user.selectOptions(sortSelect(), '가격 높은 순');
+  expect(cardNames(list).slice(0, 2)).toEqual(['콜라 0', '라면 1']);
+  await user.type(searchInput(), '라면');
+  await user.click(screen.getByRole('radio', { name: '1+1' }));
+  expect(cardNames(list)).toHaveLength(20);
+  expect(cardNames(list).slice(0, 2)).toEqual(['라면 1', '라면 3']);
+  await user.selectOptions(sortSelect(), '가격 낮은 순');
+  expect(cardNames(list).slice(0, 2)).toEqual(['라면 39', '라면 37']);
+  await user.selectOptions(sortSelect(), '기본순');
+  expect(cardNames(list).slice(0, 2)).toEqual(['라면 1', '라면 3']);
+});
+it('검색 결과가 없으면 검색 빈 상태를 보여 주고 API의 빈 목록과 구분한다', async () => {
+  useSearchableProducts();
+  const user = setup('/cheap-meals?tab=convenience');
+  await screen.findByRole('list', { name: '행사상품 목록' });
+  await user.type(searchInput(), '우유');
+  expect(screen.getByText('이마트24 · 검색 결과 0개 상품')).toBeInTheDocument();
+  expect(screen.getByText('검색어와 일치하는 상품이 없어요')).toBeInTheDocument();
+  expect(screen.queryByRole('list', { name: '행사상품 목록' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /상품 더 보기/ })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '검색어 지우기' }));
+  expect(await screen.findByRole('list', { name: '행사상품 목록' })).toBeInTheDocument();
+});
+it('등록된 행사상품이 없으면 검색 중이어도 검색 결과 0건이 아니라 빈 목록 안내를 보여 준다', async () => {
+  server.use(http.get('http://localhost:8080/api/promotions', () => success(promotion('EMART24', []))));
+  const user = setup('/cheap-meals?tab=convenience');
+  expect(await screen.findByText('현재 등록된 행사상품이 없어요')).toBeInTheDocument();
+  await user.type(searchInput(), '콜라');
+  expect(screen.getByText('현재 등록된 행사상품이 없어요')).toBeInTheDocument();
+  expect(screen.queryByText('검색어와 일치하는 상품이 없어요')).not.toBeInTheDocument();
+});
+it('편의점 검색어와 정렬은 탭을 오가도 유지된다', async () => {
+  useSearchableProducts();
+  const user = setup();
+  await user.click(tab('편의점'));
+  const list = await screen.findByRole('list', { name: '행사상품 목록' });
+  await user.type(searchInput(), '라면');
+  await user.selectOptions(sortSelect(), '가격 낮은 순');
+  await user.click(tab('식당'));
+  await user.click(tab('배달'));
+  await screen.findByRole('list', { name: '배달 혜택 목록' });
+  await user.click(tab('편의점'));
+  expect(searchInput()).toHaveValue('라면');
+  expect(sortSelect()).toHaveValue('PRICE_ASC');
+  expect(cardNames(list)[0]).toBe('라면 59');
+});
 it('브랜드·1+1 필터·배달 플랫폼이 탭을 오가도 유지된다', async () => {
   const user = setup();
   await user.click(tab('편의점'));
