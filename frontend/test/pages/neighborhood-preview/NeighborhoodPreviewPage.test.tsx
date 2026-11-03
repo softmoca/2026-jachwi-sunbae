@@ -86,7 +86,8 @@ vi.mock('@/features/map/ui/map-canvas/MapCanvas', async () => {
         {props.onBoundsChange && (
           <button
             onClick={() => {
-              props.onLevelChange?.(5);
+              // 역삼1동 경계에 맞춘 단계는 마커를 올리는 상한(6.5)이다. 지도는 6.5로 옮겨도 소수 오차를 두고 멈춘다.
+              props.onLevelChange?.(6.5000001);
               props.onBoundsChange?.({ south: 37.495, west: 127.03, north: 37.506, east: 127.044 });
             }}
           >
@@ -554,7 +555,8 @@ it('통근 필터·조회·동네 선택 및 닫기에도 결과와 시점을 �
   expect(screen.queryByRole('button', { name: '정자동' })).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: '역삼1동' }));
   expect(screen.getByRole('region', { name: '행정동 프리셋 지도' })).toBeInTheDocument();
-  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":5');
+  // 동네 경계 전체가 보이게 다가가되, 큰 동네도 마커를 올리는 단계(6.5)보다 멀리 가지 않는다.
+  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":6.5');
   // 휴대폰은 동네를 고르면 지도 위 말풍선 대신 아래에 정류장·공인중개사 탭 시트를 올린다.
   expect(screen.getByRole('tablist', { name: '역삼1동 주변 장소' })).toBeInTheDocument();
   // 동네 대중교통 상세로 넘기는 버튼과 닫기 버튼은 두지 않는다.
@@ -771,8 +773,8 @@ it('동네를 고르면 그 동네로 다가가 확대하지 않아도 마커를
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
   await user.click(await screen.findByRole('button', { name: /1위 역삼1동/ }));
-  // 동네를 고르면 동네 보기(5)로 다가가고, 이동이 끝나면(idle) 그 단계와 화면 범위를 알린다. 5는 마커를 올리는 단계 안이다.
-  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":5');
+  // 동네를 고르면 경계에 맞춘 단계로 다가가고, 이동이 끝나면(idle) 그 단계와 화면 범위를 알린다. 6.5는 마커를 올리는 단계 안이다.
+  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":6.5');
   await user.click(screen.getByRole('button', { name: '동네 보기 이동 끝' }));
   const categories = () =>
     new Set(

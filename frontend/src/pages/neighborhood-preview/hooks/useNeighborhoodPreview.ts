@@ -26,7 +26,7 @@ import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import { commuteBand, commuteColor, OUT_OF_RENT_COLOR, OUT_OF_RENT_DRAW_STAGE } from '../model/commuteColors';
 import { readNeighborhoodSearch, writeNeighborhoodSearch } from '../model/neighborhoodSearchSession';
 import { PREVIEW_DESTINATION } from '../model/preview';
-import { AREA_FOCUS_LEVEL, RESULT_OVERVIEW_LEVEL, resultMapCenter } from '../model/resultMapView';
+import { areaFocusLevel, RESULT_OVERVIEW_LEVEL, resultMapCenter } from '../model/resultMapView';
 import useNeighborhoodAnalytics from './useNeighborhoodAnalytics';
 
 const describeError = (error: unknown) => {
@@ -392,10 +392,10 @@ const useNeighborhoodPreview = () => {
     maxTransfers,
     changeMaxTransfers: setMaxTransfers,
     // 새로고침·뒤로가기로 고른 동네가 복원되면 전체 보기 대신 그 동네로 연다. 고른 동네 화면의 정류장·부동산을 바로 보여주기 위해서다.
-    resultLevel: resultView.current?.level ?? (selected ? AREA_FOCUS_LEVEL : RESULT_OVERVIEW_LEVEL),
+    resultLevel: resultView.current?.level ?? (selected ? areaFocusLevel(selected.polygons) : RESULT_OVERVIEW_LEVEL),
     center:
       resultView.current ??
-      (selected ? resultMapCenter(selected.center, AREA_FOCUS_LEVEL) : undefined) ??
+      (selected ? resultMapCenter(selected.center, areaFocusLevel(selected.polygons)) : undefined) ??
       resultMapCenter(
         areas?.length
           ? {
@@ -433,7 +433,11 @@ const useNeighborhoodPreview = () => {
       // 회색(월세 조건 밖) 동네도 지도에서 고를 수 있어 받은 동네 전체에서 찾는다.
       const area = allAreas?.find((area) => area.adminDongCode === id);
       if (area) analytics.selectArea();
-      if (area) resultView.current = { ...resultMapCenter(area.center, AREA_FOCUS_LEVEL), level: AREA_FOCUS_LEVEL };
+      if (area) {
+        // 동네 크기에 맞춰 경계 전체가 보이게 다가간다.
+        const level = areaFocusLevel(area.polygons);
+        resultView.current = { ...resultMapCenter(area.center, level), level };
+      }
       setSelectedId(id);
       setSelectedStopId(area?.stations[0]?.stopId ?? null);
       // 데스크탑은 상세를 목록 옆에 붙여 지도를 가리지 않으므로, 동네를 고르면 바로 상세를 연다.

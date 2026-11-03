@@ -5,12 +5,7 @@ import { stationVariant } from '@/features/map/lib/mapIconAssets';
 import { viewportQuery } from '@/features/map/lib/mapViewportQuery';
 import type { MapBounds, MapMarker, NearbyAgency } from '@/features/map/model/Map';
 
-/**
- * 이 확대 단계(작을수록 가까움) 이하부터 화면 안의 정류장·부동산·메모를 올린다. 축척 200~300m 화면 정도다.
- * 동네를 고르면 `AREA_FOCUS_LEVEL`(5)로 다가가므로 고르자마자 마커가 보이고, 거기서 한 단계 멀리 봐도 그대로 보인다.
- * 데스크탑 휠은 확대를 부드럽게 해 6.3처럼 소수 단계로 멈추므로, 정수 6보다 반 단계 넉넉하게 둔다.
- */
-export const PLACES_MAX_LEVEL = 6.5;
+import { nextPlacesVisible } from '../model/resultMapView';
 
 type BusStop = ReturnType<typeof useViewportPlaces>['busStops'][number];
 /** 동네의 출발 정류장. 경로망 정류장 ID를 그대로 가지고, 고르면 지도를 그 자리로 옮긴다. */
@@ -35,7 +30,7 @@ const STATION_PREFIX = 'station:';
  */
 const useNeighborhoodPlaces = (enabled: boolean) => {
   const [bounds, setBounds] = useState<MapBounds | null>(null);
-  const [level, setLevel] = useState<number | null>(null);
+  const [isNear, setIsNear] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [station, setStation] = useState<AreaStation | null>(null);
   // 결과 지도가 아닌 동안(다시 고르기, 분석 중)은 지도가 확대 단계와 범위를 알려 주지 않는다.
@@ -44,11 +39,11 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
   if (wasEnabled !== enabled) {
     setWasEnabled(enabled);
     if (!enabled) {
-      setLevel(null);
+      setIsNear(false);
       setBounds(null);
     }
   }
-  const isClose = enabled && level !== null && level <= PLACES_MAX_LEVEL;
+  const isClose = enabled && isNear;
   const query = useMemo(() => (isClose && bounds ? viewportQuery(bounds) : null), [isClose, bounds]);
   const places = useViewportPlaces(query);
   const markers = useMemo<MapMarker[]>(
@@ -129,7 +124,7 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
     closePlace: () => setSelectedId(null),
     bounds,
     rememberBounds: setBounds,
-    rememberLevel: setLevel,
+    rememberLevel: (level: number) => setIsNear((wasNear) => nextPlacesVisible(wasNear, level)),
   };
 };
 
