@@ -33,11 +33,22 @@ class WeatherNotificationConfigTest {
                 .run(context -> assertThat(context.getStartupFailure()).hasRootCauseMessage("날씨 알림 활성화에는 Firebase project ID가 필요합니다."));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"local", "prod"})
-    void currentProfilesStartWithoutReadingFirebaseCredentials(final String name) {
+    @Test
+    void localProfileStartsWithoutReadingFirebaseCredentials() {
         try (var credentials = mockStatic(GoogleCredentials.class)) {
-            profile(name).run(context -> {
+            profile("local").run(context -> {
+                assertThat(context).hasNotFailed().hasSingleBean(WeatherPushSender.class).doesNotHaveBean(FirebaseApp.class);
+                credentials.verifyNoInteractions();
+            });
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"dev", "prod"})
+    void disablingOverridesProfileWithoutReadingFirebaseCredentials(final String name) {
+        // 운영 긴급 중단: app_env의 WEATHER_NOTIFICATION_ENABLED=false가 YAML의 true보다 우선한다.
+        try (var credentials = mockStatic(GoogleCredentials.class)) {
+            profile(name).withPropertyValues("weather.notification.enabled=false").run(context -> {
                 assertThat(context).hasNotFailed().hasSingleBean(WeatherPushSender.class).doesNotHaveBean(FirebaseApp.class);
                 credentials.verifyNoInteractions();
             });
