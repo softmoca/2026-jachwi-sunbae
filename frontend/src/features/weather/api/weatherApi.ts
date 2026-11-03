@@ -105,5 +105,16 @@ export const registerWeatherDevice = (
     parseData: (value) => ({ installationId: readString(readRecord(value), 'installationId') }),
   });
 
+/** 등록된 내 기기로 고정 문구 테스트 알림을 바로 보낸다. 운영 서버에는 이 API가 없다. */
+export const submitWeatherTestPush = (config: PublicConfig, expectedMemberId: number) =>
+  apiRequest({
+    config,
+    path: '/api/members/me/weather-notifications/test',
+    method: 'POST',
+    expectedMemberId,
+    parseData: (value: unknown) =>
+      typeof value === 'object' && value !== null && (value as { sent?: unknown }).sent === true,
+  });
+
 export const revokeWeatherDevice = (config: PublicConfig, expectedMemberId: number) =>
   apiRequest({ config, path: DEVICE_PATH, method: 'DELETE', expectedMemberId, parseData: () => undefined });

@@ -6,8 +6,10 @@ import IconBase from '@/shared/ui/icon/IconBase';
 
 import { forecastHour, weatherLabel, weatherValue } from '../../lib/weatherPresentation';
 import { useWeatherSubscription } from '../../model/useWeatherSubscription';
+import { useWeatherTestPush } from '../../model/useWeatherTestPush';
 import NotificationToggle from '../notification-toggle/NotificationToggle';
 import WeatherSymbol from '../weather-symbol/WeatherSymbol';
+import WeatherTestPushButton from '../weather-test-push-button/WeatherTestPushButton';
 
 const BELL = 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0';
 const BELL_OFF = 'M6 8a6 6 0 0 1 8.5-5.45M18 11c.4 4 3 6 3 6H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0M16 3l5 5m0-5-5 5';
@@ -26,7 +28,10 @@ const WeatherSummaryCard = () => {
     pushMessage,
     canRetry,
     retry,
+    canOpenSettings,
+    openSettings,
   } = useWeatherSubscription();
+  const testPush = useWeatherTestPush(isEnabled);
   const hour = forecast.data?.hourly[Number(forecastHour(new Date().toISOString()))];
   const showsWeather = isEnabled && hour !== undefined && hour.tmp !== null;
 
@@ -107,6 +112,14 @@ const WeatherSummaryCard = () => {
           message={message}
           onToggle={toggle}
         />
+        {canOpenSettings && (
+          <Button variant="secondary" onClick={openSettings}>
+            설정 열기
+          </Button>
+        )}
+        {testPush.canSend && (
+          <WeatherTestPushButton status={testPush.status} secondsLeft={testPush.secondsLeft} onSend={testPush.send} />
+        )}
         {canRetry && (
           <Button variant="secondary" onClick={retry}>
             알림 연결 다시 시도
