@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { authenticate, getSafeApiErrorMessage } from '@/features/auth/api/apiClient';
 import { useCurrentMember } from '@/features/auth/api/useCurrentMember';
 import { useAuthentication } from '@/features/auth/model/useAuthentication';
+import { useWeatherPushSync } from '@/features/weather/model/useWeatherPushSync';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { Button } from '@/shared/ui/button/Button';
 import StatusPanel from '@/shared/ui/status-panel/StatusPanel';
@@ -19,6 +20,7 @@ const ProtectedRoute = () => {
   const navigate = useNavigate();
   const { terminationReason } = useAuthentication();
   const currentMember = useCurrentMember();
+  useWeatherPushSync(true);
 
   if (terminationReason === 'unauthorized') {
     return (

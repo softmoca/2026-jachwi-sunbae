@@ -57,6 +57,8 @@ type ApiRequestOptions<T> = {
   formData?: FormData;
   signal?: AbortSignal;
   requiresAuthentication?: boolean;
+  /** 비동기 기기 권한 확인 중 회원이 바뀌면 새 회원에게 이전 동의를 적용하지 않는다. */
+  expectedMemberId?: number;
   parseData: (value: unknown) => T;
 };
 
@@ -167,6 +169,7 @@ type ExecuteRequestOptions = {
   body?: BodyInit;
   signal?: AbortSignal;
   requiresAuthentication: boolean;
+  expectedMemberId?: number;
 };
 
 const sendRequest = async (
@@ -368,10 +371,22 @@ const getOrStartAuthentication = (config: PublicConfig): Promise<string> => {
 const executeRequest = async (options: ExecuteRequestOptions): Promise<Response> => {
   if (!options.requiresAuthentication) return sendRequest(options, null);
 
+  const assertMember = () => {
+    if (
+      options.expectedMemberId !== undefined &&
+      getAuthenticationSnapshot().session?.memberId !== options.expectedMemberId
+    ) {
+      throw new ApiError({ kind: 'authentication-ended' });
+    }
+  };
+  assertMember();
+
   const accessToken = await getOrStartAuthentication(options.config);
+  assertMember();
   // 요청 도중 다른 회원으로 바뀌거나 인증이 끝나면 늦게 온 응답을 버린다. 같은 회원의 토큰 갱신은 버리지 않는다.
   const authenticationRevision = getAuthenticationRevision();
   const throwIfAuthenticationEnded = () => {
+    assertMember();
     if (authenticationRevision !== getAuthenticationRevision()) throw new ApiError({ kind: 'authentication-ended' });
   };
 
@@ -425,6 +440,7 @@ const apiRequestInternal = async <T>({
   formData,
   signal,
   requiresAuthentication = true,
+  expectedMemberId,
   parseData,
 }: ApiRequestOptions<T>): Promise<T> => {
   if (body !== undefined && formData !== undefined) {
@@ -445,6 +461,7 @@ const apiRequestInternal = async <T>({
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
     signal,
     requiresAuthentication,
+    expectedMemberId,
   });
 
   if (response.status === 204 && response.ok) {

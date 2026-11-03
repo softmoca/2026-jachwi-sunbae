@@ -8,10 +8,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createMockWeatherForecast } from '@/app/mocks/handlers/weatherHandlers';
 import AppRoutes from '@/app/router/AppRoutes';
-import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
+import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
+import { installNativePush } from '../../helpers/nativePush';
 import { server } from '../../server';
 
 const config = { apiBaseUrl: 'http://localhost:8080', mapProviderMode: 'demo' } as const;
@@ -27,6 +28,11 @@ const useWeatherServer = ({
   const state = { enabled, savedLocations: [] as unknown[], updates: [] as boolean[] };
   server.use(
     http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
+    http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+      const body = (await request.json()) as { installationId: string };
+      return success({ installationId: body.installationId });
+    }),
+    http.delete('*/api/members/me/weather-devices/current', () => new HttpResponse(null, { status: 204 })),
     http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
       const body = (await request.json()) as { enabled: boolean };
       state.updates.push(body.enabled);
@@ -84,8 +90,10 @@ const renderMyPage = () =>
     </StrictMode>,
   );
 
-const renderWeatherCard = () =>
-  render(
+const renderWeatherCard = () => {
+  // 실제 화면은 ProtectedRoute에서 인증을 마친 뒤 카드를 렌더링한다.
+  setAuthentication({ accessToken: 'fake-weather-member', tokenType: 'Bearer', memberId: 1, expiresIn: 900 });
+  return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } })
@@ -96,13 +104,15 @@ const renderWeatherCard = () =>
       </PublicConfigProvider>
     </QueryClientProvider>,
   );
+};
 
 beforeEach(() => {
-  window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2 };
+  installNativePush();
 });
 
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  delete window.ReactNativeWebView;
   Object.defineProperty(navigator, 'geolocation', { configurable: true, value: originalGeolocation });
 });
 
