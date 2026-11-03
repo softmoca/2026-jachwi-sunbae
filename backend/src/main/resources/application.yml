@@ -64,6 +64,8 @@ weather:
     api-key: ${KMA_API_KEY:}
   notification:
     enabled: false
+    # 운영자 테스트 알림 API의 비밀키. 비어 있으면 API가 항상 거부한다.
+    test-push-key: ${WEATHER_TEST_PUSH_KEY:}
   collection:
     enabled: false
   cleanup:

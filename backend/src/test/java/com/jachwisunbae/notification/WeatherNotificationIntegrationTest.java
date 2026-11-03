@@ -2,6 +2,10 @@ package com.jachwisunbae.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -59,7 +63,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -69,7 +75,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-@SpringBootTest(properties = "weather.notification.enabled=false")
+@SpringBootTest(properties = {"weather.notification.enabled=false", "weather.notification.test-push-key=" + WeatherNotificationIntegrationTest.TEST_PUSH_KEY})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(WeatherNotificationIntegrationTest.ClockConfig.class)
@@ -80,6 +86,7 @@ class WeatherNotificationIntegrationTest {
     private static final GridPoint GRID = new GridPoint(60, 127);
     private static final String SECRET = "test-installation-secret-with-at-least-43-characters";
     private static final MutableClock CLOCK = new MutableClock();
+    static final String TEST_PUSH_KEY = "test-only-push-key";
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MockMvc mvc;
     @Autowired private JwtTokenProvider tokens;
@@ -90,6 +97,7 @@ class WeatherNotificationIntegrationTest {
     @Autowired private WeatherNotificationSettingsRepository settingsRepository;
     @Autowired private WeatherNotificationRepository notifications;
     @Autowired private LifeWeatherAnalysisService analysis;
+    @MockitoBean private WeatherPushSender sender;
     private final List<Push> pushes = new CopyOnWriteArrayList<>();
     private Function<Push, Boolean> outcome;
     private WeatherNotificationDispatchService dispatch;
@@ -157,6 +165,39 @@ class WeatherNotificationIntegrationTest {
         mvc.perform(post("/api/members/me/weather-notifications/test").header("Authorization", bearer(2)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(false));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM weather_notifications", Integer.class)).isZero();
+    }
+
+    @Test
+    void internalTestPushRejectsMissingOrWrongKey() throws Exception {
+        mvc.perform(post("/internal/weather-notifications/test").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"memberId\":1}")).andExpect(status().isNotFound());
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", "wrong-key")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":1}")).andExpect(status().isNotFound());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    void internalTestPushSendsFixedTextOnlyToTheGivenMembersDevice() throws Exception {
+        when(sender.send(any())).thenReturn(true);
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":1}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(true));
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":2}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(false));
+        ArgumentCaptor<Push> push = ArgumentCaptor.forClass(Push.class);
+        verify(sender).send(push.capture());
+        assertThat(push.getValue().token()).isEqualTo(device.token());
+        assertThat(push.getValue().title()).isEqualTo("날씨 알림 테스트");
+        assertThat(notificationCount()).isZero();
+    }
+
+    @Test
+    void internalTestPushReportsUnknownMember() throws Exception {
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":999}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
+        verifyNoInteractions(sender);
     }
 
     @Test
