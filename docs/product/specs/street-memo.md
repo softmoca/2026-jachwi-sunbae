@@ -57,7 +57,7 @@
 
 ### 3.1. 회원과 공유 범위
 
-- `POL-STREET-001`: 기존 [익명 인증 정책](../product/specs/authentication.md)을 따른다. 별도의 닉네임·프로필 입력을 요구하지 않는다.
+- `POL-STREET-001`: 기존 [익명 인증 정책](authentication.md)을 따른다. 별도의 닉네임·프로필 입력을 요구하지 않는다.
 - `POL-STREET-002`: 작성자는 요청의 인증 정보로 결정한다. 클라이언트가 전달한 회원 ID로 다른 회원의 메모를 생성하거나 삭제할 수 없다.
 - `POL-STREET-003`: 저장한 메모는 다른 회원도 위치·내용·선호를 조회할 수 있는 공유 데이터다. 특정 회원에게만 공개하거나 나만 보기로 전환하는 기능은 이번 범위에서 제공하지 않는다.
 - `POL-STREET-004`: `member_id`는 내부 소유권 확인에만 사용하며 공유 응답에 포함하지 않는다. 작성·조회 응답의 `isMine`은 인증된 회원과 작성자가 일치하면 `true`, 다르면 `false`다. 프론트엔드는 이 값으로 본인 메모와 삭제 버튼을 구분한다. 실제 삭제 권한은 서버에서 별도로 검증하며 클라이언트가 보낸 `isMine`을 신뢰하지 않는다.
@@ -99,7 +99,7 @@
 
 ### 3.6. 저장 데이터와 조회 응답
 
-테이블은 `street_memos`이며 [V6 마이그레이션](../../backend/src/main/resources/db/migration/V6__create_street_memos.sql)으로 추가하고 [V10 마이그레이션](../../backend/src/main/resources/db/migration/V10__add_street_memo_admin_dong.sql)으로 행정동 코드를 더한다.
+테이블은 `street_memos`이며 [V6 마이그레이션](../../../backend/src/main/resources/db/migration/V6__create_street_memos.sql)으로 추가하고 [V10 마이그레이션](../../../backend/src/main/resources/db/migration/V10__add_street_memo_admin_dong.sql)으로 행정동 코드를 더한다.
 아래 표는 내부 저장 구조다. 공유 응답에서는 작성자 식별 정보를 제외한다.
 
 | 필드              | 저장 타입        | 필수 여부 | 의미                                                                            |
@@ -136,27 +136,27 @@
 
 `com.jachwisunbae.streetmemo.domain`에서 확정된 불변 조건과 상태 변경 규칙을 관리한다.
 
-| 객체                                                                                                             | 책임                                                                  |
-| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [StreetMemo](../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemo.java)                     | 생성·저장 데이터 복원, 작성자 소유권 판단, 논리 삭제와 시간 상태 관리 |
-| [StreetMemoLocation](../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemoLocation.java)     | 필수 위도·경도와 허용 범위 검증                                       |
-| [StreetMemoPreference](../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemoPreference.java) | `LIKE`·`DISLIKE` 구분과 대문자 코드 변환                              |
+| 객체                                                                                                                | 책임                                                                  |
+| ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [StreetMemo](../../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemo.java)                     | 생성·저장 데이터 복원, 작성자 소유권 판단, 논리 삭제와 시간 상태 관리 |
+| [StreetMemoLocation](../../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemoLocation.java)     | 필수 위도·경도와 허용 범위 검증                                       |
+| [StreetMemoPreference](../../../backend/src/main/java/com/jachwisunbae/streetmemo/domain/StreetMemoPreference.java) | `LIKE`·`DISLIKE` 구분과 대문자 코드 변환                              |
 
 - 생성할 때 메모 ID와 삭제 시각은 없으며 작성·수정 시각은 전달받은 서버 시각으로 초기화한다.
 - 복원할 때 저장된 ID, 내용·선호와 작성·수정·삭제 시각을 유지한다. 작성자 ID와 복원할 메모 ID는 양수여야 한다.
 - 시각은 작성·수정·삭제 순서를 지켜야 한다. 삭제 요청의 시각은 마지막 수정 시각과 같거나 이후여야 한다.
 - 현재 내용 검증은 `null` 필수 제약을 적용하며 전달받은 공백·줄바꿈을 보존한다. 최대 길이와 빈 문자열·공백만 있는 내용의 처리 정책은 5절에서 결정한다.
 - 내용·위치·선호 입력 오류는 각각 `STREET_MEMO_CONTENT_INVALID`, `STREET_MEMO_LOCATION_INVALID`, `STREET_MEMO_PREFERENCE_INVALID`로 구분한다. 이미 삭제됐거나 타인이 소유한 메모의 삭제는 `STREET_MEMO_NOT_FOUND`로 거부한다.
-- DB 복원 중 도메인 입력 검증이나 내부 불변식 검증에 실패하면 Repository에서 기존 [예외 컨벤션](../../backend/docs/conventions/exception-convention.md)에 따라 `DataInconsistencyException`으로 변환한다.
+- DB 복원 중 도메인 입력 검증이나 내부 불변식 검증에 실패하면 Repository에서 기존 [예외 컨벤션](../../../backend/docs/conventions/exception-convention.md)에 따라 `DataInconsistencyException`으로 변환한다.
 
 ### 3.8. 서비스와 저장소 구현
 
-| 객체                                                                                                                         | 책임                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [StreetMemoService](../../backend/src/main/java/com/jachwisunbae/streetmemo/service/StreetMemoService.java)                  | 작성·지도 영역 조회·행정동 조회·본인 삭제 유스케이스와 트랜잭션 관리       |
-| [AdminDongFinder](../../backend/src/main/java/com/jachwisunbae/transit/service/AdminDongFinder.java)                         | 행정동 경계를 처음 한 번 읽어 메모리에 두고 좌표가 속한 행정동 코드를 찾음 |
-| [JdbcStreetMemoRepository](../../backend/src/main/java/com/jachwisunbae/streetmemo/repository/JdbcStreetMemoRepository.java) | 메모 저장, 영역 SQL 조회, 삭제 행 잠금과 논리 삭제, 저장 데이터 복원       |
-| [StreetMemoResult](../../backend/src/main/java/com/jachwisunbae/streetmemo/service/dto/result/StreetMemoResult.java)         | 작성자 식별자를 제외한 메모 ID·위도·경도·내용·선호·본인 여부 전달          |
+| 객체                                                                                                                            | 책임                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [StreetMemoService](../../../backend/src/main/java/com/jachwisunbae/streetmemo/service/StreetMemoService.java)                  | 작성·지도 영역 조회·행정동 조회·본인 삭제 유스케이스와 트랜잭션 관리       |
+| [AdminDongFinder](../../../backend/src/main/java/com/jachwisunbae/transit/service/AdminDongFinder.java)                         | 행정동 경계를 처음 한 번 읽어 메모리에 두고 좌표가 속한 행정동 코드를 찾음 |
+| [JdbcStreetMemoRepository](../../../backend/src/main/java/com/jachwisunbae/streetmemo/repository/JdbcStreetMemoRepository.java) | 메모 저장, 영역 SQL 조회, 삭제 행 잠금과 논리 삭제, 저장 데이터 복원       |
+| [StreetMemoResult](../../../backend/src/main/java/com/jachwisunbae/streetmemo/service/dto/result/StreetMemoResult.java)         | 작성자 식별자를 제외한 메모 ID·위도·경도·내용·선호·본인 여부 전달          |
 
 - 작성·삭제 시 회원 서비스를 통해 현재 유효한 회원인지 확인한다. 작성자는 인증 경계에서 전달받은 회원 ID로 정하고, 시각은 공통 `Clock`에서 얻는다.
 - 작성·삭제는 쓰기 트랜잭션, 조회는 읽기 전용 트랜잭션으로 처리한다. 저장에 실패하면 성공 결과를 반환하지 않으며 DB 변경을 롤백한다.
@@ -168,7 +168,7 @@
 
 ### 3.9. API 구현과 검증 경계
 
-- [StreetMemoController](../../backend/src/main/java/com/jachwisunbae/streetmemo/controller/StreetMemoController.java)는 기존 익명 인증 필터를 통해 작성·조회·삭제 요청의 Access Token을 검증한다. 작성·삭제의 회원 ID는 인증 정보에서만 얻는다.
+- [StreetMemoController](../../../backend/src/main/java/com/jachwisunbae/streetmemo/controller/StreetMemoController.java)는 기존 익명 인증 필터를 통해 작성·조회·삭제 요청의 Access Token을 검증한다. 작성·삭제의 회원 ID는 인증 정보에서만 얻는다.
 - 작성 요청의 위도·경도·내용·선호 누락과 `null`은 Request DTO에서 검증한다. 빈 문자열·공백만 있는 메모는 아직 제한하지 않고 공백·줄바꿈을 보존한다. 선호는 도메인의 코드 변환을 통해 대문자 `LIKE`, `DISLIKE`만 허용한다.
 - 지도 영역 좌표 네 개는 별도 영역 객체 없이 서비스로 전달한다. 누락·범위·순서 오류는 서비스의 `validateBounds()`가 검증하고, 숫자로 읽을 수 없는 요청은 공통 HTTP 예외 처리기가 거부한다.
 - 행정동 기준 조회는 `GET /api/street-memos?adminDongCode={행정동 코드}`다. `adminDongCode`가 있으면 영역 좌표 대신 행정동으로 조회하며, 코드 형식은 서비스에서 검증한다. 응답은 영역 조회와 같은 메모 배열이다.
@@ -230,6 +230,6 @@
 
 ## 6. 관련 문서
 
-- [회원·인증 정책](../product/specs/authentication.md): 익명 회원 식별·복원과 API 접근 기준
-- [지도·주소·주변 분석 명세](../product/specs/map.md): 지도 위치 선택과 기존 주변 정보 조회
-- [DB 마이그레이션 운영 기준](../../backend/docs/operations/database-migrations.md): 버전 관리와 DB 검증 절차
+- [회원·인증 정책](authentication.md): 익명 회원 식별·복원과 API 접근 기준
+- [지도·주소·주변 분석 명세](map.md): 지도 위치 선택과 기존 주변 정보 조회
+- [DB 마이그레이션 운영 기준](../../../backend/docs/operations/database-migrations.md): 버전 관리와 DB 검증 절차
