@@ -1,6 +1,5 @@
 # 거리 메모 정책
 
-- 상태: 확정
 - 대상: 지도 위 동네 정보와 작성자 선호의 작성·공유·조회·삭제
 - 관련 이슈: [#436 거리 메모 기능 구현](https://github.com/woowacourse-teams/2026-jachwi-sunbae/issues/436), [#567 거리 메모 행정동 저장과 행정동 기준 조회](https://github.com/woowacourse-teams/2026-jachwi-sunbae/issues/567)
 - 구현 범위: 스키마·도메인·JDBC 저장소·서비스와 작성·조회·삭제 API, 본 방 기록 지도·동네 찾기 지도의 작성·조회·삭제 화면을 구현했다. 작성할 때 행정동을 함께 저장하고 행정동 기준으로 조회하는 API를 추가했다. 행정동 조회 화면은 아직 없다.
