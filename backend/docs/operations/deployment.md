@@ -75,7 +75,7 @@ dev는 `jachwi-sunbae-dev-asg`, prod는 `jachwi-sunbae-prod-asg`를 사용하며
 
 GitHub Actions는 PR과 `main`·`develop` push에서 `clean build`를 실행한다. 병합 전에 필수 검사를 통과해야 하므로 배포 빌드는 `clean bootJar -x test`로 JAR를 만든다.
 
-백엔드 문서 전용 변경은 CI의 무거운 단계를 생략한다. 의존성 캐시와 개선 전후 비교 기준은 [CI 실행 범위와 시간 측정](../../../docs/convention/ci-runtime-optimization.md)을 따른다. AWS 배포 트리거는 CI의 변경 감지와 별개이므로 CI 생략이 배포 생략을 뜻하지 않는다.
+백엔드 문서 전용 변경은 CI의 무거운 단계를 생략한다. CI 실행 범위와 캐시·테스트 정책은 [Backend CI](ci.md)를 따른다. AWS 배포 트리거는 CI의 변경 감지와 별개이므로 CI 생략이 배포 생략을 뜻하지 않는다.
 
 팀은 AWS 액세스 키와 서비스 역할 정책을 직접 관리할 수 없어 AWS 파이프라인을 사용한다. 별도 CodeBuild 프로젝트는 `SourceArtifact` 읽기 권한 문제로 사용하지 않고, 파이프라인 서비스 역할을 사용하는 `Commands`를 사용한다. **빌드 명령은 콘솔에 있으므로 설정 변경 시 문서도 갱신한다.**
 
