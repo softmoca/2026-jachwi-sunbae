@@ -96,10 +96,15 @@ const styles = {
     }
   `,
 
+  /*
+   * 가운데 자리는 로고와 같은 높이로 고정한다. 화면 기준 글자 크기(rem)로 그린 검색창이 로고보다 조금 높아도
+   * 헤더 높이가 검색창 유무에 따라 바뀌지 않게 해, 아래 지도가 크기를 다시 잡으며 깜빡이지 않게 한다.
+   */
   slot: css`
     label: DesktopHeader-slot;
     display: flex;
     min-width: 0;
+    height: 2.5em;
     flex: 0 1 28em;
     align-items: center;
     gap: 0.5em;
