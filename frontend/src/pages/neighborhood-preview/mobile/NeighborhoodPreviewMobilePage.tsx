@@ -161,7 +161,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
               )}
             </header>
             <LocationControls preview={preview} isResult={false} isFilterOpen={pickerField !== null} />
-            {showsTapHint && <MapTapHint centered />}
+            {showsTapHint && <MapTapHint />}
             {/* 조건 칸과 찾기 버튼은 위치를 고르기 전부터 아래 시트에 두어, 위치를 골라도 자리가 바뀌지 않게 한다.
                 위치를 고르기 전에는 찾기 버튼을 막아 두고 장소를 고르라고 적는다. 지도 위 버튼은 말풍선 핀과 겹쳐 두지 않는다. */}
             <section

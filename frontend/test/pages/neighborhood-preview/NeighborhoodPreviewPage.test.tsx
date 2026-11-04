@@ -785,6 +785,13 @@ it('휴대폰에서 동네 시트를 올리면 확대 축소, 현재 위치 버�
   expect(within(sheet).getByRole('button', { name: '내 현재 위치로 이동' })).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: '지도 확대' })).toHaveLength(1);
 });
+it('출퇴근 장소 안내는 본 방 기록과 같은 지도 안내로 띄우고, 건너뛰면 이 화면에서는 다시 띄우지 않는다', async () => {
+  show(true);
+  const intro = screen.getByRole('note', { name: '지도 사용 안내' });
+  expect(intro).toHaveTextContent('지도를 눌러 출퇴근 장소를 찍어보세요');
+  await userEvent.click(within(intro).getByRole('button', { name: '건너뛰기' }));
+  expect(screen.queryByRole('note', { name: '지도 사용 안내' })).not.toBeInTheDocument();
+});
 it('결과 지도는 가까이 확대해도 거리 메모를 조회하거나 올리지 않는다', async () => {
   let memoRequests = 0;
   server.use(
