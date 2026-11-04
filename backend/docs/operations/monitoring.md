@@ -105,7 +105,6 @@ Dev와 Prod는 각각 Spring의 `dev`·`prod` 프로필을 사용하며 두 프�
 
 요청 로그에는 `request_id`, `http_method`, `path`, `status`, `duration_ms`를 기본 필드로 넣는다. 애플리케이션 내부 예외 로그도 같은 `request_id`를 가지므로 요청 완료 로그와 연결할 수 있다.
 
-
 서버 예외로 실패한 요청 로그에는 `error_type`과 `message`의 `HTTP request failed: <오류 메시지>`를 기록한다. 따라서 5xx 요청 목록에서 오류 메시지를 바로 확인할 수 있다. 자세한 호출 위치와 원인은 같은 `request_id`의 예외 로그에 있는 `error.stack_trace`를 확인한다. 예외 객체 없이 5xx 상태만 반환된 경우에는 원인 메시지가 없으므로 `HTTP request failed`만 남는다. HTTP 응답에는 내부 오류 메시지 대신 공개 오류 메시지를 사용한다.
 
 4xx 요청 로그의 `message`에는 응답의 공개 오류 메시지를 기록한다. 예를 들어 사진 등록 한도 초과는 `등록할 수 있는 사진 개수를 초과했습니다.`, 인증 실패는 `인증 정보를 확인할 수 없습니다.`로 표시된다. 필드별 검증 사유는 HTTP 오류 응답의 `errors`에서 확인한다. 4xx는 `INFO`, 5xx는 `ERROR` 수준으로 남긴다.
