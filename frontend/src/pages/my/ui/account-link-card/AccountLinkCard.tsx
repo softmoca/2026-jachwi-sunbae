@@ -13,6 +13,7 @@ import {
   type OAuthProvider,
   readLinkedProvider,
 } from '@/features/auth/model/oauthLink';
+import { readPropertyCount } from '@/features/property/api/propertyCount';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog';
@@ -77,7 +78,13 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
 
   const confirmLink = async (provider: OAuthProvider) => {
     setStatus('working');
-    const result = await startOAuthLink({ config, provider, memberId, linkedProvider });
+    const result = await startOAuthLink({
+      config,
+      provider,
+      memberId,
+      linkedProvider,
+      countProperties: () => readPropertyCount(config, queryClient),
+    });
     // 제공자 화면으로 떠나는 중에는 버튼을 진행 상태로 둔다.
     if (result.kind === 'left-page') return;
     setStatus('idle');

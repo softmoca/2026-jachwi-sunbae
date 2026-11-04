@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { isOAuthLinkAvailable } from '@/features/auth/model/oauthAvailability';
 import { completeOAuthLink } from '@/features/auth/model/oauthFlow';
 import type { OAuthNotice } from '@/features/auth/model/oauthLink';
+import { readPropertyCount } from '@/features/property/api/propertyCount';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { MY_PATH } from '@/shared/lib/navigation/appPaths';
 import PageLoading from '@/shared/ui/page-loading/PageLoading';
@@ -31,7 +32,7 @@ const OAuthCompletePage = () => {
   useEffect(() => {
     if (!isAvailable || isStarted.current) return;
     isStarted.current = true;
-    void completeOAuthLink(config, search)
+    void completeOAuthLink(config, search, () => readPropertyCount(config))
       .catch(() => UNKNOWN_RESULT_NOTICE)
       .then((oauthNotice) => navigate(MY_PATH, { replace: true, state: { oauthNotice } }));
   }, [config, isAvailable, navigate, search]);

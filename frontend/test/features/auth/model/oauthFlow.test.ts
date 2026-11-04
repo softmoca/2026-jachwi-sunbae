@@ -1,5 +1,12 @@
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { trackEvent, trackOutboundEvent } = vi.hoisted(() => ({ trackEvent: vi.fn(), trackOutboundEvent: vi.fn() }));
+vi.mock('@/shared/lib/analytics/posthog', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/lib/analytics/posthog')>()),
+  trackPostHogEvent: trackEvent,
+  trackPostHogOutboundEvent: trackOutboundEvent,
+}));
 
 import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
 import { completeOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
@@ -21,8 +28,130 @@ const loginAs = (memberId: number) =>
 const signIn = (memberId: number) =>
   setAuthentication({ accessToken: `token-${memberId}`, tokenType: 'Bearer', expiresIn: 900, memberId });
 
+/** 로그인 이벤트는 빼고 OAuth 연결 이벤트만 모은다. */
+const oauthEvents = () =>
+  [...trackEvent.mock.calls, ...trackOutboundEvent.mock.calls].filter(([name]) =>
+    String(name).startsWith('oauth_link_'),
+  );
+
+beforeEach(() => {
+  trackEvent.mockClear();
+  trackOutboundEvent.mockClear();
+});
+
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+});
+
+describe('OAuth 연결 분석 이벤트', () => {
+  const kakaoStart = () =>
+    server.use(http.post(START_URL, () => success({ authorizationUrl: 'https://kauth.kakao.com/oauth/authorize' })));
+
+  it('시작은 제공자 화면으로 떠나기 직전 Beacon으로 제공자, 기존 연결 여부, 그 시점 매물 수를 남긴다', async () => {
+    signIn(20);
+    kakaoStart();
+
+    await startOAuthLink({
+      config,
+      provider: 'KAKAO',
+      memberId: 20,
+      linkedProvider: null,
+      countProperties: () => Promise.resolve(3),
+      leavePage: vi.fn(),
+    });
+
+    expect(oauthEvents()).toEqual([
+      ['oauth_link_started', { provider: 'kakao', already_linked: false, property_count: 3 }],
+    ]);
+    expect(trackOutboundEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it('시작 API가 실패하면 시작 대신 실패 이벤트를 원인과 함께 남긴다', async () => {
+    signIn(20);
+    server.use(
+      http.post(START_URL, () =>
+        HttpResponse.json({ code: 'OAUTH_PROVIDER_UNAVAILABLE', message: '장애', errors: [] }, { status: 503 }),
+      ),
+    );
+
+    await startOAuthLink({
+      config,
+      provider: 'APPLE',
+      memberId: 20,
+      linkedProvider: 'KAKAO',
+      countProperties: () => Promise.resolve(4),
+      leavePage: vi.fn(),
+    });
+
+    expect(oauthEvents()).toEqual([
+      ['oauth_link_failed', { provider: 'apple', reason: 'unavailable', property_count: 4 }],
+    ]);
+  });
+
+  it('매물 수를 모르면 추정하지 않고 속성을 빼고 보낸다', async () => {
+    signIn(20);
+    kakaoStart();
+
+    await startOAuthLink({
+      config,
+      provider: 'KAKAO',
+      memberId: 20,
+      linkedProvider: 'APPLE',
+      countProperties: () => Promise.reject(new Error('목록 실패')),
+      leavePage: vi.fn(),
+    });
+
+    expect(oauthEvents()).toEqual([['oauth_link_started', { provider: 'kakao', already_linked: true }]]);
+  });
+
+  it('완료는 결과 종류와 바뀐 회원 기준 매물 수를 남긴다', async () => {
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    signIn(20);
+    server.use(loginAs(10));
+    let countedAs: number | null = null;
+
+    await completeOAuthLink(config, '', () => {
+      countedAs = getAuthenticationSnapshot().session?.memberId ?? null;
+      return Promise.resolve(7);
+    });
+
+    expect(countedAs).toBe(10);
+    expect(oauthEvents()).toEqual([
+      ['oauth_link_completed', { provider: 'kakao', outcome: 'merged', property_count: 7 }],
+    ]);
+  });
+
+  it.each([
+    ['linked', 20, null],
+    ['switched', 30, 'KAKAO'],
+  ] as const)('완료 결과를 %s로 남긴다', async (outcome, newMemberId, previousProvider) => {
+    savePendingOAuth({ provider: 'APPLE', previousMemberId: 20, previousProvider });
+    signIn(20);
+    server.use(loginAs(newMemberId));
+
+    await completeOAuthLink(config, '', () => Promise.resolve(1));
+
+    expect(oauthEvents()).toEqual([['oauth_link_completed', { provider: 'apple', outcome, property_count: 1 }]]);
+  });
+
+  it('제공자 화면에서 취소하고 돌아오면 실패가 아니라 취소 이벤트를 남긴다', async () => {
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    signIn(20);
+
+    await completeOAuthLink(config, '?error=access_denied', () => Promise.resolve(2));
+
+    expect(oauthEvents()).toEqual([['oauth_link_cancelled', { provider: 'kakao', property_count: 2 }]]);
+  });
+
+  it('콜백 오류로 돌아오면 실패 이벤트를 남기고, 시작 정보를 잃었으면 제공자를 unknown으로 둔다', async () => {
+    signIn(20);
+
+    await completeOAuthLink(config, '?error=server_error', () => Promise.resolve(2));
+
+    expect(oauthEvents()).toEqual([
+      ['oauth_link_failed', { provider: 'unknown', reason: 'failed', property_count: 2 }],
+    ]);
+  });
 });
 
 describe('OAuth 계정 연결 시작', () => {
