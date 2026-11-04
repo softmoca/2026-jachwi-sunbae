@@ -3,13 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import { clampToSouthKorea } from '../lib/mapLocation';
-import {
-  COORDINATE_ACTION_Z_INDEX,
-  COORDINATE_MENU_Z_INDEX,
-  markerScale,
-  markerSignature,
-  markerZIndex,
-} from '../lib/mapMarkerPresentation';
+import { createMapMarkerLayer } from '../lib/mapMarkerLayer';
+import { COORDINATE_ACTION_Z_INDEX, COORDINATE_MENU_Z_INDEX } from '../lib/mapMarkerPresentation';
 import { createMapRegionLayer, READY_TIMEOUT_MS } from '../lib/mapRegionLayer';
 import {
   isNaverSdkAvailable,
@@ -73,7 +68,7 @@ const useNaverMap = ({
   const config = usePublicConfig();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LiveMap | null>(null);
-  const overlaysRef = useRef(new Map<string, { signature: string; overlay: LiveOverlay; content: HTMLElement }>());
+  const markerLayerRef = useRef<ReturnType<typeof createMapMarkerLayer> | null>(null);
   const circlesRef = useRef<LiveOverlay[]>([]);
   const regionLayerRef = useRef<ReturnType<typeof createMapRegionLayer> | null>(null);
   const circleSignatureRef = useRef('');
@@ -130,7 +125,8 @@ const useNaverMap = ({
       map = null;
       regionLayerRef.current?.dispose(true);
       regionLayerRef.current = null;
-      overlaysRef.current.clear();
+      markerLayerRef.current?.dispose(true);
+      markerLayerRef.current = null;
       circlesRef.current = [];
       containerRef.current?.replaceChildren();
       setMapReady(false);
@@ -197,8 +193,8 @@ const useNaverMap = ({
       listeners = [];
       setGestureActive(false);
       viewAnimatingRef.current = false;
-      if (isNaverSdkAvailable()) overlaysRef.current.forEach(({ overlay }) => overlay.setMap(null));
-      overlaysRef.current.clear();
+      markerLayerRef.current?.dispose(!isNaverSdkAvailable());
+      markerLayerRef.current = null;
       if (isNaverSdkAvailable()) circlesRef.current.forEach((circle) => circle.setMap(null));
       circlesRef.current = [];
       circleSignatureRef.current = '';
@@ -295,35 +291,11 @@ const useNaverMap = ({
     const map = mapRef.current;
     if (!liveMode || !overlayReady || map === null || gestureActiveRef.current || !isNaverSdkAvailable()) return;
     // 달라진 마커만 다시 그린다. 전부 지웠다 만들면 지도를 옮길 때마다 깜빡인다.
-    const previous = overlaysRef.current;
-    const next = new Map<string, { signature: string; overlay: LiveOverlay; content: HTMLElement }>();
-
-    markers.forEach((marker) => {
-      const signature = markerSignature(marker, selectedMarkerId);
-      const kept = previous.get(marker.id);
-      if (kept !== undefined && kept.signature === signature) {
-        kept.content.style.setProperty('--map-marker-scale', String(markerScale(marker, level)));
-        previous.delete(marker.id);
-        next.set(marker.id, kept);
-        return;
-      }
-      if (kept !== undefined) {
-        kept.overlay.setMap(null);
-        previous.delete(marker.id);
-      }
-      const content = createMapMarkerElement(marker, selectedMarkerId, (selected) =>
-        callbackRef.current.onSelectMarker?.(selected),
-      );
-      content.style.setProperty('--map-marker-scale', String(markerScale(marker, level)));
-      next.set(marker.id, {
-        signature,
-        content,
-        overlay: engine.createOverlay(map, marker, content, markerZIndex(marker, selectedMarkerId)),
-      });
-    });
-
-    previous.forEach(({ overlay }) => overlay.setMap(null));
-    overlaysRef.current = next;
+    // 내린 마커는 레이어가 들고 있다가 같은 모양으로 다시 요청되면(탭을 오갈 때) 새로 만들지 않고 다시 붙인다.
+    markerLayerRef.current ??= createMapMarkerLayer(map, engine, (marker, selected) =>
+      createMapMarkerElement(marker, selected, (picked) => callbackRef.current.onSelectMarker?.(picked)),
+    );
+    markerLayerRef.current.sync(markers, selectedMarkerId, level);
   }, [engine, level, liveMode, overlayReady, markers, selectedMarkerId, settledVersion]);
 
   useEffect(() => {
