@@ -34,15 +34,20 @@ const WeatherSummaryCard = () => {
   const testPush = useWeatherTestPush(isEnabled);
   const hour = forecast.data?.hourly[Number(forecastHour(new Date().toISOString()))];
   const showsWeather = isEnabled && hour !== undefined && hour.tmp !== null;
+  // 알림은 켰지만 위치 확인에 실패했고 마지막 위치도 없어 날씨를 그릴 수 없다. 공통 알림이라 배달 할인 알림은 계속 받는다.
+  const hasNoLocation =
+    isEnabled && location.coordinate === null && (location.status === 'denied' || location.status === 'unavailable');
 
   // 알림이 꺼져 있거나 날씨를 아직 못 그릴 때 대표 줄에 보일 안내
   const state = !isEnabled
-    ? { icon: BELL_OFF, title: '생활 날씨 알림이 꺼져 있어요', detail: '켜면 오늘 날씨를 여기에 보여 드려요' }
-    : forecast.isError
-      ? { icon: BELL, title: '날씨를 불러오지 못했어요', detail: '잠시 후 다시 확인해 주세요' }
-      : forecast.data === undefined
-        ? { icon: BELL, title: '날씨를 불러오고 있어요', detail: '현재 위치의 예보를 확인하고 있어요' }
-        : { icon: BELL, title: '아직 예보 정보가 없어요', detail: '예보가 준비되면 보여 드릴게요' };
+    ? { icon: BELL_OFF, title: '알림이 꺼져 있어요', detail: '켜면 오늘 날씨를 여기에 보여 드려요' }
+    : hasNoLocation
+      ? { icon: BELL, title: '날씨는 위치를 확인한 뒤 알려 드려요', detail: '배달 할인 알림은 위치 없이도 받아요' }
+      : forecast.isError
+        ? { icon: BELL, title: '날씨를 불러오지 못했어요', detail: '잠시 후 다시 확인해 주세요' }
+        : forecast.data === undefined
+          ? { icon: BELL, title: '날씨를 불러오고 있어요', detail: '현재 위치의 예보를 확인하고 있어요' }
+          : { icon: BELL, title: '아직 예보 정보가 없어요', detail: '예보가 준비되면 보여 드릴게요' };
 
   const message =
     pushMessage ??
@@ -51,10 +56,12 @@ const WeatherSummaryCard = () => {
       : location.status === 'denied'
         ? location.isStale
           ? '위치 권한이 꺼져 있어 마지막 위치로 알려드려요.'
-          : '위치 권한을 허용해야 알림을 받을 수 있어요.'
-        : platform === 'web'
-          ? '알림은 앱에서 받을 수 있어요.'
-          : null);
+          : '위치 권한을 허용하면 날씨 알림도 받을 수 있어요.'
+        : hasNoLocation
+          ? '지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.'
+          : platform === 'web'
+            ? '알림은 앱에서 받을 수 있어요.'
+            : null);
 
   return (
     <section className={styles.card} aria-labelledby="weather-summary-heading">
@@ -101,7 +108,7 @@ const WeatherSummaryCard = () => {
               {weatherValue(forecast.data.tmx, '°')}
             </>
           ) : (
-            '비·눈·추위 같은 생활 날씨를 알림으로 알려드려요.'
+            '생활 날씨와 배달 할인 소식을 알림으로 알려드려요.'
           )}
         </p>
       </div>
