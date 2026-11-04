@@ -14,9 +14,9 @@ type Props = {
 };
 
 /**
- * 본 방 기록 지도에 처음 들어왔을 때 지도를 가까이 확대하고, 손가락이 지도를 톡 누르는 움직임으로 직접 눌러 보게 이끄는 안내.
- * 안내는 지도 조작을 막지 않아 그대로 지도를 누를 수 있고, 누르면 그 자리에 메모·매물 말풍선이 떠 어떻게 추가하는지 보여 준다.
- * 지도를 누르거나 건너뛰면 마치고, 한 번 마치면 다시 띄우지 않는다.
+ * 본 방 기록 지도에 처음 들어왔을 때 지도를 가까이 확대하고, 손가락이 지도를 톡 누르는 움직임으로 지도를 눌러 기록하는 법을 알려 주는 안내.
+ * 안내는 화면을 덮어 누른 손가락이 밑의 마커나 지도에 닿지 않게 막고, 어디를 누르든 안내만 닫는다. 닫은 뒤 지도를 누르면 그 자리에 메모와 매물 말풍선이 뜬다.
+ * 한 번 닫으면 다시 띄우지 않는다.
  */
 const RecordMapTapIntro = ({ setLevel, hasTapped }: Props) => {
   const [isOpen, setIsOpen] = useState(() => !hasSeenRecordsMapIntro());
@@ -56,6 +56,8 @@ const RecordMapTapIntro = ({ setLevel, hasTapped }: Props) => {
       <button type="button" className={styles.skip} onClick={finish}>
         건너뛰기
       </button>
+      {/* 안내 아무 곳이나 눌러도 닫는다. 밑의 마커가 눌리지 않게 화면 전체를 덮는다. 키보드는 건너뛰기 버튼으로 닫는다. */}
+      <button type="button" className={styles.dismissArea} aria-hidden="true" tabIndex={-1} onClick={finish} />
     </div>
   );
 };
@@ -108,8 +110,18 @@ const styles = {
     background: rgb(20 23 28 / 35%);
     color: white;
     text-align: center;
-    /* 안내 위로 누른 손가락도 그대로 지도에 닿게 한다. 건너뛰기만 누를 수 있다. */
-    pointer-events: none;
+    /* 안내가 화면을 덮는 동안에는 밑의 지도와 마커가 눌리지 않는다. 누르면 안내만 닫는다(dismissArea). */
+  `,
+
+  dismissArea: css`
+    label: RecordMapTapIntro-dismissArea;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
   `,
 
   stage: css`
@@ -173,8 +185,11 @@ const styles = {
     }
   `,
 
+  /* 화면을 덮는 dismissArea보다 위에 두어 건너뛰기를 바로 누를 수 있게 한다. 손가락 그림과 글은 그 밑에 깔려 눌러도 안내를 닫는다. */
   skip: css`
     label: RecordMapTapIntro-skip;
+    position: relative;
+    z-index: 1;
     padding: 0.55rem 1.2rem;
     border: 1px solid rgb(255 255 255 / 70%);
     border-radius: 2rem;
@@ -184,7 +199,6 @@ const styles = {
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    pointer-events: auto;
   `,
 };
 

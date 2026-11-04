@@ -85,8 +85,29 @@ it('지도를 조금 옮겨도 겹치는 칸은 같은 가운데로 조회해 �
   ).toBeGreaterThan(0);
 });
 
-it('화면이 넓으면 가운데에 가까운 칸부터 상한만큼만 조회한다', () => {
-  const cells = facilityCells(around(0.02, 0.025));
+const corners = (bounds: ReturnType<typeof around>) => [
+  { latitude: bounds.south, longitude: bounds.west },
+  { latitude: bounds.north, longitude: bounds.east },
+  { latitude: bounds.south, longitude: bounds.east },
+  { latitude: bounds.north, longitude: bounds.west },
+];
+
+it('400m 칸이 상한보다 많아질 만큼 화면이 넓으면 칸을 키워 화면 모서리까지 모두 덮는다', () => {
+  // 약 4.4km 정사각형 화면. 400m 칸이면 100칸이 넘는다.
+  const bounds = around(0.02, 0.025);
+  const cells = facilityCells(bounds);
+  expect(cells.length).toBeLessThanOrEqual(MAX_FACILITY_CELLS);
+  expect(cells.every((cell) => cell.radius > 500)).toBe(true);
+  for (const cell of cells)
+    expect(distanceMeters(cell.center, { latitude: cell.bounds.north, longitude: cell.bounds.east })).toBeLessThan(
+      cell.radius,
+    );
+  for (const corner of corners(bounds)) expect(cells.some((cell) => isInBounds(corner, cell.bounds))).toBe(true);
+});
+
+it('가장 큰 칸으로도 상한을 넘으면 가운데에 가까운 칸부터 상한만큼만 조회한다', () => {
+  const cells = facilityCells(around(0.2, 0.25));
   expect(cells).toHaveLength(MAX_FACILITY_CELLS);
-  expect(cells.every((cell) => distanceMeters({ latitude: 37.5, longitude: 127 }, cell.center) < 800)).toBe(true);
+  expect(cells.every((cell) => cell.radius === 2000)).toBe(true);
+  expect(cells.every((cell) => distanceMeters({ latitude: 37.5, longitude: 127 }, cell.center) < 8000)).toBe(true);
 });
