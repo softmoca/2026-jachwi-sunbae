@@ -225,7 +225,11 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 다시 선택하기
               </Button>
             </header>
-            <LocationControls preview={preview} isResult />
+            <LocationControls
+              preview={preview}
+              isResult
+              zoom={{ level: preview.resultLevel, onZoom: preview.zoomResultBy }}
+            />
             {preview.isPublicExplore && recordArea && (
               <div className={shared.recordAction}>
                 <ExplorationRecordAction

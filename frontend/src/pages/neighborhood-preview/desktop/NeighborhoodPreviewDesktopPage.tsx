@@ -163,9 +163,7 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
               ? preview.closeAreaDetails
               : () => preview.selectRegion(null)
         }
-        closeLabel={
-          places.selectedPlace ? '정보 닫기' : hasDetail ? '대중교통 상세 닫기' : '동네 정보 닫기'
-        }
+        closeLabel={places.selectedPlace ? '정보 닫기' : hasDetail ? '대중교통 상세 닫기' : '동네 정보 닫기'}
       >
         <section className={shared.mapPage} aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}>
           <MapCanvas
@@ -210,7 +208,11 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
               </div>
               {/* 월세 시세는 찾기 전이 아니라 결과 지도 위에서 고른다. 끄는 동안 지도 색과 왼쪽 순위가 바로 바뀐다. */}
               <RentSlider preview={preview} className={styles.rentCard} />
-              <LocationControls preview={preview} isResult />
+              <LocationControls
+                preview={preview}
+                isResult
+                zoom={{ level: preview.resultLevel, onZoom: preview.zoomResultBy }}
+              />
               {preview.isPublicExplore && recordArea && (
                 <div className={`${shared.recordAction} ${styles.recordAction}`}>
                   <ExplorationRecordAction

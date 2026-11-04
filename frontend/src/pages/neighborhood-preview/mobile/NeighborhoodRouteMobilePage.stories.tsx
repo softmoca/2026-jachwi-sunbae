@@ -137,6 +137,7 @@ const preview: NeighborhoodPreviewContext = {
   selected: area,
   selectRegion: noop,
   focusResultPoint: noop,
+  zoomResultBy: noop,
   selectStation: noop,
   openAreaDetails: noop,
   closeAreaDetails: fn(),

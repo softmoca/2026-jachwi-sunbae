@@ -12,6 +12,7 @@ import { writeCommuteDestination } from '@/features/map/lib/commuteDestinationSt
 import { readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import { MapLocationError } from '@/features/map/lib/mapLocation';
 import type { MapAddress } from '@/features/map/model/Map';
+import { MAX_MAP_LEVEL, MIN_MAP_LEVEL } from '@/features/map/ui/map-zoom-control/MapZoomControl';
 import { completeExploration, startExploration } from '@/features/onboarding/lib/explorationJourney';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import {
@@ -189,6 +190,27 @@ const useNeighborhoodPreview = () => {
           },
     );
   }, [allAreas, areas]);
+  // 새로고침·뒤로가기로 고른 동네가 복원되면 전체 보기 대신 그 동네로 연다. 고른 동네 화면의 정류장·부동산을 바로 보여주기 위해서다.
+  const resultLevel =
+    resultView.current?.level ?? (selected ? areaFocusLevel(selected.polygons) : RESULT_OVERVIEW_LEVEL);
+  const resultCenter =
+    resultView.current ??
+    (selected ? resultMapCenter(selected.center, areaFocusLevel(selected.polygons)) : undefined) ??
+    resultMapCenter(
+      areas?.length
+        ? {
+            latitude:
+              (Math.min(...areas.map((area) => area.center.latitude)) +
+                Math.max(...areas.map((area) => area.center.latitude))) /
+              2,
+            longitude:
+              (Math.min(...areas.map((area) => area.center.longitude)) +
+                Math.max(...areas.map((area) => area.center.longitude))) /
+              2,
+          }
+        : destination,
+      10,
+    );
   return {
     isPublicExplore,
     mapPath,
@@ -267,6 +289,13 @@ const useNeighborhoodPreview = () => {
     selectionLevel,
     rememberResultCenter: (latitude: number, longitude: number) => {
       resultView.current = { latitude, longitude, level: resultView.current?.level ?? RESULT_OVERVIEW_LEVEL };
+    },
+    /** 결과 지도 확대(-1)·축소(+1) 버튼. 휠이나 손가락으로 바꾼 단계는 다시 그리지 않고 기억만 하므로 기억한 값에서 옮긴다. */
+    zoomResultBy: (delta: -1 | 1) => {
+      const current = resultView.current ?? { ...resultCenter, level: resultLevel };
+      const level = Math.max(MIN_MAP_LEVEL, Math.min(MAX_MAP_LEVEL, current.level + delta));
+      resultView.current = { latitude: current.latitude, longitude: current.longitude, level };
+      setResultViewVersion((version) => version + 1);
     },
     rememberResultLevel: (level: number) => {
       if (resultView.current) resultView.current.level = level;
@@ -391,26 +420,8 @@ const useNeighborhoodPreview = () => {
     changeMaxMinutes: setMaxMinutes,
     maxTransfers,
     changeMaxTransfers: setMaxTransfers,
-    // 새로고침·뒤로가기로 고른 동네가 복원되면 전체 보기 대신 그 동네로 연다. 고른 동네 화면의 정류장·부동산을 바로 보여주기 위해서다.
-    resultLevel: resultView.current?.level ?? (selected ? areaFocusLevel(selected.polygons) : RESULT_OVERVIEW_LEVEL),
-    center:
-      resultView.current ??
-      (selected ? resultMapCenter(selected.center, areaFocusLevel(selected.polygons)) : undefined) ??
-      resultMapCenter(
-        areas?.length
-          ? {
-              latitude:
-                (Math.min(...areas.map((area) => area.center.latitude)) +
-                  Math.max(...areas.map((area) => area.center.latitude))) /
-                2,
-              longitude:
-                (Math.min(...areas.map((area) => area.center.longitude)) +
-                  Math.max(...areas.map((area) => area.center.longitude))) /
-                2,
-            }
-          : destination,
-        10,
-      ),
+    resultLevel,
+    center: resultCenter,
     reset: () => {
       analytics.cancelSearch();
       if (location.pathname.includes('/areas/')) navigate(mapPath, { replace: true });

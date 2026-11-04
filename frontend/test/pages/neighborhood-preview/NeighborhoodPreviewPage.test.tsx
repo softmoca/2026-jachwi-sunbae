@@ -727,6 +727,22 @@ it('결과 지도를 가까이 확대하면 화면 안 정류장·부동산을 �
   await user.click(stop.getByRole('button', { name: '뒤로 가기' }));
   expect(screen.getByRole('list', { name: '역삼1동 출발 정류장' })).toBeInTheDocument();
 });
+it('결과 지도에 확대·축소 버튼을 두고, 손가락이나 휠로 바꾼 단계에서 한 단계씩 옮긴다', async () => {
+  server.use(...mapHandlers, ...createStreetMemoHandlers([]));
+  show();
+  const user = await choosePoint();
+  // 결과 전에는 버튼을 두지 않는다.
+  expect(screen.queryByRole('group', { name: '지도 확대·축소' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
+  const level = () => JSON.parse(screen.getByLabelText('지도 시점').textContent ?? '{}').level as number;
+  await waitFor(() => expect(level()).toBe(10));
+  await user.click(await screen.findByRole('button', { name: '지도 확대' }));
+  expect(level()).toBe(9);
+  // 지도가 휠로 4단계에 멈췄다고 알리면, 축소 버튼은 그 단계에서 한 단계 멀어진다.
+  await user.click(screen.getByRole('button', { name: '가까이 확대' }));
+  await user.click(screen.getByRole('button', { name: '지도 축소' }));
+  expect(level()).toBe(5);
+});
 it('결과 지도는 가까이 확대해도 거리 메모를 조회하거나 올리지 않는다', async () => {
   let memoRequests = 0;
   server.use(
