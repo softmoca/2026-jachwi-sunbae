@@ -463,6 +463,61 @@ describe('Naver 지도 상태 동기화', () => {
     expect(maps[0].autoResize).toHaveBeenCalledTimes(2);
   });
 
+  it('옆 칸이 열려 지도 칸 크기가 바뀐 채로 시점을 옮기면, 옮기기 전에 크기를 맞춰 한 번에 옮긴다', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = vi.fn();
+        disconnect = vi.fn();
+      },
+    );
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} animateView />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(560);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(760);
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} animateView />);
+
+    await waitFor(() => expect(maps[0].setCenter).toHaveBeenCalled());
+    expect(maps[0].autoResize).toHaveBeenCalledOnce();
+    expect(maps[0].autoResize.mock.invocationCallOrder[0]).toBeLessThan(maps[0].setCenter.mock.invocationCallOrder[0]);
+  });
+
+  it('시점을 옮기는 도중에 온 idle은 중간 좌표를 알리지 않고, 목표에 닿거나 기다릴 시간이 지나면 알린다', async () => {
+    const onCenterChange = vi.fn();
+    const props = { animateView: true, onCenterChange };
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} {...props} />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    const morph = vi.fn();
+    Object.assign(maps[0], { morph });
+    const idle = vi
+      .mocked(window.naver!.maps.Event.addListener)
+      .mock.calls.find((call) => call[0] === maps[0] && call[1] === 'idle')![2];
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} {...props} />);
+    await waitFor(() => expect(morph).toHaveBeenCalledOnce());
+    // 아직 출발한 자리(중간)에서 온 idle
+    act(() => idle());
+    expect(onCenterChange).not.toHaveBeenCalled();
+
+    maps[0].center = new FakeLatLng(37.5, 127.03);
+    maps[0].zoom = 15;
+    act(() => idle());
+    expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03);
+
+    // 목표에 닿지 못해도(경계에 걸림 등) 기다릴 시간이 지나면 그 자리를 알린다.
+    onCenterChange.mockClear();
+    rerender(<MapCanvas center={{ latitude: 37.6, longitude: 127.1 }} level={5} {...props} />);
+    await waitFor(() => expect(morph).toHaveBeenCalledTimes(2));
+    act(() => idle());
+    expect(onCenterChange).not.toHaveBeenCalled();
+    await waitFor(() => expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03), { timeout: 1500 });
+  });
+
   it('앱 확대 단계를 반대 방향인 Naver zoom으로 바꿔 전달한다', async () => {
     renderWithConfig(<MapCanvas center={{ latitude: 37.5665, longitude: 126.978 }} level={5} />);
 

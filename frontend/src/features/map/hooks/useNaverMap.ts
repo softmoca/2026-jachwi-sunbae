@@ -21,6 +21,8 @@ import * as actionStyles from '../ui/map-canvas/MapCanvas.styles';
 const EMPTY_MARKERS: NonNullable<MapCanvasProps['markers']> = [];
 const EMPTY_CIRCLES: NonNullable<MapCanvasProps['circles']> = [];
 const EMPTY_REGIONS: NonNullable<MapCanvasProps['regions']> = [];
+/** 시점 옮기기(morph 320ms)가 끝났다고 보는 최대 시간. 이 안에 목표에 못 닿은 idle은 중간 시점으로 본다. */
+const VIEW_SETTLE_MS = 700;
 
 type LiveMapProps = Pick<
   MapCanvasProps,
@@ -86,6 +88,10 @@ const useNaverMap = ({
   // 애니메이션이 끝나는 idle까지 크기 맞춤을 미룬다.
   const viewAnimatingRef = useRef(false);
   const pendingRelayoutRef = useRef<(() => void) | null>(null);
+  // 지도에 마지막으로 맞춘 칸 크기. 크기 맞춤은 크기가 달라졌을 때만 한다.
+  const relaidSizeRef = useRef('');
+  // 시점을 옮기기 시작한 시각과 목표. 옮기는 도중에 오는 idle(크기 맞춤 직후 등)을 다 옮긴 것으로 받지 않는다.
+  const viewTargetRef = useRef<{ startedAt: number; latitude: number; longitude: number; level: number } | null>(null);
   const [settledVersion, setSettledVersion] = useState(0);
   const setGestureActive = (active: boolean) => {
     gestureActiveRef.current = active;
@@ -103,6 +109,16 @@ const useNaverMap = ({
     () => naverEngine(config.naverMapClientId ?? '', customStyleId),
     [config.naverMapClientId, customStyleId],
   );
+  /** 지도 칸 크기가 마지막으로 맞춘 크기와 다르면 지도를 그 크기에 맞춘다. 크기가 0이면(숨김) 건너뛴다. */
+  const relayoutIfResized = (map: LiveMap) => {
+    const container = containerRef.current;
+    if (container === null || container.clientWidth === 0 || container.clientHeight === 0) return;
+    const size = `${container.clientWidth}x${container.clientHeight}`;
+    if (size === relaidSizeRef.current) return;
+    relaidSizeRef.current = size;
+    engine.relayout(map);
+    callbackRef.current.onBoundsChange?.(engine.getBounds(map));
+  };
   const liveMode = config.mapProviderMode === 'naver' && (config.naverMapClientId ?? '') !== '';
   const initialViewRef = useRef({ center: boundedCenter, level });
   initialViewRef.current = { center: boundedCenter, level };
@@ -116,6 +132,7 @@ const useNaverMap = ({
     let map: LiveMap | null = null;
     let listeners: unknown[] = [];
     let readyFrame: number | null = null;
+    let settleTimer: number | null = null;
 
     const handleAuthFailure = () => {
       // 폐기된 SDK를 호출하지 않고 지도만 중단하여 실제 API 목록·상세를 계속 사용할 수 있게 한다.
@@ -144,8 +161,45 @@ const useNaverMap = ({
         map = engine.createMap(containerRef.current, initialViewRef.current.center, initialViewRef.current.level);
         mapRef.current = map;
 
+        const handleIdle = () => {
+          // 앞서 미뤄 둔 확인은 이 idle이 대신한다.
+          if (settleTimer !== null) window.clearTimeout(settleTimer);
+          settleTimer = null;
+          if (disposed || map === null || !isNaverSdkAvailable()) return;
+          // 시점을 옮기는 중간에 온 idle은 무시한다. 중간 좌표를 화면에 알리면 화면이 그 좌표로 다시 옮기라고 해
+          // 목표와 중간 시점 사이를 오가며 튄다. 끝까지 오지 못하는 경우를 위해 일정 시간이 지나면 받는다.
+          const target = viewTargetRef.current;
+          if (target !== null) {
+            const current = engine.getCenter(map);
+            const arrived =
+              Math.abs(current.latitude - target.latitude) < 0.000001 &&
+              Math.abs(current.longitude - target.longitude) < 0.000001 &&
+              Math.abs(engine.getZoom(map) - target.level) < 0.01;
+            const waited = performance.now() - target.startedAt;
+            if (!arrived && waited < VIEW_SETTLE_MS) {
+              // 이 idle 뒤로 더 오지 않을 수 있으니(목표가 지도 경계에 걸리는 등) 기다릴 시간이 지나면 다시 받는다.
+              settleTimer = window.setTimeout(handleIdle, VIEW_SETTLE_MS - waited);
+              return;
+            }
+            viewTargetRef.current = null;
+          }
+          setGestureActive(false);
+          viewAnimatingRef.current = false;
+          const pendingRelayout = pendingRelayoutRef.current;
+          pendingRelayoutRef.current = null;
+          pendingRelayout?.();
+          setSettledVersion((current) => current + 1);
+          const nextCenter = engine.getCenter(map);
+          callbackRef.current.onCenterChange?.(nextCenter.latitude, nextCenter.longitude);
+          callbackRef.current.onLevelChange?.(engine.getZoom(map));
+          callbackRef.current.onBoundsChange?.(engine.getBounds(map));
+        };
         listeners.push(
-          engine.addListener(map, 'dragstart', () => setGestureActive(true)),
+          engine.addListener(map, 'dragstart', () => {
+            // 옮기는 도중에 손으로 끌면 그 자리를 따른다.
+            viewTargetRef.current = null;
+            setGestureActive(true);
+          }),
           engine.addListener(map, 'zoomstart', () => setGestureActive(true)),
         );
         listeners.push(
@@ -153,19 +207,7 @@ const useNaverMap = ({
             if (latitude !== undefined && longitude !== undefined)
               callbackRef.current.onSelectLocation?.(latitude, longitude);
           }),
-          engine.addListener(map, 'idle', () => {
-            setGestureActive(false);
-            viewAnimatingRef.current = false;
-            const pendingRelayout = pendingRelayoutRef.current;
-            pendingRelayoutRef.current = null;
-            if (map === null || !isNaverSdkAvailable()) return;
-            pendingRelayout?.();
-            setSettledVersion((current) => current + 1);
-            const nextCenter = engine.getCenter(map);
-            callbackRef.current.onCenterChange?.(nextCenter.latitude, nextCenter.longitude);
-            callbackRef.current.onLevelChange?.(engine.getZoom(map));
-            callbackRef.current.onBoundsChange?.(engine.getBounds(map));
-          }),
+          engine.addListener(map, 'idle', handleIdle),
         );
         setMapReady(true);
         callbackRef.current.onBoundsChange?.(engine.getBounds(map));
@@ -189,6 +231,7 @@ const useNaverMap = ({
       disposed = true;
       window.removeEventListener(NAVER_AUTH_FAILURE_EVENT, handleAuthFailure);
       if (readyFrame !== null) window.cancelAnimationFrame(readyFrame);
+      if (settleTimer !== null) window.clearTimeout(settleTimer);
       listeners.forEach((listener) => engine.removeListener(listener));
       listeners = [];
       setGestureActive(false);
@@ -224,7 +267,12 @@ const useNaverMap = ({
       engine.getZoom(map) === level
     )
       return;
+    // 옆 칸이 열리고 닫혀 지도 칸 크기가 바뀐 채로 옮기기 시작하면, 옛 크기로 옮긴 뒤 다 옮기고서야 크기를 맞춰
+    // 화면이 한 번 더 튄다(넓어진 칸은 그동안 비어 보인다). 이미 바뀐 크기는 옮기기 전에 맞춘다.
+    pendingRelayoutRef.current = null;
+    relayoutIfResized(map);
     viewAnimatingRef.current = true;
+    viewTargetRef.current = { startedAt: performance.now(), ...boundedCenter, level };
     engine.animateView(map, engine.latLng(boundedCenter.latitude, boundedCenter.longitude), level);
   }, [boundedCenter, engine, liveMode, mapReady, animateView, level]);
 
@@ -239,7 +287,6 @@ const useNaverMap = ({
       return;
     const map = mapRef.current;
     let relayoutFrame: number | null = null;
-    let previousSize = '';
     const observer = new ResizeObserver(() => {
       if (relayoutFrame !== null) return;
       relayoutFrame = window.requestAnimationFrame(() => {
@@ -253,13 +300,10 @@ const useNaverMap = ({
           !isNaverSdkAvailable()
         )
           return;
-        const size = `${container.clientWidth}x${container.clientHeight}`;
-        if (size === previousSize) return;
-        previousSize = size;
+        if (`${container.clientWidth}x${container.clientHeight}` === relaidSizeRef.current) return;
         const relayout = () => {
           if (mapRef.current !== map || !isNaverSdkAvailable()) return;
-          engine.relayout(map);
-          callbackRef.current.onBoundsChange?.(engine.getBounds(map));
+          relayoutIfResized(map);
         };
         if (viewAnimatingRef.current) pendingRelayoutRef.current = relayout;
         else relayout();
