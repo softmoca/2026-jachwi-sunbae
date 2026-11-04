@@ -31,7 +31,7 @@ npm start
 # 다른 터미널에서 npm run ios 또는 npm run android
 ```
 
-Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.kr`을 연다. 기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 단, OAuth 계정 연결의 카카오, Apple 인증 화면과 API의 `/api/auth/oauth/` 경로는 쿠키를 이어 가도록 WebView 안에 둔다([앱 인증 브리지](docs/auth-bridge.md)). 앱 시작만으로 위치 권한을 요청하지 않는다.
+Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.kr`을 연다. 기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 앱 시작만으로 위치 권한을 요청하지 않는다.
 
 ## 푸시 알림
 
