@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
+import usePreloadMapSdk from '@/features/map/hooks/usePreloadMapSdk';
 import type { MapAddress } from '@/features/map/model/Map';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
@@ -36,6 +37,8 @@ const RecordsDesktopPage = () => {
     setSelectedId: (id) => navigate(id === null ? RECORDS_PATH : `${RECORDS_PATH}/${id}`),
   });
   const { selected, setSelectedId, setNotice } = records;
+  // 데스크탑은 늘 지도를 함께 그린다. 매물 목록을 기다리는 동안 지도 SDK를 먼저 받기 시작한다.
+  usePreloadMapSdk(true);
   // 지도에서 찍어 매물을 만드는 중인 위치. 만드는 동안 그 자리에 등록 핀을 둔다.
   const [creatingAt, setCreatingAt] = useState<MapAddress | null>(null);
   const quickCreate = useQuickCreateProperty({
