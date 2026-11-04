@@ -39,6 +39,10 @@ Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.k
 
 **설정 파일, APNs 인증 연결, 실제 기기 수신 검증이 완료되기 전에는 배포하지 않는다.** 사용자별 발송은 웹/서버의 인증된 토큰 등록·로그아웃 해제 연동이 추가로 필요하다. 현재 준비 범위와 서버 연동 규약은 [푸시 운영 문서](docs/push-notifications.md)를 따른다.
 
+## 인증 브리지
+
+OAuth 인증 화면(iOS ASWebAuthenticationSession, Android Custom Tabs)을 열어 결과를 웹에 돌려주고, WebView의 Refresh 쿠키를 기기 저장소에 백업해 앱을 시작할 때 되살린다. 메시지 약속과 저장 위치는 [앱 인증 브리지](docs/auth-bridge.md)를 따른다.
+
 ## 검사
 
 ```bash
