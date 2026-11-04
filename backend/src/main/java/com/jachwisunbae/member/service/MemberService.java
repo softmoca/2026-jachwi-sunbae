@@ -1,5 +1,6 @@
 package com.jachwisunbae.member.service;
 
+import com.jachwisunbae.auth.repository.MemberIdentityRepository;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
@@ -17,13 +18,16 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final MemberIdentityRepository identities;
     private final Clock clock;
 
     public MemberService(final MemberRepository memberRepository,
                          final RefreshTokenRepository refreshTokenRepository,
+                         final MemberIdentityRepository identities,
                          final Clock clock) {
         this.memberRepository = memberRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.identities = identities;
         this.clock = clock;
     }
 
@@ -45,6 +49,7 @@ public class MemberService {
         LocalDateTime now = LocalDateTime.now(clock);
         memberRepository.deleteOwnedData(memberId, now);
         refreshTokenRepository.deleteByMemberId(memberId);
+        identities.deleteByMemberId(memberId);
         memberRepository.delete(memberId, now);
     }
 }

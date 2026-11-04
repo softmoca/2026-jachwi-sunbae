@@ -80,16 +80,19 @@ class AnonymousAuthenticationAcceptanceTest {
     void clearMembers() {
         jdbcTemplate.update("DELETE FROM oauth_attempts");
         jdbcTemplate.update("DELETE FROM refresh_tokens");
+        jdbcTemplate.update("DELETE FROM member_identities");
         jdbcTemplate.update("DELETE FROM members");
     }
 
     @Test
-    @DisplayName("OAuth 콜백은 시작한 회원의 세션과 제공자가 일치할 때 한 번만 검증한다")
+    @DisplayName("OAuth 콜백은 시작한 세션에서 한 번만 연결하고 현재 Refresh Token을 교체한다")
     void verifiesOAuthCallbackOnceForStartingSession() throws Exception {
         var login = mvc.perform(post("/api/auth/login")).andReturn();
         String accessToken = objectMapper.readTree(login.getResponse().getContentAsString())
                 .path("data").path("accessToken").asText();
         Cookie cookie = login.getResponse().getCookie("refresh_token");
+        long memberId = objectMapper.readTree(login.getResponse().getContentAsString())
+                .path("data").path("member").path("memberId").asLong();
         Cookie otherCookie = startAnonymous().refreshCookie();
         String startPath = "/api/auth/oauth/KAKAO/start";
         String callbackPath = "/api/auth/oauth/KAKAO/callback";
@@ -114,11 +117,22 @@ class AnonymousAuthenticationAcceptanceTest {
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/auth/oauth/APPLE/callback").cookie(cookie).param("state", state).param("code", "valid-code"))
                 .andExpect(status().isUnauthorized());
-        mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
-                .andExpect(status().isNoContent());
+        var linked = mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isNoContent()).andReturn();
+        Cookie replacement = linked.getResponse().getCookie("refresh_token");
+        assertThat(replacement).isNotNull();
+        assertThat(replacement.getValue()).isNotEqualTo(cookie.getValue());
+        assertThat(replacement.isHttpOnly()).isTrue();
+        mvc.perform(post("/api/auth/refresh").cookie(cookie))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(memberId));
+        mvc.perform(post("/api/auth/refresh").cookie(otherCookie)).andExpect(status().isOk());
         mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
                 .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("OAUTH_AUTHENTICATION_FAILED"));
-        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM member_identities", Long.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT member_id FROM member_identities WHERE provider = 'KAKAO' AND provider_subject = 'external-user'",
+                Long.class)).isEqualTo(memberId);
     }
 
     @Test

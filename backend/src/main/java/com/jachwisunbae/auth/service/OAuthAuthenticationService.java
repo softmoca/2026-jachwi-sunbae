@@ -60,8 +60,7 @@ public class OAuthAuthenticationService {
             throw invalid("OAuth 인증이 취소됐거나 인가 코드가 유효하지 않습니다.");
         }
         String subject = providers.exchangeAndVerify(provider, code, nonce);
-        requireSession(refreshCookie);
-        return new VerifiedIdentity(session.getMemberId(), provider, subject);
+        return new VerifiedIdentity(session.getMemberId(), provider, subject, session.getTokenHash());
     }
 
     private RefreshToken requireSession(String refreshCookie) {
@@ -78,6 +77,6 @@ public class OAuthAuthenticationService {
         return new AuthenticationFailedException(ErrorCode.OAUTH_AUTHENTICATION_FAILED, message);
     }
 
-    public record VerifiedIdentity(Long memberId, OAuthProvider provider, String subject) {
+    public record VerifiedIdentity(Long memberId, OAuthProvider provider, String subject, String refreshTokenHash) {
     }
 }

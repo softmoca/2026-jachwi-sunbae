@@ -47,15 +47,7 @@ public class AuthController {
     }
 
     private ApiResponse<LoginResponse> respondWithCookie(LoginResult loginResult, HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie
-                .from("refresh_token", loginResult.refreshToken())
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Lax")
-                .path("/api/auth")
-                .maxAge(loginResult.refreshTokenExpiresIn())
-                .build();
-
+        ResponseCookie cookie = RefreshTokenCookie.create(loginResult.refreshToken(), loginResult.refreshTokenExpiresIn());
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ApiResponse.of(LoginResponse.from(loginResult));
     }

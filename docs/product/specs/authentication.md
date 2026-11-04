@@ -71,7 +71,7 @@ PostHog에서 기존 로그인 화면 방문자의 85%가 이탈한 것을 확�
 
 - `POST /api/auth/oauth/{provider}/start`는 같은 회원의 Bearer JWT와 Refresh 쿠키를 확인하고 `data.authorizationUrl`을 반환한다. 브라우저는 받은 URL로 이동한다.
 - `GET /api/auth/oauth/{provider}/callback`은 시작할 때 사용한 Refresh 쿠키와 5분 이내의 일회용 `state`를 확인한다. 제공자가 발급한 인가 코드를 서버에서 교환하고 ID Token의 서명·발급자·대상·만료·`nonce`를 검증한다.
-- 현재 콜백은 검증 성공 시 `204`를 반환한다. 검증 실패·취소는 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정 누락·장애는 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답한다. 연결·기록 통합·새 서비스 토큰 발급은 후속 작업이다.
+- 미등록 외부 계정은 현재 익명 회원에 연결한다. 성공 시 `204`와 새 Refresh 쿠키를 반환하며, 이후 `POST /api/auth/refresh`로 새 Access Token을 받는다. 현재 회원이나 외부 계정에 이미 연결이 있으면 `400 OAUTH_IDENTITY_ALREADY_LINKED`를 반환한다. 검증 실패·취소는 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정 누락·장애는 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답한다. 기록 통합과 계정 전환은 후속 작업이다.
 - 환경별로 `KAKAO_OAUTH_CLIENT_ID`, `KAKAO_OAUTH_CLIENT_SECRET`, `KAKAO_OAUTH_REDIRECT_URI`와 대응하는 `APPLE_OAUTH_*`를 설정한다. 제공자 콘솔에 위 콜백의 HTTPS 주소를 등록하고, 카카오는 OpenID Connect를 활성화한다. Apple의 Client ID는 웹용 Services ID, Client Secret은 만료 전에 갱신해야 하는 개발자 서명 JWT다.
 
 ### 3.5. 익명 기록 통합
