@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
 import type { Member } from '@/features/auth/model/Member';
-import { weatherQueryKeys } from '@/features/weather/api/weatherApi';
 import type { WeatherForecastResponse, WeatherHour } from '@/features/weather/model/weather';
+import { weatherQueryKeys } from '@/features/weather/model/weatherQueryKeys';
 import { currentMemberQueryKey } from '@/shared/api/queryClient';
 
 import MyDesktopPage from './MyDesktopPage';
@@ -59,7 +59,7 @@ export const Default: Story = {
   parameters: {
     queryData: [
       [currentMemberQueryKey, member],
-      [weatherQueryKeys.settings, { enabled: true }],
+      [weatherQueryKeys.settings(null), { enabled: true }],
       [weatherQueryKeys.forecast(coordinate), forecast],
       [weatherQueryKeys.place(coordinate), '관악구 신림동'],
     ],
@@ -81,7 +81,7 @@ export const NotificationOff: Story = {
   parameters: {
     queryData: [
       [currentMemberQueryKey, member],
-      [weatherQueryKeys.settings, { enabled: false }],
+      [weatherQueryKeys.settings(null), { enabled: false }],
     ],
   },
 };

@@ -46,6 +46,11 @@ export const getPostHogOptions = (
   },
   capture_pageview: false,
   disable_session_recording: false,
+  session_recording: {
+    // 콘솔에서 네트워크 녹화를 켜더라도 기기 토큰·설치 비밀키 요청은 수집하지 않는다.
+    maskCapturedNetworkRequestFn: (request) =>
+      request.name.includes('/api/members/me/weather-devices/') ? null : request,
+  },
   mask_all_text: true,
   mask_all_element_attributes: true,
 });
