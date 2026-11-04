@@ -165,6 +165,58 @@ class AnonymousAuthenticationAcceptanceTest {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Long.class)).isEqualTo(1L);
     }
 
+    @Test
+    @DisplayName("같은 회원의 두 인증은 서로 다른 Refresh Token으로 복원하고 만료도 독립적으로 연장한다")
+    void restoresIndependentSessionsForSameMember() throws Exception {
+        AnonymousLogin first = startAnonymous();
+        AnonymousLogin second = addSession(first);
+        RefreshToken secondToken = storedToken(second);
+        LocalDateTime shortenedExpiry = secondToken.getCreatedAt().plusDays(1);
+        jdbcTemplate.update("UPDATE refresh_tokens SET expires_at = ? WHERE id = ?",
+                shortenedExpiry, secondToken.getId());
+
+        mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+        assertThat(storedToken(second).getExpiresAt()).isEqualTo(shortenedExpiry);
+        LocalDateTime firstExpiry = storedToken(first).getExpiresAt();
+
+        mvc.perform(post("/api/auth/refresh").cookie(second.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+
+        assertThat(storedToken(first).getExpiresAt()).isEqualTo(firstExpiry);
+        assertThat(storedToken(second).getExpiresAt()).isAfter(shortenedExpiry);
+        assertThat(first.refreshCookie().getValue()).isNotEqualTo(second.refreshCookie().getValue());
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM members", Long.class)).isOne();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Long.class)).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("한 Refresh Token을 폐기해도 다른 인증과 이미 발급한 유효 JWT는 유지된다")
+    void revokesOnlySelectedRefreshToken() throws Exception {
+        AnonymousLogin first = startAnonymous();
+        AnonymousLogin second = addSession(first);
+        var response = mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        String accessToken = objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+        String firstHash = refreshTokenProvider.hash(first.refreshCookie().getValue());
+
+        assertThat(refreshTokenRepository.deleteByTokenHash(firstHash)).isOne();
+        assertThat(refreshTokenRepository.deleteByTokenHash(firstHash)).isZero();
+
+        mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
+        mvc.perform(post("/api/auth/refresh").cookie(second.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(first.memberId()));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"expired", "deleted", "deleted-member"})
     @DisplayName("로그인할 때 인증을 복원할 수 없으면 이전 회원을 보존하고 새 회원을 만든다")
@@ -301,6 +353,13 @@ class AnonymousAuthenticationAcceptanceTest {
     private RefreshToken storedToken(AnonymousLogin login) {
         return refreshTokenRepository.findByTokenHash(refreshTokenProvider.hash(login.refreshCookie().getValue()))
                 .orElseThrow();
+    }
+
+    private AnonymousLogin addSession(AnonymousLogin original) {
+        String rawToken = refreshTokenProvider.generateToken();
+        refreshTokenRepository.save(RefreshToken.create(original.memberId(), refreshTokenProvider.hash(rawToken),
+                storedToken(original).getCreatedAt(), 365));
+        return new AnonymousLogin(original.memberId(), new Cookie("refresh_token", rawToken));
     }
 
     private void invalidateAuthentication(AnonymousLogin login, String state) {

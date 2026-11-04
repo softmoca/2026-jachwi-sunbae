@@ -76,6 +76,11 @@ public class JdbcRefreshTokenRepository implements RefreshTokenRepository {
     }
 
     @Override
+    public int deleteByTokenHash(final String tokenHash) {
+        return jdbcTemplate.update("DELETE FROM refresh_tokens WHERE token_hash = ?", tokenHash);
+    }
+
+    @Override
     public void deleteByMemberId(final Long memberId) {
         String sql = """
                 DELETE FROM refresh_tokens

@@ -11,5 +11,7 @@ public interface RefreshTokenRepository {
 
     int updateExpiry(RefreshToken refreshToken);
 
+    int deleteByTokenHash(String tokenHash);
+
     void deleteByMemberId(Long memberId);
 }
