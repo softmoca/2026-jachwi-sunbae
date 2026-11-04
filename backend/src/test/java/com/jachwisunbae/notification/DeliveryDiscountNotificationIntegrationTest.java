@@ -2,6 +2,7 @@ package com.jachwisunbae.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -105,6 +106,13 @@ class DeliveryDiscountNotificationIntegrationTest {
             assertThat(push.url()).isEqualTo("/cheap-meals?tab=delivery");
             assertThat(push.type()).isEqualTo(PushSender.Type.DELIVERY_COUPON);
         });
+        assertThat(jdbc.queryForMap("SELECT * FROM delivery_discount_notifications")).satisfies(row -> {
+            assertThat(row.get("notification_id")).isEqualTo(pushes.getFirst().notificationId().toString());
+            assertThat(((Number) row.get("member_id")).longValue()).isOne();
+            assertThat(row.get("type")).isEqualTo("EVENING");
+            assertThat(row.get("send_date")).isEqualTo(java.sql.Date.valueOf(TODAY));
+            assertThat(row.get("success")).isEqualTo(true);
+        });
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM member_weather_locations", Integer.class)).isZero();
     }
 
@@ -119,6 +127,7 @@ class DeliveryDiscountNotificationIntegrationTest {
         service.dispatch(type);
 
         assertThat(pushes).isEmpty();
+        assertThat(recordCount()).isZero();
     }
 
     @Test
@@ -174,6 +183,35 @@ class DeliveryDiscountNotificationIntegrationTest {
 
         verify(sender, times(2)).send(any());
         assertThat(pushes).hasSize(1);
+        assertThat(jdbc.queryForList("SELECT success FROM delivery_discount_notifications", Boolean.class))
+                .containsExactlyInAnyOrder(false, true);
+    }
+
+    @Test
+    @DisplayName("발송 기록 저장에 실패해도 나머지 기기에는 계속 보낸다")
+    void continuesAfterRecordFails() {
+        settings.setEnabled(3, true);
+        offer("BAEMIN", null, null, null, true);
+        doAnswer(invocation -> {
+            Push push = invocation.getArgument(0);
+            pushes.add(push);
+            // 첫 발송 직후 그 회원을 지워 발송 기록 저장이 FK 제약으로 실패하게 한다.
+            if (pushes.size() == 1) {
+                Long member = jdbc.queryForObject("SELECT member_id FROM notification_devices WHERE token = ?",
+                        Long.class, push.token());
+                jdbc.update("DELETE FROM members WHERE id = ?", member);
+            }
+            return true;
+        }).when(sender).send(any());
+
+        service.dispatch(DeliveryDiscountNotificationType.EVENING);
+
+        assertThat(pushes).hasSize(2);
+        assertThat(recordCount()).isOne();
+    }
+
+    private int recordCount() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM delivery_discount_notifications", Integer.class);
     }
 
     private String register(final long member) {
