@@ -26,7 +26,12 @@ npm run render    # 1440×1152, 60fps MP4를 out/flyover.mp4로 저장
 - 폰트를 CDN에서 불러오므로 렌더링할 때 인터넷 연결이 필요하다.
 - 브라우저에서 `flyover.html#play`를 열면 실시간으로 재생하고, `flyover.html#t=10.5`를 열면 그 시점에 멈춘 화면을 보여준다.
 
-렌더링한 MP4는 `frontend/src/pages/landing/assets/landing-flyover.mp4`로 복사한다.
+렌더링한 MP4는 해상도는 그대로 두고 다시 압축해서 `frontend/src/pages/landing/assets/landing-flyover.mp4`로 넣는다. 화면에 보이는 폭(데스크톱 2배 밀도에서 약 1,350px)에 1440px가 맞으므로 줄이지 않는다. 2026-11 기준 4.5MB가 1.9MB가 되고 원본과의 SSIM은 0.994다.
+
+```bash
+ffmpeg -i out/flyover.mp4 -c:v libx264 -preset slow -crf 27 -profile:v high -pix_fmt yuv420p -an \
+  -movflags +faststart ../../frontend/src/pages/landing/assets/landing-flyover.mp4
+```
 
 ### 장면 구성
 

@@ -1,14 +1,14 @@
-import cheapMealsMobileScreen from '@/shared/assets/app-screens/cheap-meals-mobile.jpg';
-import checklistMobileScreen from '@/shared/assets/app-screens/checklist-mobile.jpg';
-import compareMobileScreen from '@/shared/assets/app-screens/compare-mobile.jpg';
-import exploreMobileScreen from '@/shared/assets/app-screens/explore-mobile.jpg';
-import recordsMobileScreen from '@/shared/assets/app-screens/records-mobile.jpg';
+import cheapMealsMobileScreen from '@/shared/assets/app-screens/cheap-meals-mobile.webp';
+import checklistMobileScreen from '@/shared/assets/app-screens/checklist-mobile.webp';
+import compareMobileScreen from '@/shared/assets/app-screens/compare-mobile.webp';
+import exploreMobileScreen from '@/shared/assets/app-screens/explore-mobile.webp';
+import recordsMobileScreen from '@/shared/assets/app-screens/records-mobile.webp';
 
-import cheapMealsScreen from '../assets/landing-cheap-meals.jpg';
-import checklistScreen from '../assets/landing-checklist.jpg';
-import compareScreen from '../assets/landing-compare.jpg';
-import exploreScreen from '../assets/landing-explore.jpg';
-import recordsScreen from '../assets/landing-records.jpg';
+import cheapMealsScreen from '../assets/landing-cheap-meals.webp';
+import checklistScreen from '../assets/landing-checklist.webp';
+import compareScreen from '../assets/landing-compare.webp';
+import exploreScreen from '../assets/landing-explore.webp';
+import recordsScreen from '../assets/landing-records.webp';
 
 /** 서비스의 두 축. 자취할 동네를 찾는 것과, 직접 본 방을 기록하고 비교하는 것. */
 export const HERO_TITLE = ['자취할 동네를 찾고,', '본 방은 기록하고 비교해요'] as const;
