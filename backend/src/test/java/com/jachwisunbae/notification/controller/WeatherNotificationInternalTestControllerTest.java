@@ -6,13 +6,13 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.notification.controller.WeatherNotificationInternalTestController.InternalTestPushRequest;
-import com.jachwisunbae.notification.service.WeatherNotificationSettingsService;
+import com.jachwisunbae.notification.service.NotificationSettingsService;
 import org.junit.jupiter.api.Test;
 
 class WeatherNotificationInternalTestControllerTest {
     @Test
     void unconfiguredKeyRejectsEveryRequestIncludingEmptyHeader() {
-        WeatherNotificationSettingsService service = mock(WeatherNotificationSettingsService.class);
+        NotificationSettingsService service = mock(NotificationSettingsService.class);
         var controller = new WeatherNotificationInternalTestController(service, "");
 
         assertThatThrownBy(() -> controller.send("", new InternalTestPushRequest(1L)))

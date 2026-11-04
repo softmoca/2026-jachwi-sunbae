@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.jachwisunbae.common.config.LocalDatabaseSampleConfig;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.sql.DataSource;
@@ -50,14 +51,15 @@ class DatabaseBaselineIntegrationTest {
     @DisplayName("빈 DB에 마이그레이션하면 시스템 체크 항목만 기본 데이터로 들어간다")
     void migratesAnEmptyDatabaseWithSystemItems() {
         Flyway flyway = flyway();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(10);
         assertThat(jdbcTemplate.queryForList(
                 "SELECT script FROM flyway_schema_history ORDER BY installed_rank", String.class))
                 .containsExactly("V1__initial_schema.sql", "V2__add_bus_stops_coordinate_index.sql",
                         "V3__introduce_anonymous_authentication.sql", "V4__create_weather_forecasts.sql",
                         "V5__create_weather_user_features.sql", "V6__create_street_memos.sql",
                         "V7__create_promotion_products.sql", "V8__create_admin_dong_rents.sql",
-                        "V9__create_delivery_discount_offers.sql");
+                        "V9__create_delivery_discount_offers.sql",
+                        "V10__rename_weather_notification_settings_to_common.sql");
         assertAnonymousMemberSchema();
         assertEmptyWeatherTables();
         flyway.validate();
@@ -70,17 +72,17 @@ class DatabaseBaselineIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 DB에 V9까지 적용해도 버스정류장 좌표 인덱스가 위도·경도 순서로 생성된다")
+    @DisplayName("빈 DB에 V10까지 적용해도 버스정류장 좌표 인덱스가 위도·경도 순서로 생성된다")
     void migratesAnEmptyDatabaseUpToBusStopCoordinateIndex() {
         flyway().migrate();
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
     }
 
     @Test
-    @DisplayName("기존 스키마 DB에 버전 1 기준선을 등록하면 기존 데이터를 유지한 채 V2–V9를 적용한다")
+    @DisplayName("기존 스키마 DB에 버전 1 기준선을 등록하면 기존 데이터를 유지한 채 V2–V10을 적용한다")
     void oneTimeBaselinePreservesExistingMembersChecklistsAndSystemItems() {
         new ResourceDatabasePopulator(
                 new ClassPathResource("db/migration/V1__initial_schema.sql")).execute(dataSource);
@@ -107,14 +109,14 @@ class DatabaseBaselineIntegrationTest {
                 .baselineOnMigrate(true)
                 .load();
 
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(8);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id")).isEqualTo(busStopsBefore);
         assertThat(jdbcTemplate.queryForList("SELECT id, created_at, updated_at FROM members ORDER BY id"))
                 .isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id")).isEqualTo(checklistsBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM system_check_items ORDER BY id")).isEqualTo(systemItemsBefore);
         assertThat(history()).containsExactly("1:BASELINE:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
     }
 
@@ -137,9 +139,9 @@ class DatabaseBaselineIntegrationTest {
         prepareManuallyIndexedDatabase();
         var busStopsBefore = jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id");
 
-        assertThat(baselineFlyway("2").migrate().migrationsExecuted).isEqualTo(7);
+        assertThat(baselineFlyway("2").migrate().migrationsExecuted).isEqualTo(8);
         assertThat(history()).containsExactly("2:BASELINE:1", "3:SQL:1", "4:SQL:1", "5:SQL:1",
-                "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
         assertThat(jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id")).isEqualTo(busStopsBefore);
         flyway().validate();
@@ -158,7 +160,7 @@ class DatabaseBaselineIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2})
-    @DisplayName("V1·V2 DB를 V9로 올리면 회원·매물·체크리스트를 보존하고 익명 인증과 날씨 테이블을 생성한다")
+    @DisplayName("V1·V2 DB를 V10으로 올리면 회원·매물·체크리스트를 보존하고 익명 인증과 날씨 테이블을 생성한다")
     void upgradesLegacyMembersAndRecords(final int version) {
         Flyway.configure().dataSource(dataSource).target(Integer.toString(version)).load().migrate();
         // 인증 V3 적용 전에는 닉네임·비밀번호가 있는 기존 회원 스키마를 사용한다.
@@ -174,10 +176,10 @@ class DatabaseBaselineIntegrationTest {
         var busStopsBefore = jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id");
         var systemItemsBefore = jdbcTemplate.queryForList("SELECT * FROM system_check_items ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(9 - version);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(10 - version);
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(jdbcTemplate.queryForList("SELECT id, created_at, updated_at FROM members ORDER BY id"))
                 .isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id")).isEqualTo(propertiesBefore);
@@ -191,7 +193,7 @@ class DatabaseBaselineIntegrationTest {
     }
 
     @Test
-    @DisplayName("익명 인증 V3 DB에는 V4~V9를 적용하며 회원·Refresh Token·연관 기록을 보존한다")
+    @DisplayName("익명 인증 V3 DB에는 V4~V10을 적용하며 회원·Refresh Token·연관 기록을 보존한다")
     void upgradesAnonymousAuthenticationWithWeatherTables() {
         Flyway.configure().dataSource(dataSource).target("3").load().migrate();
         jdbcTemplate.update("""
@@ -208,10 +210,10 @@ class DatabaseBaselineIntegrationTest {
         var propertiesBefore = jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id");
         var checklistsBefore = jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(6);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(7);
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id")).isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM refresh_tokens ORDER BY id")).isEqualTo(tokensBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id")).isEqualTo(propertiesBefore);
@@ -285,13 +287,14 @@ class DatabaseBaselineIntegrationTest {
     }
 
     private void assertEmptyWeatherTables() {
-        List<String> tables = List.of("weather_forecasts", "weather_daily_forecasts", "weather_collection_publications",
-                "member_weather_locations", "member_weather_notification_settings",
-                "weather_notification_devices", "weather_notifications");
+        List<String> weatherTables = List.of("weather_forecasts", "weather_daily_forecasts",
+                "weather_collection_publications", "member_weather_locations", "weather_notifications");
         assertThat(jdbcTemplate.queryForList("""
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = DATABASE() AND table_name LIKE '%weather%'
-                """, String.class)).containsExactlyInAnyOrderElementsOf(tables);
+                """, String.class)).containsExactlyInAnyOrderElementsOf(weatherTables);
+        List<String> tables = new ArrayList<>(weatherTables);
+        tables.addAll(List.of("member_notification_settings", "notification_devices"));
         for (String table : tables) {
             assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class))
                     .as(table).isZero();
@@ -305,7 +308,7 @@ class DatabaseBaselineIntegrationTest {
         insertStreetMemoAuthor();
         var membersBefore = jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(4);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(5);
 
         assertThat(jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id")).isEqualTo(membersBefore);
         insertStreetMemo(999L, new BigDecimal("37.3948000"), new BigDecimal("127.1112000"), "LIKE");
@@ -327,6 +330,39 @@ class DatabaseBaselineIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM street_memos WHERE deleted_at IS NOT NULL", Integer.class)).isOne();
         assertThat(flyway().migrate().migrationsExecuted).isZero();
+    }
+
+    @Test
+    @DisplayName("V9 DB를 V10으로 올리면 날씨 수신 동의와 FCM 기기를 공통 알림 테이블로 그대로 옮긴다")
+    void upgradesVersion9DatabaseAndKeepsNotificationSettingsAndDevices() {
+        Flyway.configure().dataSource(dataSource).target("9").load().migrate();
+        jdbcTemplate.update("INSERT INTO members (id, created_at, updated_at) VALUES (999, NOW(6), NOW(6))");
+        jdbcTemplate.update("""
+                INSERT INTO member_weather_notification_settings (member_id, enabled, updated_at)
+                VALUES (999, TRUE, NOW(6))
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO weather_notification_devices
+                    (installation_id, member_id, installation_secret_hash, token, token_hash, updated_at)
+                VALUES ('00000000-0000-0000-0000-000000000999', 999, REPEAT('a', 64), 'token', REPEAT('b', 64), NOW(6))
+                """);
+
+        assertThat(flyway().migrate().migrationsExecuted).isOne();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT enabled FROM member_notification_settings WHERE member_id = 999", Boolean.class)).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT token FROM notification_devices WHERE member_id = 999", String.class)).isEqualTo("token");
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT constraint_name FROM information_schema.table_constraints
+                WHERE table_schema = DATABASE() AND table_name IN ('member_notification_settings', 'notification_devices')
+                  AND constraint_type IN ('FOREIGN KEY', 'UNIQUE')
+                """, String.class)).containsExactlyInAnyOrder("fk_notification_settings_member",
+                "fk_notification_device_member", "uk_notification_device_token", "uk_notification_device_member");
+        jdbcTemplate.update("DELETE FROM members WHERE id = 999");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification_devices", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM member_notification_settings", Integer.class))
+                .isZero();
     }
 
     @Test

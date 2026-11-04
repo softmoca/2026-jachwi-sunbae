@@ -2,7 +2,7 @@ package com.jachwisunbae.notification.controller;
 
 import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
-import com.jachwisunbae.notification.service.WeatherNotificationSettingsService;
+import com.jachwisunbae.notification.service.NotificationSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Weather notifications")
 @SecurityRequirement(name = "bearerAuth")
 public class WeatherNotificationTestController {
-    private final WeatherNotificationSettingsService service;
+    private final NotificationSettingsService service;
 
-    public WeatherNotificationTestController(final WeatherNotificationSettingsService service) {
+    public WeatherNotificationTestController(final NotificationSettingsService service) {
         this.service = service;
     }
 

@@ -11,15 +11,15 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
-import com.jachwisunbae.notification.provider.WeatherPushSender.Push;
-import com.jachwisunbae.notification.provider.fcm.FirebaseWeatherPushSender;
+import com.jachwisunbae.notification.provider.PushSender.Push;
+import com.jachwisunbae.notification.provider.fcm.FirebasePushSender;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-class FirebaseWeatherPushSenderTest {
+class FirebasePushSenderTest {
     private final FirebaseMessaging messaging = mock(FirebaseMessaging.class);
-    private final FirebaseWeatherPushSender sender = new FirebaseWeatherPushSender(messaging);
+    private final FirebasePushSender sender = new FirebasePushSender(messaging);
 
     @Test
     void sendsTitleBodyAndClickIdentity() throws Exception {

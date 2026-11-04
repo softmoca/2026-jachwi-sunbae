@@ -4,12 +4,12 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
-import com.jachwisunbae.notification.provider.WeatherPushSender;
+import com.jachwisunbae.notification.provider.PushSender;
 
-public class FirebaseWeatherPushSender implements WeatherPushSender {
+public class FirebasePushSender implements PushSender {
     private final FirebaseMessaging messaging;
 
-    public FirebaseWeatherPushSender(final FirebaseMessaging messaging) {
+    public FirebasePushSender(final FirebaseMessaging messaging) {
         this.messaging = messaging;
     }
 

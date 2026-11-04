@@ -49,7 +49,7 @@ export const getPostHogOptions = (
   session_recording: {
     // 콘솔에서 네트워크 녹화를 켜더라도 기기 토큰·설치 비밀키 요청은 수집하지 않는다.
     maskCapturedNetworkRequestFn: (request) =>
-      request.name.includes('/api/members/me/weather-devices/') ? null : request,
+      request.name.includes('/api/members/me/notification-devices/') ? null : request,
   },
   mask_all_text: true,
   mask_all_element_attributes: true,

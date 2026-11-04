@@ -28,13 +28,13 @@ const useWeatherServer = ({
 }: { enabled?: boolean; failUpdate?: boolean; forecast?: unknown } = {}) => {
   const state = { enabled, savedLocations: [] as unknown[], updates: [] as boolean[], testPushes: 0 };
   server.use(
-    http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
-    http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+    http.get('*/api/members/me/notification-settings', () => success({ enabled: state.enabled })),
+    http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
       const body = (await request.json()) as { installationId: string };
       return success({ installationId: body.installationId });
     }),
-    http.delete('*/api/members/me/weather-devices/current', () => new HttpResponse(null, { status: 204 })),
-    http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+    http.delete('*/api/members/me/notification-devices/current', () => new HttpResponse(null, { status: 204 })),
+    http.put('*/api/members/me/notification-settings', async ({ request }) => {
       const body = (await request.json()) as { enabled: boolean };
       state.updates.push(body.enabled);
       if (failUpdate)

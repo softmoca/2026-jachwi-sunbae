@@ -25,23 +25,23 @@ const mockServer = (enabled = false) => {
     failRevoke: false,
   };
   server.use(
-    http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
+    http.get('*/api/members/me/notification-settings', () => success({ enabled: state.enabled })),
     http.put('*/api/members/me/weather-location', () => {
       state.calls.push('location');
       return success({ available: true });
     }),
-    http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+    http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
       state.calls.push('register');
       if (state.failRegister) return failure();
       const body = (await request.json()) as (typeof state.registrations)[number];
       state.registrations.push(body);
       return success({ installationId: body.installationId });
     }),
-    http.delete('*/api/members/me/weather-devices/current', () => {
+    http.delete('*/api/members/me/notification-devices/current', () => {
       state.calls.push('revoke');
       return state.failRevoke ? failure() : new HttpResponse(null, { status: 204 });
     }),
-    http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+    http.put('*/api/members/me/notification-settings', async ({ request }) => {
       state.enabled = ((await request.json()) as { enabled: boolean }).enabled;
       state.calls.push(state.enabled ? 'on' : 'off');
       return success({ enabled: state.enabled });
@@ -173,12 +173,12 @@ describe('생활 날씨 기기 등록', () => {
   it('설치 소유 충돌이면 이전 회원에게 남은 토큰을 네이티브에서 폐기한다', async () => {
     mockServer();
     server.use(
-      http.put('*/api/members/me/weather-devices/current', () =>
-        HttpResponse.json({ code: 'WEATHER_DEVICE_CONFLICT', message: '충돌', errors: [] }, { status: 400 }),
+      http.put('*/api/members/me/notification-devices/current', () =>
+        HttpResponse.json({ code: 'NOTIFICATION_DEVICE_CONFLICT', message: '충돌', errors: [] }, { status: 400 }),
       ),
     );
     await expect(changeWeatherPush(config, 1, true, coordinate)).rejects.toMatchObject({
-      code: 'WEATHER_DEVICE_CONFLICT',
+      code: 'NOTIFICATION_DEVICE_CONFLICT',
     });
     expect(native.actions.at(-1)).toBe('disable');
   });

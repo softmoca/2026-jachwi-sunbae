@@ -44,7 +44,7 @@ const register = async (config: PublicConfig, memberId: number) => {
   try {
     await registerWeatherDevice(config, memberId, { ...getWeatherInstallation(), token });
   } catch (error) {
-    if (error instanceof ApiError && error.code === 'WEATHER_DEVICE_CONFLICT') {
+    if (error instanceof ApiError && error.code === 'NOTIFICATION_DEVICE_CONFLICT') {
       // 소유 증명을 잃은 토큰이 이전 회원에 남아 있으면 그 토큰 자체를 폐기한다.
       await disableNativePush();
     }
