@@ -190,9 +190,9 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
         {isResultMap && (
           <>
             <header className={shared.resultHeader}>
-              {/* 왼쪽은 들어온 곳(보통 홈)으로 한 번에 나가는 뒤로가기, 가운데는 조건과 색 기준, 오른쪽은 출퇴근 장소부터 다시 고르는 버튼이다. */}
+              {/* 왼쪽은 들어온 곳(보통 홈)으로 한 번에 나가는 집 모양 버튼, 가운데는 조건과 색 기준, 오른쪽은 출퇴근 장소부터 다시 고르는 버튼이다. */}
               <button type="button" className={shared.mapBack} aria-label="동네 찾기 나가기" onClick={preview.leave}>
-                <Icon name="chevron-left" size={24} />
+                <Icon name="home" size={22} />
               </button>
               <div className={shared.resultCriteria}>
                 <div className={shared.criteriaBadges} aria-label="선택한 탐색 조건">
