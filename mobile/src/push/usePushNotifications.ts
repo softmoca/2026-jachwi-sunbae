@@ -8,6 +8,7 @@ import {
   type RemoteMessage,
 } from '@react-native-firebase/messaging';
 import { WEB_APP_URL } from '../config';
+import { createForegroundNotifier, type PushOpen } from './foreground';
 import { createNativePush, getConfiguredMessaging } from './service';
 import {
   createPushReplyScript,
@@ -22,6 +23,9 @@ export const usePushNotifications = (
   inject: (script: string) => void,
 ) => {
   const [push] = useState(createNativePush);
+  const [notifier] = useState(() =>
+    push ? createForegroundNotifier(Platform.OS) : null,
+  );
   const promptShown = useRef(false);
   const enabledNotice = useCallback(async () => {
     if (!push) return;
@@ -69,16 +73,29 @@ export const usePushNotifications = (
     const messaging = getConfiguredMessaging();
     if (!messaging || !push) return undefined;
     let active = true;
-    const open = (message: RemoteMessage | null) => {
-      const url = resolvePushUrl(message?.data?.url, WEB_APP_URL);
+    const openUrl = (value: unknown) => {
+      const url = resolvePushUrl(value, WEB_APP_URL);
       if (active && url) navigate(url);
+    };
+    const open = (message: RemoteMessage | null) => openUrl(message?.data?.url);
+    const openPressed = (pressed: PushOpen | null) => {
+      if (pressed) openUrl(pressed.url);
+    };
+    const takeOpened = () => {
+      notifier
+        ?.takeOpened()
+        .then(openPressed)
+        .catch(() => undefined);
     };
     // 토큰 자체나 알림 본문을 로그/분석에 남기지 않는다.
     push.restore().catch(() => undefined);
+    notifier?.prepare().catch(() => undefined);
     getInitialNotification(messaging)
       .then(open)
       .catch(() => undefined);
     const opened = onNotificationOpenedApp(messaging, open);
+    takeOpened();
+    const pressed = notifier?.onOpen(openPressed);
     const refreshed = onTokenRefresh(messaging, () => {
       push
         .restore()
@@ -93,35 +110,23 @@ export const usePushNotifications = (
     const received = onMessage(messaging, message => {
       // iOS는 firebase.json의 포그라운드 표시 옵션으로 OS가 배너를 띄우고,
       // 배너를 누르면 onNotificationOpenedApp으로 이동한다.
-      if (
-        Platform.OS === 'ios' ||
-        !active ||
-        AppState.currentState !== 'active' ||
-        !message.notification
-      )
-        return;
-      Alert.alert(
-        message.notification.title || '자취선배',
-        message.notification.body || '',
-        [
-          { text: '닫기', style: 'cancel' },
-          ...(resolvePushUrl(message.data?.url, WEB_APP_URL)
-            ? [{ text: '확인', onPress: () => open(message) }]
-            : []),
-        ],
-      );
+      if (!active || !message.notification) return;
+      notifier?.show(message).catch(() => undefined);
     });
     const foreground = AppState.addEventListener('change', state => {
-      if (state === 'active') push.restore().catch(() => undefined);
+      if (state !== 'active') return;
+      push.restore().catch(() => undefined);
+      takeOpened();
     });
     return () => {
       active = false;
       opened();
       refreshed();
       received();
+      pressed?.();
       foreground.remove();
     };
-  }, [push, navigate, inject]);
+  }, [push, notifier, navigate, inject]);
 
   const onMessageFromWeb = useCallback(
     async (raw: string, sourceUrl: string): Promise<boolean> => {
