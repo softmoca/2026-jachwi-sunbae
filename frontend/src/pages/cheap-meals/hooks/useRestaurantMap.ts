@@ -10,7 +10,7 @@ import {
 } from '@/features/map/lib/mapLocation';
 import type { MapMarker } from '@/features/map/model/Map';
 
-import { RESTAURANT_SEARCH_RADIUS, type RestaurantArea } from '../model/RestaurantMap';
+import { MAP_SEARCH_DELAY_MS, RESTAURANT_SEARCH_RADIUS, type RestaurantArea } from '../model/RestaurantMap';
 import storePin from '../ui/store-pin.svg';
 import useRestaurantOverlay from './useRestaurantOverlay';
 
@@ -22,6 +22,8 @@ const useRestaurantMap = (isActive: boolean) => {
   const [isListOpen, setIsListOpen] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  // 사용자가 지도를 끌어 옮긴 자리. 지도가 멈추고 잠시 뒤 이 자리를 새 기준 위치로 다시 찾는다.
+  const [movedTo, setMovedTo] = useState<MapCoordinate | null>(null);
   const requestId = useRef(0);
   useEffect(() => {
     setIsLocating(false);
@@ -29,6 +31,19 @@ const useRestaurantMap = (isActive: boolean) => {
       requestId.current += 1;
     };
   }, [isActive, overlay.isSearchOpen]);
+  // 동네 찾기처럼 지도 이동이 멈춘 뒤(idle) 잠깐 더 기다렸다가 찾는다. 연달아 옮기면 마지막 자리만 찾는다.
+  useEffect(() => {
+    if (!isActive || movedTo === null) return;
+    const timer = window.setTimeout(() => {
+      requestId.current += 1;
+      setIsLocating(false);
+      setLocationError(null);
+      setArea((current) =>
+        coordinatesAreClose(current, movedTo) ? current : { ...movedTo, label: '지도에서 선택한 위치' },
+      );
+    }, MAP_SEARCH_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [isActive, movedTo]);
   const query = useGoodPriceStores(area, RESTAURANT_SEARCH_RADIUS, isActive);
   const selectedStore = query.data?.stores.find((store) => String(store.id) === overlay.selectedStoreId) ?? null;
   const markers = useMemo<MapMarker[]>(
@@ -49,6 +64,7 @@ const useRestaurantMap = (isActive: boolean) => {
     setLocationError(null);
     setArea(next);
     setViewport(next);
+    setMovedTo(null);
     setIsListOpen(true);
     overlay.closeOverlay();
   };
@@ -79,16 +95,19 @@ const useRestaurantMap = (isActive: boolean) => {
     isListOpen,
     isLocating,
     locationError,
-    isMapMoved: !coordinatesAreClose(area, viewport),
     isSearchOpen: overlay.isSearchOpen,
     chooseArea,
     locate,
     changeLevel: setLevel,
     openList: () => setIsListOpen(true),
     closeList: () => setIsListOpen(false),
-    moveMap: (latitude: number, longitude: number) =>
-      setViewport((old) => (coordinatesAreClose(old, { latitude, longitude }) ? old : { latitude, longitude })),
-    searchMap: () => chooseArea({ ...viewport, label: '지도에서 선택한 위치' }),
+    // 지도가 멈출 때마다 불린다. 가게나 주소를 골라 지도를 옮긴 경우는 멈춘 자리가 지금 화면 가운데와 같아 다시 찾지 않는다.
+    moveMap: (latitude: number, longitude: number) => {
+      const next = { latitude, longitude };
+      if (coordinatesAreClose(viewport, next)) return;
+      setViewport(next);
+      setMovedTo(next);
+    },
     openSearch: overlay.openSearch,
     openStore: (id: number) => {
       const store = query.data?.stores.find((store) => store.id === id);

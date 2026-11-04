@@ -1,5 +1,4 @@
 import { css, cx } from '@emotion/css';
-import { useEffect, useState } from 'react';
 
 import useAddressSearch from '@/features/map/api/useAddressSearch';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
@@ -25,24 +24,21 @@ type RestaurantPanelProps = { isActive: boolean; layout: MealLayout };
 const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   const map = useRestaurantMap(isActive);
   // 식당 탭을 처음 열어 보여 줄 목록이 없을 때는 찾는 중 문구를 바로 보여 준다.
-  // 지도를 옮겨 다시 찾을 때처럼 이미 목록을 보여 준 뒤에는 빠른 응답에 문구가 번쩍이지 않게 늦춘다.
-  const [hasShownStores, setHasShownStores] = useState(false);
-  useEffect(() => {
-    if (map.query.data !== undefined) setHasShownStores(true);
-  }, [map.query.data]);
-  const isDelayedLoadingVisible = useDelayedLoading(map.query.isPending && hasShownStores);
-  const isLoadingVisible = (map.query.isPending && !hasShownStores) || isDelayedLoadingVisible;
+  // 지도를 옮겨 다시 찾을 때는 이전 목록을 둔 채 기다리고, 응답이 늦을 때만 찾는 중 문구로 바꾼다.
+  const isDelayedLoadingVisible = useDelayedLoading(map.query.isPlaceholderData);
+  const isLoadingVisible = map.query.isPending || isDelayedLoadingVisible;
   const search = useAddressSearch();
   const data = map.query.isError ? undefined : map.query.data;
   const locate = () => void map.locate();
   const controls = (
     <div className={styles.controls}>
-      <button type="button" className={styles.search} onClick={map.openSearch}>
-        <Icon name="search" size={18} />
-        <span>{map.area.label}</span>
-        <small>주소 검색</small>
-      </button>
+      {/* 검색창과 현재 위치를 한 줄에 두고 안내 문구를 바로 아래에 붙여 지도 위 빈 줄을 줄인다. */}
       <div className={styles.row}>
+        <button type="button" className={styles.search} onClick={map.openSearch}>
+          <Icon name="search" size={18} />
+          <span>{map.area.label}</span>
+          <small>주소 검색</small>
+        </button>
         <button
           type="button"
           className={styles.locate}
@@ -54,9 +50,9 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
           {map.isLocating ? '확인 중' : '현재 위치'}
         </button>
       </div>
-      <p className={styles.notice}>음식점 외 업종도 포함돼요. 가게별 원본 업종을 확인해 주세요.</p>
+      <p className={styles.hint}>음식점 외 업종도 있어요. 가게별 업종을 확인해 주세요.</p>
       {map.locationError && (
-        <p className={styles.notice} role="alert">
+        <p className={styles.hint} role="alert">
           {map.locationError}
         </p>
       )}
@@ -79,50 +75,44 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
           onLevelChange={map.changeLevel}
         />
       )}
-      {map.isMapMoved && (
-        <button type="button" className={styles.research} onClick={map.searchMap}>
-          이 위치에서 찾기
-        </button>
-      )}
     </>
   );
-  const storeList =
-    map.query.isPending || isLoadingVisible ? (
-      isLoadingVisible && <ProgressCircle size={24} label="주변 가게를 찾고 있어요." />
-    ) : map.query.isError ? (
-      <div role="alert">
-        <p>가게 정보를 불러오지 못했어요.</p>
-        <Button onClick={() => void map.query.refetch()}>다시 시도</Button>
-      </div>
-    ) : data?.count === 0 ? (
-      <EmptyState
-        variant="plain"
-        icon="map"
-        title="이 반경 안에 등록된 가게가 없어요"
-        description="지도를 옮겨 다시 찾거나 다른 동네를 검색해 보세요."
-        action={
-          <Button variant="secondary" onClick={map.openSearch}>
-            다른 동네 찾기
-          </Button>
-        }
-      />
-    ) : (
-      <>
-        <p className={styles.notice}>가까운 순 · 기준 위치에서 직선거리 · 등록 가격</p>
-        <ul className={styles.list} aria-label="가게 목록">
-          {data?.stores.map((store) => (
-            <li key={store.id}>
-              <StoreCard store={store} onSelect={map.openStore} />
-            </li>
-          ))}
-        </ul>
-        <InlineNotice>
-          행정안전부 착한가격업소 현황 · {data?.dataAsOf ?? '기준일 정보 없음'}
-          <br />
-          방문 전 가격과 영업 여부를 확인해 주세요.
-        </InlineNotice>
-      </>
-    );
+  const storeList = isLoadingVisible ? (
+    <ProgressCircle size={24} label="주변 가게를 찾고 있어요." />
+  ) : map.query.isError ? (
+    <div role="alert">
+      <p>가게 정보를 불러오지 못했어요.</p>
+      <Button onClick={() => void map.query.refetch()}>다시 시도</Button>
+    </div>
+  ) : data?.count === 0 ? (
+    <EmptyState
+      variant="plain"
+      icon="map"
+      title="이 반경 안에 등록된 가게가 없어요"
+      description="지도를 옮겨 다시 찾거나 다른 동네를 검색해 보세요."
+      action={
+        <Button variant="secondary" onClick={map.openSearch}>
+          다른 동네 찾기
+        </Button>
+      }
+    />
+  ) : (
+    <>
+      <p className={styles.notice}>가까운 순 · 기준 위치에서 직선거리 · 등록 가격</p>
+      <ul className={styles.list} aria-label="가게 목록">
+        {data?.stores.map((store) => (
+          <li key={store.id}>
+            <StoreCard store={store} onSelect={map.openStore} />
+          </li>
+        ))}
+      </ul>
+      <InlineNotice>
+        행정안전부 착한가격업소 현황 · {data?.dataAsOf ?? '기준일 정보 없음'}
+        <br />
+        방문 전 가격과 영업 여부를 확인해 주세요.
+      </InlineNotice>
+    </>
+  );
   const searchSheet = map.isSearchOpen && isActive && (
     <MealSheet title="어느 동네를 둘러볼까요?" layout={layout} onClose={map.closeOverlay}>
       <Button fullWidth variant="secondary" isLoading={map.isLocating} onClick={locate}>
@@ -230,16 +220,17 @@ const styles = {
   `,
   controls: css`
     label: RestaurantPanel-controls;
-    padding: 0.8rem 1rem 0.5rem;
+    padding: 0.8rem 1rem 0.6rem;
     flex-shrink: 0;
     border-bottom: 1px solid var(--color-border);
   `,
   search: css`
     label: RestaurantPanel-search;
     display: flex;
+    flex: 1;
+    min-width: 0;
     align-items: center;
     gap: 0.55rem;
-    width: 100%;
     min-height: 44px;
     padding: 0.6rem 0.8rem;
     border: 0;
@@ -265,13 +256,12 @@ const styles = {
     label: RestaurantPanel-row;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
+    gap: 0.25rem;
   `,
   locate: css`
     label: RestaurantPanel-locate;
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 0.3rem;
     min-height: 44px;
@@ -282,12 +272,26 @@ const styles = {
     font-size: 0.75rem;
     cursor: pointer;
   `,
+  hint: css`
+    label: RestaurantPanel-hint;
+    font-size: 0.7rem;
+    color: var(--color-ink-soft);
+    line-height: 1.5;
+    margin: 0.4rem 0 0;
+    /* 좁은 칸이나 큰 글씨에서 줄이 넘어가도 낱말 가운데서 끊지 않는다. */
+    word-break: keep-all;
+    & + & {
+      margin-top: 0.15rem;
+    }
+  `,
   notice: css`
     label: RestaurantPanel-notice;
     font-size: 0.7rem;
     color: var(--color-ink-soft);
     line-height: 1.5;
     margin: 0.5rem 0 0.2rem;
+    /* 좁은 칸이나 큰 글씨에서 줄이 넘어가도 낱말 가운데서 끊지 않는다. */
+    word-break: keep-all;
   `,
   map: css`
     label: RestaurantPanel-map;
@@ -299,24 +303,6 @@ const styles = {
       white-space: normal;
       overflow-wrap: anywhere;
     }
-  `,
-  research: css`
-    label: RestaurantPanel-research;
-    position: absolute;
-    z-index: 25;
-    left: 50%;
-    top: 0.75rem;
-    transform: translateX(-50%);
-    border: 0;
-    border-radius: 99px;
-    padding: 0.7rem 1rem;
-    min-height: 44px;
-    background: var(--color-action);
-    color: var(--color-on-action);
-    font-weight: 700;
-    box-shadow: 0 2px 8px #0002;
-    cursor: pointer;
-    white-space: nowrap;
   `,
   showList: css`
     label: RestaurantPanel-showList;
