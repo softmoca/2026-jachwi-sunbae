@@ -1,7 +1,7 @@
 # 회원·인증 기능 명세
 
-- 상태: 익명 인증 유지·OAuth 계정 연결 정책 / 수정일: 2026-11-03
-- 관련 이슈: [#523](https://github.com/woowacourse-teams/2026-jachwi-sunbae/issues/523). OAuth 연결·기록 통합·다중 인증 세션·로그아웃은 구현 예정 정책이다.
+- 상태: 익명 인증 유지·OAuth 계정 연결 정책 / 수정일: 2026-11-04
+- 관련 이슈: [#523](https://github.com/woowacourse-teams/2026-jachwi-sunbae/issues/523). 백엔드에서 OAuth 연결·기록 통합·계정 전환을 지원한다. 프론트 연동과 로그아웃은 후속 작업이다.
 
 ## 1. 목적과 범위
 
@@ -71,13 +71,14 @@ PostHog에서 기존 로그인 화면 방문자의 85%가 이탈한 것을 확�
 
 - `POST /api/auth/oauth/{provider}/start`는 같은 회원의 Bearer JWT와 Refresh 쿠키를 확인하고 `data.authorizationUrl`을 반환한다. 브라우저는 받은 URL로 이동한다.
 - `GET /api/auth/oauth/{provider}/callback`은 시작할 때 사용한 Refresh 쿠키와 5분 이내의 일회용 `state`를 확인한다. 제공자가 발급한 인가 코드를 서버에서 교환하고 ID Token의 서명·발급자·대상·만료·`nonce`를 검증한다.
-- 미등록 외부 계정은 현재 익명 회원에 연결한다. 성공 시 `204`와 새 Refresh 쿠키를 반환하며, 이후 `POST /api/auth/refresh`로 새 Access Token을 받는다. 현재 회원이나 외부 계정에 이미 연결이 있으면 `400 OAUTH_IDENTITY_ALREADY_LINKED`를 반환한다. 검증 실패·취소는 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정 누락·장애는 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답한다. 기록 통합과 계정 전환은 후속 작업이다.
+- 콜백에서 외부 계정 연결 상태에 따라 현재 회원에 연결하거나, 익명 기록을 통합하거나, 다른 회원으로 전환한다. 성공하면 현재 기기의 Refresh 쿠키를 교체한다. `OAUTH_SUCCESS_REDIRECT_URI`를 설정한 환경에서는 `303`으로 프론트 앱에 돌아가 새 쿠키로 인증을 복원한다. 미설정 환경에서는 `204`를 반환한다.
+- 검증 실패·취소는 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정 누락·장애는 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답한다. 연결 상태가 동시 요청으로 바뀌면 `400 OAUTH_IDENTITY_ALREADY_LINKED`를 반환한다.
 - 환경별로 `KAKAO_OAUTH_CLIENT_ID`, `KAKAO_OAUTH_CLIENT_SECRET`, `KAKAO_OAUTH_REDIRECT_URI`와 대응하는 `APPLE_OAUTH_*`를 설정한다. 제공자 콘솔에 위 콜백의 HTTPS 주소를 등록하고, 카카오는 OpenID Connect를 활성화한다. Apple의 Client ID는 웹용 Services ID, Client Secret은 만료 전에 갱신해야 하는 개발자 서명 JWT다.
 
 ### 3.5. 익명 기록 통합
 
 - `POL-AUTH-023`: 매물·사진 메타데이터·사용자 체크리스트·거리 메모와 관련 기록의 소유권을 기준 회원으로 이전한다. 중복 제거 없이 ID·내용·삭제 상태와 기록 간 연결을 보존한다.
-- `POL-AUTH-024`: 날씨 위치·알림 등 단일 설정은 기준 회원의 값을 우선한다. 해당 설정이 아예 없을 때만 익명 회원의 값을 가져오며, 알림 끄기 등 명시적 값은 덮어쓰지 않는다.
+- `POL-AUTH-024`: 날씨 위치·알림 등 단일 설정은 기준 회원의 값을 우선한다. 해당 설정이 아예 없을 때만 익명 회원의 값을 가져오며, 알림 끄기 등 명시적 값은 덮어쓰지 않는다. 발송 이력은 원래 회원에 보관하고, 통합 전 익명 회원의 기기 푸시 토큰은 폐기한다.
 - `POL-AUTH-025`: 기록 이전·설정 반영·원래 익명 회원 비활성화·인증 전환은 한 트랜잭션으로 처리한다. 반복·동시 요청으로 중복 통합하지 않으며 탈퇴·초기화로 통합을 대신하지 않는다.
 - `POL-AUTH-026`: 서버는 현재 익명 인증과 검증된 OAuth 결과로 통합 대상을 결정하고, OAuth 시작 요청과 완료 결과를 안전하게 연결한다.
 
@@ -135,9 +136,9 @@ OAuth 연결·통합과 기기별 이용은 다음 기준으로 확인한다.
 
 ## 5. 미정 사항
 
-- OAuth 검증 후 계정 연결·전환 및 로그아웃 API의 응답과 화면 복귀 방식
+- OAuth 실패 시 화면 복귀와 로그아웃 API 계약
 - 브라우저·WebView 환경별 리다이렉트·쿠키·CORS·CSRF 설정과 여러 탭의 인증 전환·토큰 갱신 조정 방식
 - 앱에서 OAuth를 마친 뒤 WebView 인증으로 연결하는 완료 결과 전달 계약
-- 사진의 복합 외래키와 기기 푸시 등록 등 기존 제약을 지키는 소유권·인증 세션 이전 방식
+- 통합 이후 기기 푸시 등록을 복원하는 프론트 흐름
 - 외부 서비스의 연결 해제 통지에 따른 인증 종료·회원 처리와 OAuth 식별정보 등 개인정보 파기 범위
 - 장기 미접속 회원의 기록 보존·삭제 정책
