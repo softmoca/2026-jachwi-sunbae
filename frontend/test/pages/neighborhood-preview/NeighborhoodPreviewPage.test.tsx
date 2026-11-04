@@ -771,6 +771,20 @@ it('결과 지도에 확대·축소 버튼을 두고, 손가락이나 휠로 바
   await user.click(screen.getByRole('button', { name: '지도 축소' }));
   expect(level()).toBe(5);
 });
+it('휴대폰에서 동네 시트를 올리면 확대 축소, 현재 위치 버튼을 시트 바로 위에 붙여 시트에 가리지 않게 한다', async () => {
+  server.use(...mapHandlers, ...createStreetMemoHandlers([]));
+  show(true);
+  const user = await choosePoint();
+  await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
+  const zoomIn = await screen.findByRole('button', { name: '지도 확대' });
+  // 시트가 없을 때는 지도 위 고정 자리에 둔다.
+  expect(zoomIn.closest('.BottomSheet-sheet')).toBeNull();
+  await user.click(await screen.findByRole('button', { name: /1위 역삼1동/ }));
+  const sheet = await screen.findByRole('region', { name: '역삼1동' });
+  expect(within(sheet).getByRole('button', { name: '지도 확대' })).toBeInTheDocument();
+  expect(within(sheet).getByRole('button', { name: '내 현재 위치로 이동' })).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: '지도 확대' })).toHaveLength(1);
+});
 it('결과 지도는 가까이 확대해도 거리 메모를 조회하거나 올리지 않는다', async () => {
   let memoRequests = 0;
   server.use(

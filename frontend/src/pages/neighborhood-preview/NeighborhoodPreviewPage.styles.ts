@@ -69,6 +69,13 @@ export const locationControls = css`
   &[data-filter-open='true'] {
     bottom: calc(var(--map-sheet-bottom, 0px) + 10.5rem + 132px + 0.75rem);
   }
+
+  /* 바텀시트 위에 붙이면 시트가 자리를 정한다. */
+  .NeighborhoodPreviewPage-page &[data-docked='true'] {
+    position: relative;
+    right: auto;
+    bottom: auto;
+  }
 `;
 
 // 다른 요소의 선택자에서 `.NeighborhoodPreviewPage-mapSearch`로 가리킨다.

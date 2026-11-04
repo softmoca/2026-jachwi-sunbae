@@ -22,6 +22,11 @@ type BottomSheetProps = {
   headerEnd?: ReactNode;
   /** 제목 아래 작은 한 줄(주소 등). */
   subtitle?: string;
+  /**
+   * 시트 바로 위 오른쪽에 띄울 것(지도 확대 축소, 현재 위치 버튼 등). 시트와 함께 오르내려 시트에 가리지 않는다.
+   * 페이지로 열면 숨긴다.
+   */
+  floating?: ReactNode;
 };
 
 /** 시트 높이 단계. 낮은 것부터 제목만(peek), 처음 높이(default), 크게(expanded), 화면 전체(full). */
@@ -40,6 +45,7 @@ const BottomSheet = ({
   onBack,
   headerEnd,
   subtitle,
+  floating,
 }: BottomSheetProps) => {
   const [mode, setMode] = useState<SheetMode>('default');
   const modes: SheetMode[] = fullPage ? ['peek', 'default', 'expanded', 'full'] : ['peek', 'default', 'expanded'];
@@ -103,6 +109,7 @@ const BottomSheet = ({
         }
       }}
     >
+      {floating && !isFullPage && <div className={styles.floating}>{floating}</div>}
       {resizable && !isFullPage && (
         <button
           ref={handleRef}
@@ -200,7 +207,7 @@ const styles = {
       background: var(--color-surface);
       color: var(--color-ink);
       box-shadow: 0 -0.35rem 1.4rem rgb(0 0 0 / 12%);
-      overflow: hidden;
+      /* 시트 위로 띄운 버튼(floating)이 잘리지 않게 넘치는 것은 자르지 않는다. 내용은 content 안에서 스크롤한다. */
 
       &[data-mode='expanded'] {
         height: var(--sheet-height, 88%);
@@ -235,6 +242,14 @@ const styles = {
     `,
     'BottomSheet-sheet',
   ),
+
+  /* 시트 위 가장자리 바로 위 오른쪽. 시트와 같은 상자 안에 있어 끄는 동안 transform으로 함께 움직인다. */
+  floating: css`
+    label: BottomSheet-floating;
+    position: absolute;
+    right: 0.85rem;
+    bottom: calc(100% + 0.75rem);
+  `,
 
   grabber: css`
     label: BottomSheet-grabber;

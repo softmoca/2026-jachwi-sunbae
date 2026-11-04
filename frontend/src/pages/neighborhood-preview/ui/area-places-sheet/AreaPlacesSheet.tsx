@@ -1,4 +1,5 @@
 import { css } from '@emotion/css';
+import type { ReactNode } from 'react';
 
 import { formatManwon } from '@/features/map/api/commuteApi';
 import { stationIconSrc } from '@/features/map/lib/mapIconAssets';
@@ -26,6 +27,8 @@ type Props = {
   onClose: () => void;
   /** 값이 바뀌면 시트를 제목만 보이게 내린다(지도 빈 곳을 찍었을 때). */
   peekSignal: number;
+  /** 시트 바로 위에 함께 띄울 지도 버튼(확대 축소, 현재 위치). */
+  floating?: ReactNode;
 };
 
 /**
@@ -33,7 +36,7 @@ type Props = {
  * 정류장을 고르면 시트를 바꾸지 않고 그 안에서 경로로 넘어간다. 지도에서 공인중개사 마커를 눌러도 같은 시트 안에서 연다.
  * 닫기 버튼은 두지 않는다. 끌어 내려 닫고, 끝까지 끌어 올리면 헤더에 뒤로가기·닫기가 있는 페이지로 본다.
  */
-const AreaPlacesSheet = ({ area, place, preview, onSelectStation, onBack, onClose, peekSignal }: Props) => {
+const AreaPlacesSheet = ({ area, place, preview, onSelectStation, onBack, onClose, peekSignal, floating }: Props) => {
   const overRent = overRentNotice(area.rent, preview.maxRent);
   return (
     <BottomSheet
@@ -45,6 +48,7 @@ const AreaPlacesSheet = ({ area, place, preview, onSelectStation, onBack, onClos
       closeLabel="동네 정보 닫기"
       fullPage
       peekSignal={peekSignal}
+      floating={floating}
       onBack={place ? onBack : undefined}
       // 다방 링크는 목록일 때 제목 오른쪽 끝에 정사각형 아이콘으로 둔다.
       headerEnd={

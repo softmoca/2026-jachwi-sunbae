@@ -59,6 +59,16 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
   const hasAreaSheet = !!isRoutePage && !!preview.selected;
+  // 시트를 띄우면 확대 축소, 현재 위치 버튼을 시트 바로 위에 붙여 시트와 함께 오르내리게 한다. 지도 위 고정 자리에 두면 시트에 가린다.
+  const hasSheet = hasAreaSheet || places.selectedPlace !== null;
+  const resultControls = (
+    <LocationControls
+      preview={preview}
+      isResult
+      docked={hasSheet}
+      zoom={{ level: preview.resultLevel, onZoom: preview.zoomResultBy }}
+    />
+  );
   // 통근, 환승, 월세 조건 칸. 위치를 고르기 전후 모두 아래 시트에 둔다.
   // 칸마다 위에 항목, 아래에 값을 적고, 읽을 때는 `통근 40분 이내`처럼 한 문장으로 읽게 한다.
   const filterCells: { field: NeighborhoodFilterField; title: string; value: string; label: string }[] = [
@@ -224,11 +234,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 다시 선택하기
               </Button>
             </header>
-            <LocationControls
-              preview={preview}
-              isResult
-              zoom={{ level: preview.resultLevel, onZoom: preview.zoomResultBy }}
-            />
+            {!hasSheet && resultControls}
             {preview.isPublicExplore && recordArea && (
               <div className={shared.recordAction}>
                 <ExplorationRecordAction
@@ -276,6 +282,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 place={places.selectedPlace}
                 preview={preview}
                 peekSignal={peekSignal}
+                floating={resultControls}
                 onSelectStation={(station) => {
                   places.selectStation(areaStation(station));
                   preview.selectStation(station.stopId);
@@ -294,6 +301,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 place={places.selectedPlace}
                 preview={preview}
                 peekSignal={peekSignal}
+                floating={resultControls}
                 onClose={places.closePlace}
               />
             )}
