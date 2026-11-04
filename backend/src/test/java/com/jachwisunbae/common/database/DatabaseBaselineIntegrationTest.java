@@ -3,8 +3,14 @@ package com.jachwisunbae.common.database;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.jachwisunbae.auth.domain.MemberIdentity;
+import com.jachwisunbae.auth.domain.OAuthProvider;
+import com.jachwisunbae.auth.domain.RefreshToken;
+import com.jachwisunbae.auth.repository.JdbcMemberIdentityRepository;
+import com.jachwisunbae.auth.repository.JdbcRefreshTokenRepository;
 import com.jachwisunbae.common.config.LocalDatabaseSampleConfig;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import javax.sql.DataSource;
@@ -50,14 +56,14 @@ class DatabaseBaselineIntegrationTest {
     @DisplayName("빈 DB에 마이그레이션하면 시스템 체크 항목만 기본 데이터로 들어간다")
     void migratesAnEmptyDatabaseWithSystemItems() {
         Flyway flyway = flyway();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(10);
         assertThat(jdbcTemplate.queryForList(
                 "SELECT script FROM flyway_schema_history ORDER BY installed_rank", String.class))
                 .containsExactly("V1__initial_schema.sql", "V2__add_bus_stops_coordinate_index.sql",
                         "V3__introduce_anonymous_authentication.sql", "V4__create_weather_forecasts.sql",
                         "V5__create_weather_user_features.sql", "V6__create_street_memos.sql",
                         "V7__create_promotion_products.sql", "V8__create_admin_dong_rents.sql",
-                        "V9__create_delivery_discount_offers.sql");
+                        "V9__create_delivery_discount_offers.sql", "V10__prepare_oauth_account_linking.sql");
         assertAnonymousMemberSchema();
         assertEmptyWeatherTables();
         flyway.validate();
@@ -70,17 +76,17 @@ class DatabaseBaselineIntegrationTest {
     }
 
     @Test
-    @DisplayName("빈 DB에 V9까지 적용해도 버스정류장 좌표 인덱스가 위도·경도 순서로 생성된다")
+    @DisplayName("빈 DB에 V10까지 적용해도 버스정류장 좌표 인덱스가 위도·경도 순서로 생성된다")
     void migratesAnEmptyDatabaseUpToBusStopCoordinateIndex() {
         flyway().migrate();
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
     }
 
     @Test
-    @DisplayName("기존 스키마 DB에 버전 1 기준선을 등록하면 기존 데이터를 유지한 채 V2–V9를 적용한다")
+    @DisplayName("기존 스키마 DB에 버전 1 기준선을 등록하면 기존 데이터를 유지한 채 V2–V10을 적용한다")
     void oneTimeBaselinePreservesExistingMembersChecklistsAndSystemItems() {
         new ResourceDatabasePopulator(
                 new ClassPathResource("db/migration/V1__initial_schema.sql")).execute(dataSource);
@@ -107,14 +113,14 @@ class DatabaseBaselineIntegrationTest {
                 .baselineOnMigrate(true)
                 .load();
 
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(8);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(9);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id")).isEqualTo(busStopsBefore);
         assertThat(jdbcTemplate.queryForList("SELECT id, created_at, updated_at FROM members ORDER BY id"))
                 .isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id")).isEqualTo(checklistsBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM system_check_items ORDER BY id")).isEqualTo(systemItemsBefore);
         assertThat(history()).containsExactly("1:BASELINE:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
     }
 
@@ -137,9 +143,9 @@ class DatabaseBaselineIntegrationTest {
         prepareManuallyIndexedDatabase();
         var busStopsBefore = jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id");
 
-        assertThat(baselineFlyway("2").migrate().migrationsExecuted).isEqualTo(7);
+        assertThat(baselineFlyway("2").migrate().migrationsExecuted).isEqualTo(8);
         assertThat(history()).containsExactly("2:BASELINE:1", "3:SQL:1", "4:SQL:1", "5:SQL:1",
-                "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(busStopCoordinateIndexColumns()).containsExactly("latitude", "longitude");
         assertThat(jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id")).isEqualTo(busStopsBefore);
         flyway().validate();
@@ -158,7 +164,7 @@ class DatabaseBaselineIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2})
-    @DisplayName("V1·V2 DB를 V9로 올리면 회원·매물·체크리스트를 보존하고 익명 인증과 날씨 테이블을 생성한다")
+    @DisplayName("V1·V2 DB를 V10으로 올리면 회원·매물·체크리스트를 보존하고 인증과 날씨 테이블을 생성한다")
     void upgradesLegacyMembersAndRecords(final int version) {
         Flyway.configure().dataSource(dataSource).target(Integer.toString(version)).load().migrate();
         // 인증 V3 적용 전에는 닉네임·비밀번호가 있는 기존 회원 스키마를 사용한다.
@@ -174,10 +180,10 @@ class DatabaseBaselineIntegrationTest {
         var busStopsBefore = jdbcTemplate.queryForList("SELECT * FROM bus_stops ORDER BY id");
         var systemItemsBefore = jdbcTemplate.queryForList("SELECT * FROM system_check_items ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(9 - version);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(10 - version);
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(jdbcTemplate.queryForList("SELECT id, created_at, updated_at FROM members ORDER BY id"))
                 .isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id")).isEqualTo(propertiesBefore);
@@ -191,7 +197,7 @@ class DatabaseBaselineIntegrationTest {
     }
 
     @Test
-    @DisplayName("익명 인증 V3 DB에는 V4~V9를 적용하며 회원·Refresh Token·연관 기록을 보존한다")
+    @DisplayName("익명 인증 V3 DB에는 V4~V10을 적용하며 회원·Refresh Token·연관 기록을 보존한다")
     void upgradesAnonymousAuthenticationWithWeatherTables() {
         Flyway.configure().dataSource(dataSource).target("3").load().migrate();
         jdbcTemplate.update("""
@@ -208,10 +214,10 @@ class DatabaseBaselineIntegrationTest {
         var propertiesBefore = jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id");
         var checklistsBefore = jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(6);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(7);
 
         assertThat(history()).containsExactly("1:SQL:1", "2:SQL:1", "3:SQL:1", "4:SQL:1",
-                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1");
+                "5:SQL:1", "6:SQL:1", "7:SQL:1", "8:SQL:1", "9:SQL:1", "10:SQL:1");
         assertThat(jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id")).isEqualTo(membersBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM refresh_tokens ORDER BY id")).isEqualTo(tokensBefore);
         assertThat(jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id")).isEqualTo(propertiesBefore);
@@ -219,6 +225,76 @@ class DatabaseBaselineIntegrationTest {
         assertEmptyWeatherTables();
         flyway().validate();
         assertThat(flyway().migrate().migrationsExecuted).isZero();
+    }
+
+    @Test
+    @DisplayName("V9에서 업그레이드해도 기존 인증과 기록을 보존하고 같은 회원의 추가 인증과 OAuth 연결을 저장한다")
+    void upgradesVersion9AndSupportsMultipleSessionsAndIdentity() {
+        Flyway.configure().dataSource(dataSource).target("9").load().migrate();
+        insertStreetMemoAuthor();
+        insertMemberRecords();
+        LocalDateTime now = LocalDateTime.of(2026, 11, 3, 12, 0);
+        JdbcRefreshTokenRepository tokens = new JdbcRefreshTokenRepository(jdbcTemplate);
+        tokens.save(RefreshToken.create(999L, "a".repeat(64), now, 365));
+        var membersBefore = jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id");
+        var tokensBefore = jdbcTemplate.queryForList("SELECT * FROM refresh_tokens ORDER BY id");
+        var propertiesBefore = jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id");
+        var checklistsBefore = jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id");
+
+        assertThat(flyway().migrate().migrationsExecuted).isOne();
+
+        assertThat(jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id")).isEqualTo(membersBefore);
+        assertThat(jdbcTemplate.queryForList("SELECT * FROM refresh_tokens ORDER BY id")).isEqualTo(tokensBefore);
+        assertThat(jdbcTemplate.queryForList("SELECT * FROM properties ORDER BY id")).isEqualTo(propertiesBefore);
+        assertThat(jdbcTemplate.queryForList("SELECT * FROM user_checklists ORDER BY id")).isEqualTo(checklistsBefore);
+        tokens.save(RefreshToken.create(999L, "b".repeat(64), now, 365));
+        assertThat(tokens.findByTokenHash("a".repeat(64))).isPresent();
+        assertThat(tokens.findByTokenHash("b".repeat(64))).isPresent();
+        assertThatThrownBy(() -> tokens.save(RefreshToken.create(999L, "a".repeat(64), now, 365)))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("uk_refresh_tokens_token_hash");
+
+        JdbcMemberIdentityRepository identities = new JdbcMemberIdentityRepository(jdbcTemplate);
+        MemberIdentity saved = identities.save(MemberIdentity.create(999L, OAuthProvider.KAKAO, "Kakao-User", now));
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.KAKAO, "Kakao-User").orElseThrow())
+                .usingRecursiveComparison().isEqualTo(saved);
+        assertThat(identities.findByMemberId(999L).orElseThrow()).usingRecursiveComparison().isEqualTo(saved);
+        flyway().validate();
+        assertThat(flyway().migrate().migrationsExecuted).isZero();
+    }
+
+    @Test
+    @DisplayName("OAuth 제공자와 식별값을 함께 구별하고 한 회원과 외부 계정의 중복 연결을 막는다")
+    void enforcesOneToOneIdentitiesWithoutNormalizingSubjects() {
+        flyway().migrate();
+        jdbcTemplate.update("""
+                INSERT INTO members (id, created_at, updated_at)
+                VALUES (999, NOW(6), NOW(6)), (1000, NOW(6), NOW(6)), (1001, NOW(6), NOW(6))
+                """);
+        LocalDateTime now = LocalDateTime.of(2026, 11, 3, 12, 0);
+        JdbcMemberIdentityRepository identities = new JdbcMemberIdentityRepository(jdbcTemplate);
+        identities.save(MemberIdentity.create(999L, OAuthProvider.KAKAO, "user", now));
+        identities.save(MemberIdentity.create(1000L, OAuthProvider.APPLE, "user", now));
+
+        assertThatThrownBy(() -> identities.save(MemberIdentity.create(1001L, OAuthProvider.KAKAO, "user", now)))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("uk_member_identities_provider_subject");
+        assertThatThrownBy(() -> identities.save(MemberIdentity.create(999L, OAuthProvider.APPLE, "another", now)))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("uk_member_identities_member");
+        assertThatThrownBy(() -> identities.save(MemberIdentity.create(9999L, OAuthProvider.KAKAO, "unknown", now)))
+                .isInstanceOf(DataAccessException.class).hasMessageContaining("fk_member_identities_member");
+
+        identities.save(MemberIdentity.create(1001L, OAuthProvider.KAKAO, "User", now));
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.KAKAO, "user").orElseThrow().getMemberId())
+                .isEqualTo(999L);
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.KAKAO, "User").orElseThrow().getMemberId())
+                .isEqualTo(1001L);
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.APPLE, "User")).isEmpty();
+        assertThat(identities.findByMemberId(9999L)).isEmpty();
+
+        identities.deleteByMemberId(999L);
+
+        assertThat(identities.findByMemberId(999L)).isEmpty();
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.KAKAO, "user")).isEmpty();
+        assertThat(identities.findByProviderAndSubject(OAuthProvider.APPLE, "user")).isPresent();
     }
 
     @Test
@@ -305,7 +381,7 @@ class DatabaseBaselineIntegrationTest {
         insertStreetMemoAuthor();
         var membersBefore = jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id");
 
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(4);
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(5);
 
         assertThat(jdbcTemplate.queryForList("SELECT * FROM members ORDER BY id")).isEqualTo(membersBefore);
         insertStreetMemo(999L, new BigDecimal("37.3948000"), new BigDecimal("127.1112000"), "LIKE");
