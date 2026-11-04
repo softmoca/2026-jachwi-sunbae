@@ -33,6 +33,8 @@ npm start
 
 Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.kr`을 연다. 기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 앱 시작만으로 위치 권한을 요청하지 않는다.
 
+iOS는 UIScene 생명주기를 쓴다. 창과 `jachwisunbae://` URL은 `SceneDelegate`가 받아 `RCTLinkingManager`로 넘기고, 꺼진 상태에서 URL로 열리면 `Linking.getInitialURL`이 그 URL을 돌려준다. 무음 푸시로 화면 없이 깨어나면 `AppDelegate`가 RN을 먼저 시작한다.
+
 ## 푸시 알림
 
 앱 권한·토큰·토픽·알림 이동 모듈과 서버용 Firebase Admin 발송 예제를 포함한다. 서버 발송은 기본 dry-run이고, 실제 운영 발송에는 명시적인 플래그가 필요하다.
