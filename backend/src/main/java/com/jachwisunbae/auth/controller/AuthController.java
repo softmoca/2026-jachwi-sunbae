@@ -3,12 +3,14 @@ package com.jachwisunbae.auth.controller;
 import com.jachwisunbae.auth.controller.dto.LoginResponse;
 import com.jachwisunbae.auth.service.AuthService;
 import com.jachwisunbae.auth.service.dto.LoginResult;
+import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +46,18 @@ public class AuthController {
             @CookieValue(name = "refresh_token", required = false) String rawToken,
             HttpServletResponse response) {
         return respondWithCookie(service.refresh(rawToken), response);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "현재 기기 로그아웃",
+            description = "현재 회원의 Refresh Token만 폐기하고 만료 쿠키와 204를 반환합니다.")
+    public ResponseEntity<Void> logout(
+            @AuthenticatedMemberId Long memberId,
+            @CookieValue(name = "refresh_token", required = false) String rawToken) {
+        service.logout(memberId, rawToken);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.create("", 0).toString())
+                .build();
     }
 
     private ApiResponse<LoginResponse> respondWithCookie(LoginResult loginResult, HttpServletResponse response) {

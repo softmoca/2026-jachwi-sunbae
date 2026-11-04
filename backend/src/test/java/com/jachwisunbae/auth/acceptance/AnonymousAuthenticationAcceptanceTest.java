@@ -360,28 +360,47 @@ class AnonymousAuthenticationAcceptanceTest {
     }
 
     @Test
-    @DisplayName("한 Refresh Token을 폐기해도 다른 인증과 이미 발급한 유효 JWT는 유지된다")
+    @DisplayName("로그아웃은 현재 기기의 쿠키만 만료시키고 다른 기기와 연결된 계정을 유지한다")
     void revokesOnlySelectedRefreshToken() throws Exception {
         AnonymousLogin first = startAnonymous();
         AnonymousLogin second = addSession(first);
-        var response = mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
-                .andExpect(status().isOk()).andReturn();
-        String accessToken = objectMapper.readTree(response.getResponse().getContentAsString())
-                .path("data").path("accessToken").asText();
-        String firstHash = refreshTokenProvider.hash(first.refreshCookie().getValue());
+        AnonymousLogin other = startAnonymous();
+        attachIdentity(first, "logout-account");
+        String accessToken = accessToken(first);
+        String bearer = "Bearer " + accessToken;
 
-        assertThat(refreshTokenRepository.deleteByTokenHash(firstHash)).isOne();
-        assertThat(refreshTokenRepository.deleteByTokenHash(firstHash)).isZero();
+        mvc.perform(post("/api/auth/logout").cookie(first.refreshCookie()))
+                .andExpect(status().isUnauthorized()).andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+        mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer).cookie(other.refreshCookie()))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+        mvc.perform(post("/api/auth/refresh").cookie(other.refreshCookie())).andExpect(status().isOk());
 
+        var logout = mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .cookie(first.refreshCookie()))
+                .andExpect(status().isNoContent()).andReturn();
+        Cookie expired = logout.getResponse().getCookie("refresh_token");
+        assertThat(expired).isNotNull();
+        assertThat(expired.getMaxAge()).isZero();
+        assertThat(expired.getPath()).isEqualTo(first.refreshCookie().getPath());
+        assertThat(expired.isHttpOnly()).isTrue();
+        assertThat(expired.getSecure()).isTrue();
+
+        mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer).cookie(first.refreshCookie()))
+                .andExpect(status().isNoContent());
         mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
         mvc.perform(post("/api/auth/refresh").cookie(second.refreshCookie()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
-        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(first.memberId()));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT member_id FROM member_identities WHERE provider_subject = 'logout-account'", Long.class))
+                .isEqualTo(first.memberId());
+        assertThat(startAnonymous().memberId()).isNotEqualTo(first.memberId());
     }
 
     @ParameterizedTest

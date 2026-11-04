@@ -68,6 +68,22 @@ public class AuthService {
                         "Refresh Token으로 정상 회원의 인증을 복원할 수 없습니다."));
     }
 
+    @Transactional
+    public void logout(Long memberId, String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            return;
+        }
+
+        String hash = refreshTokenProvider.hash(rawToken);
+        refreshTokenRepository.findByTokenHash(hash).ifPresent(token -> {
+            if (!memberId.equals(token.getMemberId())) {
+                throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_INVALID,
+                        "로그아웃 요청의 회원과 Refresh 쿠키의 회원이 일치하지 않습니다.");
+            }
+            refreshTokenRepository.deleteByTokenHash(hash);
+        });
+    }
+
     private Optional<LoginResult> restoreAuthentication(String rawToken, LocalDateTime now) {
         if (rawToken == null || rawToken.isBlank()) {
             return Optional.empty();

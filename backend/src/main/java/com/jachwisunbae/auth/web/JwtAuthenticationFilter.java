@@ -75,7 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/auth/oauth/")) {
             return "GET".equals(request.getMethod()) && path.matches("/api/auth/oauth/(KAKAO|APPLE)/callback");
         }
-        return path.startsWith("/api/auth/");
+        return path.startsWith("/api/auth/") && !"/api/auth/logout".equals(path);
     }
 
     private boolean isBearerToken(String authorization) {
