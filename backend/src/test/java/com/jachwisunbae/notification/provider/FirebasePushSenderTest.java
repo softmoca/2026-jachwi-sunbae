@@ -42,6 +42,20 @@ class FirebasePushSenderTest {
     }
 
     @Test
+    void addsClickPathOnlyWhenGiven() throws Exception {
+        when(messaging.send(any(Message.class))).thenReturn("projects/test/messages/123");
+        var push = new Push(UUID.randomUUID(), "fake-fcm-test-token-1234567890", "배달 할인", "확인해 보세요",
+                "/cheap-meals?tab=delivery");
+        assertThat(sender.send(push)).isTrue();
+        var captor = ArgumentCaptor.forClass(Message.class);
+        verify(messaging).send(captor.capture());
+        var json = new ObjectMapper().readTree(GsonFactory.getDefaultInstance().toString(captor.getValue()));
+        assertThat(json.at("/data/url").asText()).isEqualTo("/cheap-meals?tab=delivery");
+        assertThat(json.at("/data/notificationId").asText()).isEqualTo(push.notificationId().toString());
+        assertThat(json.get("data").size()).isEqualTo(2);
+    }
+
+    @Test
     void failedRequestIsReturnedWithoutRetryOrSensitiveExceptionText() throws Exception {
         when(messaging.send(any(Message.class))).thenThrow(new IllegalStateException("sensitive-provider-response"));
         var result = sender.send(push());

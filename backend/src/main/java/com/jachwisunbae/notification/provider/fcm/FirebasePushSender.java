@@ -15,9 +15,14 @@ public class FirebasePushSender implements PushSender {
 
     @Override
     public boolean send(final Push push) {
-        Message message = Message.builder().setToken(push.token())
+        Message.Builder builder = Message.builder().setToken(push.token())
                 .setNotification(Notification.builder().setTitle(push.title()).setBody(push.body()).build())
-                .putData("notificationId", push.notificationId().toString()).build();
+                .putData("notificationId", push.notificationId().toString());
+        // 앱은 data.url을 현재 서비스 origin 기준으로 풀어 내부 경로만 연다.
+        if (push.url() != null) {
+            builder.putData("url", push.url());
+        }
+        Message message = builder.build();
         try {
             messaging.send(message);
             return true;
