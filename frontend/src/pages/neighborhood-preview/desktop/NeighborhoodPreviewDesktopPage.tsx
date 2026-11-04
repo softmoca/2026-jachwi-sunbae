@@ -14,8 +14,10 @@ import StateIllustration from '@/shared/ui/state-illustration/StateIllustration'
 import useNeighborhoodMapView from '../hooks/useNeighborhoodMapView';
 import type { AreaStation } from '../hooks/useNeighborhoodPlaces';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
+import useResultMapViewport from '../hooks/useResultMapViewport';
 import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
 import { areaCardDescription, emptyAreaMessage, placesHint, transferLabel } from '../model/criteriaLabels';
+import { desktopMapViewport } from '../model/resultMapView';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
 import AreaSummary, { areaStation } from '../ui/area-summary/AreaSummary';
 import ConditionPanel from '../ui/condition-panel/ConditionPanel';
@@ -45,6 +47,14 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
   const { isResultMap, mapProps, places, closeLayers } = useNeighborhoodMapView(preview, {
     showAreaAction: false,
     stationMarkersOnly: !!preview.selected,
+  });
+  // 지도 칸은 목록, 상세 칸 오른쪽에 있다. 상세 칸이 아직 닫혀 있으면 고른 뒤 열릴 폭을 미리 빼고 시점을 맞춘다.
+  const mapSectionRef = useResultMapViewport<HTMLElement>(preview, (section) => {
+    const layout = section.parentElement?.parentElement;
+    return desktopMapViewport(section.getBoundingClientRect(), {
+      width: layout?.getBoundingClientRect().width ?? window.innerWidth,
+      isDetailOpen: layout?.dataset.detailOpen === 'true',
+    });
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
   /** 출발 정류장을 고르면 정보 칸에 경로를 열고 지도를 그 정류장으로 확대한다. */
@@ -164,7 +174,11 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
         }
         closeLabel={places.selectedPlace ? '정보 닫기' : hasDetail ? '대중교통 상세 닫기' : '동네 정보 닫기'}
       >
-        <section className={shared.mapPage} aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}>
+        <section
+          ref={mapSectionRef}
+          className={shared.mapPage}
+          aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}
+        >
           <MapCanvas
             animateView
             customStyleId={SERVICE_MAP_STYLE_ID}

@@ -49,7 +49,13 @@ export const resultMapCenter = (point: MapCoordinate, level: number): MapCoordin
  * 점들이 여백을 두고 `AREA_FIT_SIZE` 칸 안에 모두 들어오는 확대 단계. 너무 가깝거나 멀지 않게 `min`~`max` 안으로 자른다.
  * 점이 없으면 `fallback`을 쓴다.
  */
-const fitLevel = (points: readonly MapCoordinate[], min: number, max: number, fallback: number): number => {
+const fitLevel = (
+  points: readonly MapCoordinate[],
+  min: number,
+  max: number,
+  fallback: number,
+  size: { width: number; height: number } = AREA_FIT_SIZE,
+): number => {
   if (!points.length) return fallback;
   const latitudes = points.map((point) => point.latitude);
   const longitudes = points.map((point) => point.longitude);
@@ -58,7 +64,7 @@ const fitLevel = (points: readonly MapCoordinate[], min: number, max: number, fa
   const cosine = Math.cos((((south + north) / 2) * Math.PI) / 180);
   const widthMeters = (Math.max(...longitudes) - Math.min(...longitudes)) * METERS_PER_LATITUDE * cosine;
   const heightMeters = (north - south) * METERS_PER_LATITUDE;
-  const metersPerPixel = Math.max(widthMeters / AREA_FIT_SIZE.width, heightMeters / AREA_FIT_SIZE.height);
+  const metersPerPixel = Math.max(widthMeters / size.width, heightMeters / size.height);
   if (metersPerPixel === 0) return min;
   // 확대 단계가 1 멀어질 때마다 1px이 덮는 거리가 두 배가 된다.
   const level = Math.log2(metersPerPixel / (METERS_PER_PIXEL_AT_LEVEL_ZERO * cosine));
@@ -76,6 +82,31 @@ export const areaFocusLevel = (polygons: readonly (readonly (readonly MapCoordin
   fitLevel(outerRingPoints(polygons), AREA_FOCUS_MIN_LEVEL, AREA_FOCUS_MAX_LEVEL, AREA_FOCUS_FALLBACK_LEVEL);
 
 /**
+ * 결과 지도 칸의 크기와, 그 안에서 다른 것이 가리는 여백(px). 데스크탑은 동네를 고르면 열릴 상세 칸 폭을 미리 빼고
+ * 색 기준과 버튼 자리를, 휴대폰은 위 조건 줄과 아래 동네 시트 높이를 여백으로 준다.
+ */
+export type MapViewport = {
+  width: number;
+  height: number;
+  padding: { top: number; right: number; bottom: number; left: number };
+};
+/** 가려지지 않은 칸 안에서도 경로가 가장자리에 붙지 않고 주변이 보이게, 칸의 이 비율 안에 담는다. */
+const VIEWPORT_FIT_RATIO = 0.75;
+/** 여백을 빼고 남은 칸이 이보다 작으면 이 크기로 본다. 아주 작은 창에서 너무 멀리 가지 않게 한다. */
+const MIN_FIT_SIZE = 160;
+
+/** 지도 중심을 화면에서 (dx, dy)px 옮긴 좌표. Naver GL은 512px 타일이라 단계 0(Naver zoom 20)의 세계 폭은 512 x 2^20px이다. */
+const shiftByPixels = (point: MapCoordinate, level: number, dx: number, dy: number): MapCoordinate => {
+  const worldSize = 512 * 2 ** (20 - level);
+  const latitude = (Math.max(-85, Math.min(85, point.latitude)) * Math.PI) / 180;
+  const y = (1 - Math.log(Math.tan(Math.PI / 4 + latitude / 2)) / Math.PI) / 2 + dy / worldSize;
+  return {
+    latitude: (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI,
+    longitude: point.longitude + (dx / worldSize) * 360,
+  };
+};
+
+/**
  * 통근 경로 전체(출발 정류장이나 동네 경계부터 출퇴근 장소까지)가 한 화면에 들어오는 시점.
  * 상위 동네나 출발 정류장을 고를 때 쓴다. 경로보다 가깝게 다가가면 출퇴근 장소가 화면 밖으로 나가 경로를 가늠하지 못한다.
  * 가장 가깝게는 `AREA_FOCUS_MIN_LEVEL`, 가장 멀게는 결과 전체를 보는 `RESULT_OVERVIEW_LEVEL`까지 둔다.
@@ -83,9 +114,16 @@ export const areaFocusLevel = (polygons: readonly (readonly (readonly MapCoordin
 export const routeFocusView = (
   points: readonly MapCoordinate[],
   polygons: readonly (readonly (readonly MapCoordinate[])[])[] = [],
+  viewport?: MapViewport,
 ): MapCoordinate & { level: number } => {
   const all = [...points, ...outerRingPoints(polygons)];
-  const level = fitLevel(all, AREA_FOCUS_MIN_LEVEL, RESULT_OVERVIEW_LEVEL, AREA_FOCUS_FALLBACK_LEVEL);
+  // 지도 칸을 알면 가려지지 않는 칸의 일부에 담고, 모르면(첫 렌더, 테스트) 정해 둔 칸에 담는다.
+  const { padding } = viewport ?? { padding: { top: 0, right: 0, bottom: 0, left: 0 } };
+  const size = viewport && {
+    width: Math.max(MIN_FIT_SIZE, viewport.width - padding.left - padding.right) * VIEWPORT_FIT_RATIO,
+    height: Math.max(MIN_FIT_SIZE, viewport.height - padding.top - padding.bottom) * VIEWPORT_FIT_RATIO,
+  };
+  const level = fitLevel(all, AREA_FOCUS_MIN_LEVEL, RESULT_OVERVIEW_LEVEL, AREA_FOCUS_FALLBACK_LEVEL, size);
   if (!all.length) return { latitude: 0, longitude: 0, level };
   const latitudes = all.map((point) => point.latitude);
   const longitudes = all.map((point) => point.longitude);
@@ -93,5 +131,42 @@ export const routeFocusView = (
     latitude: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
     longitude: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
   };
-  return { ...resultMapCenter(middle, level), level };
+  if (!viewport) return { ...resultMapCenter(middle, level), level };
+  // 가려지지 않은 칸의 가운데에 경로 가운데가 오게, 지도 중심을 여백 차이의 절반만큼 반대로 옮긴다.
+  const dx = (padding.right - padding.left) / 2;
+  const dy = (padding.bottom - padding.top) / 2;
+  return { ...shiftByPixels(middle, level, dx, dy), level };
+};
+
+const REM = 16;
+/** 데스크탑 상세 칸 폭(`ListDetailLayout`의 `clamp(22rem, 28%, 26rem)`). */
+const desktopDetailWidth = (layoutWidth: number) => Math.min(26 * REM, Math.max(22 * REM, layoutWidth * 0.28));
+
+/**
+ * 데스크탑 결과 지도 칸. 동네를 고르면 목록 옆에 상세 칸이 열려 지도 칸이 그만큼 좁아지므로, 아직 닫혀 있으면 그 폭을 미리 뺀다.
+ * 위는 색 기준 상자, 왼쪽은 상세 닫기 버튼, 오른쪽은 확대 축소 버튼, 아래는 월세 상자 자리를 비운다.
+ */
+export const desktopMapViewport = (
+  map: { width: number; height: number },
+  layout: { width: number; isDetailOpen: boolean },
+): MapViewport | null => {
+  if (map.width === 0 || map.height === 0) return null;
+  return {
+    width: map.width - (layout.isDetailOpen ? 0 : desktopDetailWidth(layout.width)),
+    height: map.height,
+    padding: { top: 96, right: 72, bottom: 40, left: 64 },
+  };
+};
+
+/** 동네를 고르면 휴대폰에서 올라오는 동네 시트의 처음 높이(`AreaPlacesSheet`, 지도 칸의 38%). */
+const MOBILE_AREA_SHEET_RATIO = 0.38;
+
+/** 휴대폰과 태블릿 결과 지도 칸. 위는 조건 줄과 색 기준(`headerBottom`, 지도 칸 위에서부터 px), 아래는 동네 시트 높이를 비운다. */
+export const mobileMapViewport = (map: { width: number; height: number }, headerBottom: number): MapViewport | null => {
+  if (map.width === 0 || map.height === 0) return null;
+  return {
+    width: map.width,
+    height: map.height,
+    padding: { top: headerBottom + 8, right: 16, bottom: map.height * MOBILE_AREA_SHEET_RATIO + 16, left: 16 },
+  };
 };

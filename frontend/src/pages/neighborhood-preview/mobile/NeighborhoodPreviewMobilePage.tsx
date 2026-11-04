@@ -15,8 +15,10 @@ import StateIllustration from '@/shared/ui/state-illustration/StateIllustration'
 
 import useNeighborhoodMapView from '../hooks/useNeighborhoodMapView';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
+import useResultMapViewport from '../hooks/useResultMapViewport';
 import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
 import { areaCardDescription, emptyAreaMessage, placesHint, rentLabel, transferLabel } from '../model/criteriaLabels';
+import { mobileMapViewport } from '../model/resultMapView';
 import type { NeighborhoodFilterField } from '../NeighborhoodFilters';
 import NeighborhoodFilters, { NeighborhoodFilterPicker } from '../NeighborhoodFilters';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
@@ -59,6 +61,12 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
   const hasAreaSheet = !!isRoutePage && !!preview.selected;
+  // 지도는 화면 전체를 쓰고, 위 조건 줄과 동네를 고르면 올라올 아래 시트가 가리는 만큼 비우고 시점을 맞춘다.
+  const mapSectionRef = useResultMapViewport<HTMLElement>(preview, (section) => {
+    const rect = section.getBoundingClientRect();
+    const header = section.querySelector('header');
+    return mobileMapViewport(rect, header ? header.getBoundingClientRect().bottom - rect.top : 0);
+  });
   // 시트를 띄우면 확대 축소, 현재 위치 버튼을 시트 바로 위에 붙여 시트와 함께 오르내리게 한다. 지도 위 고정 자리에 두면 시트에 가린다.
   const hasSheet = hasAreaSheet || places.selectedPlace !== null;
   const resultControls = (
@@ -122,7 +130,11 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
     );
   return (
     <main className={shared.page} data-public-explore={preview.isPublicExplore || undefined}>
-      <section className={shared.mapPage} aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}>
+      <section
+        ref={mapSectionRef}
+        className={shared.mapPage}
+        aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}
+      >
         <MapCanvas
           animateView
           customStyleId={SERVICE_MAP_STYLE_ID}

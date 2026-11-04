@@ -27,7 +27,7 @@ import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import { commuteBand, commuteColor, OUT_OF_RENT_COLOR, OUT_OF_RENT_DRAW_STAGE } from '../model/commuteColors';
 import { readNeighborhoodSearch, writeNeighborhoodSearch } from '../model/neighborhoodSearchSession';
 import { PREVIEW_DESTINATION } from '../model/preview';
-import { RESULT_OVERVIEW_LEVEL, resultMapCenter, routeFocusView } from '../model/resultMapView';
+import { type MapViewport, RESULT_OVERVIEW_LEVEL, resultMapCenter, routeFocusView } from '../model/resultMapView';
 import useNeighborhoodAnalytics from './useNeighborhoodAnalytics';
 
 const describeError = (error: unknown) => {
@@ -54,7 +54,8 @@ export const describeRouteError = (error: unknown) => {
 const areaRouteView = (
   area: Pick<CommuteArea, 'polygons' | 'stations'>,
   destination: { latitude: number; longitude: number },
-) => routeFocusView([destination, ...area.stations.slice(0, 1)], area.polygons);
+  viewport?: MapViewport,
+) => routeFocusView([destination, ...area.stations.slice(0, 1)], area.polygons, viewport);
 
 const useNeighborhoodPreview = () => {
   const config = usePublicConfig();
@@ -79,6 +80,9 @@ const useNeighborhoodPreview = () => {
   const [selectionCenter, setSelectionCenter] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [selectionLevel, setSelectionLevel] = useState(6);
   const resultView = useRef<{ latitude: number; longitude: number; level: number } | null>(null);
+  // 화면(휴대폰, 데스크탑)이 알려 주는 결과 지도 칸 크기와 가리는 여백. 동네나 출발 정류장을 고를 때 시점을 그 칸에 맞춘다.
+  const mapViewportReader = useRef<(() => MapViewport | null) | null>(null);
+  const readMapViewport = () => mapViewportReader.current?.() ?? undefined;
   // 결과 지도 시점은 ref에 두므로, 목록에서 정류장을 고를 때처럼 시점만 바꾸면 다시 그리도록 이 값을 올린다.
   const [, setResultViewVersion] = useState(0);
   const [hasChosenMapPoint, setHasChosenMapPoint] = useState(false);
@@ -450,7 +454,7 @@ const useNeighborhoodPreview = () => {
       const area = allAreas?.find((area) => area.adminDongCode === id);
       if (area) analytics.selectArea();
       // 동네 경계와 첫 출발 정류장, 출퇴근 장소까지 통근 경로 전체가 한 화면에 들어오게 옮긴다.
-      if (area) resultView.current = areaRouteView(area, destination);
+      if (area) resultView.current = areaRouteView(area, destination, readMapViewport());
       setSelectedId(id);
       setSelectedStopId(area?.stations[0]?.stopId ?? null);
       // 데스크탑은 상세를 목록 옆에 붙여 지도를 가리지 않으므로, 동네를 고르면 바로 상세를 연다.
@@ -461,7 +465,7 @@ const useNeighborhoodPreview = () => {
     },
     /** 출발 정류장(경로)을 고르면 그 정류장부터 출퇴근 장소까지 경로 전체가 한 화면에 들어오게 옮긴다. */
     focusRoute: (station: { latitude: number; longitude: number }) => {
-      resultView.current = routeFocusView([station, destination]);
+      resultView.current = routeFocusView([station, destination], [], readMapViewport());
       setResultViewVersion((version) => version + 1);
     },
     selectStation: (id: string) => {
@@ -476,6 +480,10 @@ const useNeighborhoodPreview = () => {
       if (selected) navigate(neighborhoodAreaPath(mapPath, selected.adminDongCode), { replace: true });
     },
     openListing: analytics.openListing,
+    /** 결과 지도 칸 크기와 가리는 여백을 읽는 함수를 둔다. 화면이 지도 칸을 그린 뒤 한 번 넣는다. */
+    setMapViewportReader: (reader: (() => MapViewport | null) | null) => {
+      mapViewportReader.current = reader;
+    },
   };
 };
 export default useNeighborhoodPreview;
