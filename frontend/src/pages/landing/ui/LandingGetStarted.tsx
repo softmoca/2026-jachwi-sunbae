@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 
 import { LogClick } from '@/shared/lib/analytics/logging';
+import { isRunningInNativeApp } from '@/shared/lib/native-app/nativeApp';
 import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 
@@ -12,6 +13,8 @@ type LandingGetStartedProps = {
   position: 'top' | 'bottom';
   /** 데스크탑은 한 줄로, 휴대폰은 스토어 배지 둘을 나란히 두고 웹 바로가기를 아래 꽉 차게 둔다. */
   layout: 'row' | 'stack';
+  /** 서비스 안에서 들어왔으면 돌아갈 주소. 있으면 웹 바로가기 대신 이 주소로 돌아가는 버튼을 둔다. */
+  returnTo?: string;
 };
 
 const AppleLogo = () => (
@@ -38,34 +41,41 @@ const BADGES = {
   google_play: { logo: <GooglePlayLogo />, caption: 'GET IT ON', name: 'Google Play' },
 };
 
-/** 앱 받기와 웹 바로가기. 첫 화면과 마지막 화면에 같이 둔다. */
-const LandingGetStarted = ({ search, position, layout }: LandingGetStartedProps) => (
-  <div className={layout === 'row' ? styles.row : styles.stack}>
-    {APP_STORES.map((app) => {
-      const badge = BADGES[app.store];
-      return (
-        <LogClick key={app.store} event="landing_app_store_clicked" params={{ store: app.store, position }}>
-          <a href={app.href} target="_blank" rel="noreferrer" className={styles.badge} aria-label={app.label}>
-            {badge.logo}
-            <span className={styles.badgeText} aria-hidden="true">
-              <small>{badge.caption}</small>
-              {badge.name}
-            </span>
-          </a>
-        </LogClick>
-      );
-    })}
-    <LogClick event="landing_web_start_clicked" params={{ position }}>
-      <ButtonLink
-        to={{ pathname: HOME_PATH, search }}
-        size="large"
-        className={layout === 'stack' ? styles.fullRow : undefined}
-      >
-        웹에서 바로 시작하기
-      </ButtonLink>
-    </LogClick>
-  </div>
-);
+/**
+ * 앱 받기와 웹 바로가기. 첫 화면과 마지막 화면에 같이 둔다.
+ * 서비스 안에서 들어왔으면 웹 바로가기 자리에 돌아가기를 두고, 앱 안에서는 이미 설치했으므로 스토어 배지를 숨긴다.
+ */
+const LandingGetStarted = ({ search, position, layout, returnTo }: LandingGetStartedProps) => {
+  const showsStores = !isRunningInNativeApp();
+  return (
+    <div className={layout === 'row' ? styles.row : styles.stack}>
+      {showsStores &&
+        APP_STORES.map((app) => {
+          const badge = BADGES[app.store];
+          return (
+            <LogClick key={app.store} event="landing_app_store_clicked" params={{ store: app.store, position }}>
+              <a href={app.href} target="_blank" rel="noreferrer" className={styles.badge} aria-label={app.label}>
+                {badge.logo}
+                <span className={styles.badgeText} aria-hidden="true">
+                  <small>{badge.caption}</small>
+                  {badge.name}
+                </span>
+              </a>
+            </LogClick>
+          );
+        })}
+      <LogClick event="landing_web_start_clicked" params={{ position }}>
+        <ButtonLink
+          to={returnTo ?? { pathname: HOME_PATH, search }}
+          size="large"
+          className={layout === 'stack' ? styles.fullRow : undefined}
+        >
+          {returnTo === undefined ? '웹에서 바로 시작하기' : '서비스로 돌아가기'}
+        </ButtonLink>
+      </LogClick>
+    </div>
+  );
+};
 
 const styles = {
   row: css`

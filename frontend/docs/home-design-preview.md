@@ -42,7 +42,7 @@
 
 색과 모서리는 `app/styles/tokens.css`의 토큰으로 묶어 한곳에서 바꾼다. 보조 브랜드색 `--color-brand-blue`, 카드 표면 `--color-card-surface`·`--color-card-surface-hover`, 톤별 카드 표면 `--color-card-brand-surface`·`--color-card-informative-surface`와 그 위 글자색 `--color-on-card-accent`, 화면 바탕 `--color-page-subtle`, 가격 강조 `--color-price`, 모서리 `--radius-card`·`--radius-tile`을 추가했고 글자·테두리·보조 글자·포커스는 기존 토큰을 쓴다.
 
-홈 맨 아래 푸터(`ui/HomeFooter`)에는 한 줄 소개(`본 방의 기록이, 내 방을 고르는 기준이 되도록.`), `사용 방법`(`/guide`)·`개인정보·광고 측정 안내`(`/privacy`) 링크, `© 2026 자취선배`를 위쪽 구분선과 함께 둔다. 모바일·태블릿은 가운데 정렬, 가로 데스크탑은 64rem 폭에 왼쪽 정렬한다.
+홈 맨 아래 푸터(`ui/HomeFooter`)에는 한 줄 소개(`본 방의 기록이, 내 방을 고르는 기준이 되도록.`), `자취선배 소개`(`/landing`, 돌아가기는 홈으로)와 `개인정보·광고 측정 안내`(`/privacy`) 링크, `© 2026 자취선배`를 위쪽 구분선과 함께 둔다. 모바일·태블릿은 가운데 정렬, 가로 데스크탑은 64rem 폭에 왼쪽 정렬한다.
 
 두 열 배치, 4칸 빠른 메뉴와 빈칸처럼 홈에만 있는 레이아웃은 재사용하기 어려워 `pages/design-home`에 둔다. 매물 기록 카드의 노트·연필·집 장면은 `ui/RecordCard`, 로고와 마이페이지 링크는 `ui/HomeHeader`, 빠른 메뉴는 `ui/QuickMenu`에서 만든다. 기능 카드 묶음은 `ui/HomeFeatures`에 두어 휴대폰·데스크탑 홈이 함께 쓴다.
 

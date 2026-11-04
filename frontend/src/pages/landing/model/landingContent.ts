@@ -52,6 +52,8 @@ export type StoryPoint = { lead: string; strong: string; tail?: string };
 export type Story = {
   id: string;
   tone: StoryTone;
+  /** 서비스에서 이 기능이 있는 메뉴 이름. 데스크탑 헤더와 홈 카드에 쓰는 이름과 같다. */
+  menu: string;
   title: string;
   description: string;
   points: StoryPoint[];
@@ -65,6 +67,7 @@ export type Story = {
 export const STORIES: Story[] = [
   {
     id: 'explore',
+    menu: '동네 찾기',
     tone: 'neighborhood',
     title: '회사에서 60분, 어느 동네까지 될까요?',
     description: '회사나 학교를 넣으면 대중교통으로 갈 수 있는 동네가 걸리는 시간별로 칠해져요.',
@@ -79,6 +82,7 @@ export const STORIES: Story[] = [
   },
   {
     id: 'cheap-meals',
+    menu: '저렴한 한 끼',
     tone: 'neighborhood',
     title: '그 동네 한 끼 값도 미리 봐요',
     description: '위치만 정하면 식비 아낄 방법을 세 가지로 모아 보여줘요.',
@@ -93,6 +97,7 @@ export const STORIES: Story[] = [
   },
   {
     id: 'records',
+    menu: '본 방 기록',
     tone: 'record',
     title: '본 방은 지도 위에 편하게 남겨요',
     description: '본 방과 동네에서 느낀 점을 지도 한곳에 모아 둬요.',
@@ -108,6 +113,7 @@ export const STORIES: Story[] = [
   },
   {
     id: 'checklist',
+    menu: '체크리스트',
     tone: 'record',
     title: '놓친 게 없는지 하나씩 확인해요',
     description: '항목마다 괜찮음, 주의를 고르면 고르지 않은 건 미확인으로 남아요.',
@@ -121,6 +127,7 @@ export const STORIES: Story[] = [
   },
   {
     id: 'compare',
+    menu: '방 비교',
     tone: 'record',
     title: '고민되는 방은 나란히 놓고 골라요',
     description: '후보를 최대 5개까지 한 표에 놓고 봐요.',

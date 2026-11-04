@@ -28,6 +28,7 @@ export const EXPLORE_PATH = '/explore';
 export const EXPLORE_NEARBY_PATH = '/explore/nearby';
 /** 예전 주소. 들어오면 다른 화면으로 보낸다. */
 export const LOGIN_PATH = '/login';
+/** 광고로 들어오는 서비스 소개. 서비스 안에서는 홈 푸터의 `자취선배 소개`로 들어온다. */
 export const LANDING_PATH = '/landing';
 export const ABOUT_PATH = '/about';
 /** 예전 매물 등록 화면. 매물은 본 방 기록 지도에서 등록하므로 기록 지도로 보낸다. */
@@ -72,6 +73,26 @@ export type NeighborhoodBasePath = typeof EXPLORE_PATH | typeof NEIGHBORHOODS_PA
 export const neighborhoodAreaPath = (base: string, adminDongCode: PathId) => `${base}/areas/${adminDongCode}`;
 export const neighborhoodAreaDetailsPath = (base: string, adminDongCode: PathId) =>
   `${neighborhoodAreaPath(base, adminDongCode)}/details`;
+
+/**
+ * 서비스 안에서 랜딩으로 갈 때 라우터 state로 넘기는 값. 주소에 붙이지 않아 `$pageview` 경로는 광고 유입과 같은
+ * `/landing`으로 남고, 랜딩 이벤트의 `entry`로 서비스 안 진입을 따로 센다. `returnTo`는 돌아갈 서비스 안 주소다.
+ */
+export type LandingEntry = 'home_footer';
+export type LandingEntryState = { landingEntry: LandingEntry; returnTo: string };
+export const landingEntryState = (landingEntry: LandingEntry, returnTo: string): LandingEntryState => ({
+  landingEntry,
+  returnTo,
+});
+
+/** 라우터 state에서 서비스 안 랜딩 진입을 읽는다. 다른 모양이거나 서비스 밖 주소면 진입 정보가 없는 것으로 본다. */
+export const readLandingEntryState = (state: unknown): LandingEntryState | null => {
+  if (typeof state !== 'object' || state === null) return null;
+  const { landingEntry, returnTo } = state as Partial<Record<keyof LandingEntryState, unknown>>;
+  if (landingEntry !== 'home_footer') return null;
+  if (typeof returnTo !== 'string' || !returnTo.startsWith('/') || returnTo.startsWith('//')) return null;
+  return { landingEntry, returnTo };
+};
 
 /** 매물 상세 탭(`?tab=`). */
 export const PROPERTY_DETAIL_TAB_PARAM = 'tab';

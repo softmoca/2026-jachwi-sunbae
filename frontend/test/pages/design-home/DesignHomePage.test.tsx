@@ -100,10 +100,12 @@ it('최근 기록을 불러오지 못하면 안내와 다시 시도 버튼을 �
   expect(await screen.findByText('신림역 원룸')).toBeInTheDocument();
 });
 
-it('푸터에 사용 방법과 개인정보 안내 링크를 둔다', () => {
+it('푸터에 서비스 소개, 개인정보 안내 링크를 두고 사용 방법은 홈 카드에만 둔다', () => {
   renderHome();
   const footer = within(screen.getByRole('contentinfo'));
-  expect(footer.getByRole('link', { name: '사용 방법' })).toHaveAttribute('href', '/guide');
+  expect(footer.getByRole('link', { name: '자취선배 소개' })).toHaveAttribute('href', '/landing');
+  expect(footer.queryByRole('link', { name: '사용 방법' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '사용방법 알아보기' })).toHaveAttribute('href', '/guide');
   expect(footer.getByRole('link', { name: '개인정보·광고 측정 안내' })).toHaveAttribute('href', '/privacy');
   expect(footer.getByText('© 2026 자취선배')).toBeInTheDocument();
 });
