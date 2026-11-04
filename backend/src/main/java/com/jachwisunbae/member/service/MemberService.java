@@ -37,6 +37,12 @@ public class MemberService {
                         "memberId=" + memberId + " 회원을 찾을 수 없습니다."));
     }
 
+    public void requireActiveMemberForUpdate(Long memberId) {
+        memberRepository.findByIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
+                        "회원을 찾을 수 없습니다."));
+    }
+
     public MemberProfile findProfileById(final Long memberId) {
         return MemberProfile.from(findById(memberId));
     }

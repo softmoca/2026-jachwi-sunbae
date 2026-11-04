@@ -78,7 +78,7 @@ public class UserChecklistService {
 
     @Transactional
     public void delete(final Long memberId, final long checklistId) {
-        requireOwnedChecklist(memberId, checklistId);
+        findOwnedChecklistForUpdate(memberId, checklistId);
         userChecklistRepository.delete(checklistId);
     }
 

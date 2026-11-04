@@ -76,6 +76,7 @@ public class JdbcPropertyChecklistItemRepository implements PropertyChecklistIte
                 JOIN property_checklists pc ON pc.id = pci.property_checklist_id
                 JOIN properties p ON p.id = pc.property_id
                 WHERE p.id = ? AND p.member_id = ? AND pc.id = ? AND pci.id = ?
+                FOR UPDATE
                 """;
         return jdbcTemplate.query(sql, (rs, row) -> mapItem(rs, propertyChecklistId),
             propertyId, memberId, propertyChecklistId, itemId).stream().findFirst();

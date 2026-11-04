@@ -41,7 +41,7 @@ public class WeatherNotificationSettingsService {
 
     @Transactional
     public void setEnabled(final long memberId, final boolean enabled) {
-        members.findProfileById(memberId);
+        members.requireActiveMemberForUpdate(memberId);
         repository.setEnabled(memberId, enabled, clock.instant());
     }
 
@@ -59,7 +59,7 @@ public class WeatherNotificationSettingsService {
     @Transactional
     public WeatherDevice register(final long memberId, final UUID installationId, final String installationSecret,
                                    final String token) {
-        members.findProfileById(memberId);
+        members.requireActiveMemberForUpdate(memberId);
         String secretHash = hash(installationSecret);
         WeatherDevice previous = repository.findInstallation(installationId).orElse(null);
         if (previous != null && !MessageDigest.isEqual(previous.secretHash().getBytes(StandardCharsets.US_ASCII),
@@ -77,7 +77,7 @@ public class WeatherNotificationSettingsService {
 
     @Transactional
     public void revoke(final long memberId) {
-        members.findProfileById(memberId);
+        members.requireActiveMemberForUpdate(memberId);
         repository.revoke(memberId, clock.instant());
     }
 

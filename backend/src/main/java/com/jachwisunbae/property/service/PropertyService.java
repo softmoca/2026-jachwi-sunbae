@@ -101,7 +101,7 @@ public class PropertyService {
 
     @Transactional
     public Property update(final Long memberId, final Long propertyId, final UpdatePropertyRequest request) {
-        Property property = propertyRepository.findByIdAndMemberId(propertyId, memberId)
+        Property property = propertyRepository.findByIdAndMemberIdForUpdate(propertyId, memberId)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND,
                 "매물을 찾을 수 없습니다."));
         property.replaceBasicInfo(request.name(), request.depositAmount(),

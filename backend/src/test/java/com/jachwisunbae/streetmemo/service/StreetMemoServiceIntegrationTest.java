@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 
+import com.jachwisunbae.auth.repository.MemberIdentityRepository;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
@@ -188,6 +189,11 @@ class StreetMemoServiceIntegrationTest {
         @Bean
         RefreshTokenRepository refreshTokenRepository() {
             return mock(RefreshTokenRepository.class);
+        }
+
+        @Bean
+        MemberIdentityRepository memberIdentityRepository() {
+            return mock(MemberIdentityRepository.class);
         }
 
         @Bean

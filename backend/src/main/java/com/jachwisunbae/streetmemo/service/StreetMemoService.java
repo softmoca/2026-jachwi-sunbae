@@ -35,7 +35,7 @@ public class StreetMemoService {
                                     final String memo, final StreetMemoPreference preference) {
         StreetMemo streetMemo = StreetMemo.create(memberId, latitude, longitude, memo, preference,
                 LocalDateTime.now(clock));
-        memberService.findById(memberId);
+        memberService.requireActiveMemberForUpdate(memberId);
         return StreetMemoResult.from(streetMemoRepository.save(streetMemo), memberId);
     }
 
