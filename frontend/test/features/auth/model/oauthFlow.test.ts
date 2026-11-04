@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
-import { completeWebOAuth, parseAppCallback, startOAuthLink } from '@/features/auth/model/oauthFlow';
+import { completeOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
 import { readLinkedProvider, savePendingOAuth, takePendingOAuth } from '@/features/auth/model/oauthLink';
 import { propertyQueryKeys } from '@/features/property/api/propertyQueryKeys';
 import { queryClient } from '@/shared/api/queryClient';
@@ -21,29 +21,12 @@ const loginAs = (memberId: number) =>
 const signIn = (memberId: number) =>
   setAuthentication({ accessToken: `token-${memberId}`, tokenType: 'Bearer', expiresIn: 900, memberId });
 
-const installNativeApp = (reply: (message: { requestId: string; url: string }) => unknown) => {
-  window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'] };
-  window.ReactNativeWebView = {
-    postMessage: (raw: string) => {
-      const message = JSON.parse(raw) as { requestId: string; url: string };
-      queueMicrotask(() =>
-        window.dispatchEvent(
-          new CustomEvent('jachwi-auth', {
-            detail: { type: 'auth:response', requestId: message.requestId, ...(reply(message) as object) },
-          }),
-        ),
-      );
-    },
-  };
-};
-
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
-  delete window.ReactNativeWebView;
 });
 
 describe('OAuth 계정 연결 시작', () => {
-  it('웹은 Access Token과 쿠키로 시작해 시작 정보를 남기고 제공자 화면으로 이동한다', async () => {
+  it('Access Token과 쿠키로 시작해 시작 정보를 남기고 지금 페이지를 제공자 화면으로 옮긴다', async () => {
     signIn(20);
     const requests: string[] = [];
     server.use(
@@ -62,6 +45,25 @@ describe('OAuth 계정 연결 시작', () => {
     expect(takePendingOAuth()).toMatchObject({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
   });
 
+  it('앱 WebView에서도 시스템 브라우저 없이 같은 페이지 이동으로 시작한다', async () => {
+    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2 };
+    signIn(20);
+    let startPath = '';
+    server.use(
+      http.post(START_URL, ({ request }) => {
+        startPath = new URL(request.url).pathname + new URL(request.url).search;
+        return success({ authorizationUrl: 'https://appleid.apple.com/auth/authorize?response_mode=query' });
+      }),
+    );
+    const leavePage = vi.fn();
+
+    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, linkedProvider: null, leavePage });
+
+    expect(startPath).toBe('/api/auth/oauth/APPLE/start');
+    expect(result).toEqual({ kind: 'left-page' });
+    expect(leavePage).toHaveBeenCalledWith('https://appleid.apple.com/auth/authorize?response_mode=query');
+  });
+
   it('시작에 실패하면 이동하지 않고 지금 회원을 그대로 둔 채 안내한다', async () => {
     signIn(20);
     server.use(
@@ -78,6 +80,7 @@ describe('OAuth 계정 연결 시작', () => {
       notice: { tone: 'error', title: '지금은 계정을 연결할 수 없어요' },
     });
     expect(leavePage).not.toHaveBeenCalled();
+    expect(takePendingOAuth()).toBeNull();
     expect(getAuthenticationSnapshot().session?.memberId).toBe(20);
   });
 
@@ -91,61 +94,6 @@ describe('OAuth 계정 연결 시작', () => {
     expect(result).toMatchObject({ kind: 'finished', notice: { tone: 'error' } });
     expect(leavePage).not.toHaveBeenCalled();
   });
-
-  it('앱에서 사용자가 인증 화면을 닫으면 취소로 안내하고 지금 회원을 그대로 둔다', async () => {
-    signIn(20);
-    installNativeApp(() => ({ ok: false, error: 'cancelled' }));
-    let startPath = '';
-    server.use(
-      http.post(START_URL, ({ request }) => {
-        startPath = new URL(request.url).search;
-        return success({ authorizationUrl: 'https://kauth.kakao.com/oauth/authorize' });
-      }),
-    );
-    const leavePage = vi.fn();
-
-    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, leavePage });
-
-    expect(startPath).toBe('?client=app');
-    expect(result).toMatchObject({ kind: 'finished', notice: { title: '계정 연결을 취소했어요' } });
-    expect(leavePage).not.toHaveBeenCalled();
-    expect(getAuthenticationSnapshot().session?.memberId).toBe(20);
-  });
-
-  it('앱은 시스템 인증 화면이 돌려준 완료 코드로 인증을 바꾼 뒤 복귀 화면을 연다', async () => {
-    signIn(20);
-    const opened: string[] = [];
-    installNativeApp((message) => {
-      opened.push(message.url);
-      return { ok: true, callbackUrl: 'jachwisunbae://auth/oauth/complete?code=one-time&result=merged' };
-    });
-    let completedCode: unknown = null;
-    server.use(
-      http.post(START_URL, () => success({ authorizationUrl: 'https://appleid.apple.com/auth/authorize' })),
-      http.post(`${config.apiBaseUrl}/api/auth/oauth/complete`, async ({ request }) => {
-        completedCode = ((await request.json()) as { code: string }).code;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-    const leavePage = vi.fn();
-
-    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, linkedProvider: null, leavePage });
-
-    expect(opened).toEqual(['https://appleid.apple.com/auth/authorize']);
-    expect(completedCode).toBe('one-time');
-    expect(result).toEqual({ kind: 'left-page' });
-    expect(leavePage).toHaveBeenCalledWith('/oauth/complete?result=merged');
-    expect(takePendingOAuth()).toMatchObject({ provider: 'APPLE', previousMemberId: 20 });
-  });
-
-  it('앱 콜백은 우리 스킴의 완료 코드나 오류만 받는다', () => {
-    expect(parseAppCallback('jachwisunbae://auth/oauth/complete?code=abc')).toEqual({ code: 'abc', result: null });
-    expect(parseAppCallback('jachwisunbae://auth/oauth/complete?error=access_denied')).toEqual({
-      error: 'access_denied',
-    });
-    expect(parseAppCallback('https://evil.example/complete?code=abc')).toBeNull();
-    expect(parseAppCallback('jachwisunbae://auth/oauth/complete')).toBeNull();
-  });
 });
 
 describe('OAuth 복귀', () => {
@@ -155,7 +103,7 @@ describe('OAuth 복귀', () => {
     queryClient.setQueryData(propertyQueryKeys.detail(1), { name: '이전 회원 매물' });
     server.use(loginAs(10));
 
-    const notice = await completeWebOAuth(config, '');
+    const notice = await completeOAuthLink(config, '');
 
     expect(notice).toMatchObject({ tone: 'success', title: '카카오 계정의 기록을 불러왔어요' });
     expect(getAuthenticationSnapshot().session?.memberId).toBe(10);
@@ -167,8 +115,17 @@ describe('OAuth 복귀', () => {
     savePendingOAuth({ provider: 'APPLE', previousMemberId: 20, previousProvider: null });
     server.use(loginAs(20));
 
-    await expect(completeWebOAuth(config, '')).resolves.toMatchObject({ title: 'Apple 계정을 연결했어요' });
+    await expect(completeOAuthLink(config, '')).resolves.toMatchObject({ title: 'Apple 계정을 연결했어요' });
     expect(readLinkedProvider(20)).toBe('APPLE');
+  });
+
+  it('다른 계정을 연결했던 회원이 다른 회원으로 바뀌면 전환으로 안내한다', async () => {
+    savePendingOAuth({ provider: 'APPLE', previousMemberId: 10, previousProvider: 'KAKAO' });
+    signIn(10);
+    server.use(loginAs(30));
+
+    await expect(completeOAuthLink(config, '')).resolves.toMatchObject({ title: 'Apple 계정으로 바꿨어요' });
+    expect(readLinkedProvider(30)).toBe('APPLE');
   });
 
   it('취소나 실패로 돌아오면 다시 로그인하지 않고 지금 회원을 그대로 둔다', async () => {
@@ -177,7 +134,7 @@ describe('OAuth 복귀', () => {
     const login = vi.fn();
     server.use(http.post(`${config.apiBaseUrl}/api/auth/login`, login));
 
-    const notice = await completeWebOAuth(config, '?error=access_denied');
+    const notice = await completeOAuthLink(config, '?error=access_denied');
 
     expect(notice).toMatchObject({ tone: 'error', title: '계정 연결을 취소했어요' });
     expect(login).not.toHaveBeenCalled();

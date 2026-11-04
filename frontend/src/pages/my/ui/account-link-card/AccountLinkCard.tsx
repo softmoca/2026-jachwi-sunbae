@@ -13,8 +13,6 @@ import {
   readLinkedProvider,
 } from '@/features/auth/model/oauthLink';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
-import { isRunningInNativeApp } from '@/shared/lib/native-app/nativeApp';
-import { isNativeAuthAvailable } from '@/shared/lib/native-app/nativeAuth';
 import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog';
 import Icon from '@/shared/ui/icon/Icon';
@@ -52,9 +50,6 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   const [status, setStatus] = useState<Status>('idle');
   const [notice, setNotice] = useState<OAuthNotice | null>(() => readOAuthNoticeFromState(location.state));
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
-
-  // 인증 화면을 열 수 없는 예전 앱은 WebView 안에서 제공자 화면으로 이동할 수 없어 연결을 보여 주지 않는다.
-  if (isRunningInNativeApp() && !isNativeAuthAvailable()) return null;
 
   const open = (next: Exclude<DialogState, null>, trigger: HTMLButtonElement) => {
     returnFocusRef.current = trigger;

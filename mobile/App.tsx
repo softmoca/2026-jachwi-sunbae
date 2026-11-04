@@ -24,11 +24,9 @@ import { startLaunchGate } from './src/push/launchGate';
 import { WEB_APP_URL } from './src/config';
 import { isAllowedWebAppUrl, toWebAppUrl } from './src/navigationPolicy';
 import { createNativeContextScript } from './src/webBridge';
-import { restoreAuthSession, useAuthBridge } from './src/auth/useAuthBridge';
 
 // 네이티브 탭바를 광고하지 않는다. 웹의 탭바가 그대로 표시된다.
-// 'auth'는 시스템 인증 화면과 Refresh 쿠키 백업을 지원한다는 뜻이다. 웹은 이 값으로 계정 연결을 보여 준다.
-const NATIVE_FEATURES = ['push', 'auth'] as const;
+const NATIVE_FEATURES = ['push'] as const;
 
 type ErrorViewProps = {
   onRetry: () => void;
@@ -75,21 +73,14 @@ const AppContent = () => {
     webViewRef.current?.injectJavaScript(script);
   }, []);
   const push = usePushNotifications(navigateFromPush, injectPushScript);
-  const auth = useAuthBridge(injectPushScript);
-  const { handleDeepLink: handleAuthDeepLink } = auth;
 
-  const openDeepLink = useCallback(
-    (url: string) => {
-      // 인증 화면의 콜백은 웹 화면으로 열지 않고 진행 중인 인증에 넘긴다.
-      if (handleAuthDeepLink(url)) return;
-      const nextUrl = toWebAppUrl(url);
-      if (nextUrl !== null) {
-        setFailed(false);
-        setAppUrl(nextUrl);
-      }
-    },
-    [handleAuthDeepLink],
-  );
+  const openDeepLink = useCallback((url: string) => {
+    const nextUrl = toWebAppUrl(url);
+    if (nextUrl !== null) {
+      setFailed(false);
+      setAppUrl(nextUrl);
+    }
+  }, []);
 
   useEffect(() => {
     Linking.getInitialURL().then(url => {
@@ -123,12 +114,11 @@ const AppContent = () => {
 
   const handleWebMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      const { data, url } = event.nativeEvent;
-      // 각 브리지는 자기 type의 메시지만 처리하고 나머지는 무시한다.
-      push.onMessageFromWeb(data, url).catch(() => undefined);
-      auth.onMessageFromWeb(data, url).catch(() => undefined);
+      push
+        .onMessageFromWeb(event.nativeEvent.data, event.nativeEvent.url)
+        .catch(() => undefined);
     },
-    [push, auth],
+    [push],
   );
 
   const handleWebViewLoadEnd = useCallback(() => {
@@ -192,11 +182,6 @@ const AppContent = () => {
 
 const App = () => {
   const [ready, setReady] = useState(false);
-  const [sessionRestored, setSessionRestored] = useState(false);
-  // WebView 쿠키를 잃었으면 기기 저장소의 백업으로 되살린 뒤 웹을 연다. 웹의 자동 로그인이 그 쿠키로 같은 회원을 복원한다.
-  useEffect(() => {
-    restoreAuthSession().finally(() => setSessionRestored(true));
-  }, []);
   useEffect(() => {
     const messaging = getConfiguredMessaging();
     if (!messaging) {
@@ -214,7 +199,7 @@ const App = () => {
       onReady: () => setReady(true),
     });
   }, []);
-  return ready && sessionRestored ? (
+  return ready ? (
     <SafeAreaProvider>
       <AppContent />
     </SafeAreaProvider>

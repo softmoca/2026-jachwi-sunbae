@@ -99,11 +99,12 @@ describe('마이 화면 계정 연결', () => {
     expect(getAuthenticationSnapshot().session?.memberId).toBe(2);
   });
 
-  it('인증 화면을 열 수 없는 예전 앱에서는 계정 연결을 보여 주지 않는다', async () => {
+  it('앱 WebView에서도 브라우저와 같은 계정 연결을 보여 준다', async () => {
     window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2 };
     renderMyPage();
 
-    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '계정 연결' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '카카오로 계속하기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apple로 계속하기' })).toBeInTheDocument();
   });
 });

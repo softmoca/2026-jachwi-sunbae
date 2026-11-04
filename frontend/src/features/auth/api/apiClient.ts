@@ -7,7 +7,6 @@ import {
   resetPostHogIdentity,
   trackPostHogEvent,
 } from '@/shared/lib/analytics/posthog';
-import { persistNativeSession } from '@/shared/lib/native-app/nativeAuth';
 
 import {
   clearAuthentication,
@@ -227,7 +226,7 @@ const sendAuthenticationRequest = async (
 };
 
 /** LoginResponse를 읽어 세션을 정하고 Access Token을 돌려준다. 다른 회원이면 인증 저장소가 이전 회원 캐시를 지운다. */
-const acceptTokenResponse = async (config: PublicConfig, response: Response, path: TokenPath): Promise<string> => {
+const acceptTokenResponse = async (response: Response, path: TokenPath): Promise<string> => {
   if (!response.ok) return throwResponseError(response);
 
   const payload = await readJson(response);
@@ -251,12 +250,8 @@ const acceptTokenResponse = async (config: PublicConfig, response: Response, pat
   if (path === LOGIN_PATH && isFirstLogin) {
     trackPostHogEvent('login_succeeded', { login_method: 'anonymous', new_member: login.newMember });
   }
-  if (path === LOGIN_PATH) {
-    // 로그인은 쿠키로 회원을 정한다. 다른 탭이 이전 회원으로 남아 있으면 이 회원으로 맞추게 한다.
-    announceMember(login.member.memberId);
-    // 앱이면 이번 로그인으로 정해진 Refresh 쿠키를 기기 저장소에 백업한다. 웹 브라우저에서는 아무 일도 하지 않는다.
-    persistNativeSession(new URL(config.apiBaseUrl).origin);
-  }
+  // 로그인은 쿠키로 회원을 정한다. 다른 탭이 이전 회원으로 남아 있으면 이 회원으로 맞추게 한다.
+  if (path === LOGIN_PATH) announceMember(login.member.memberId);
   return login.accessToken;
 };
 
@@ -268,7 +263,7 @@ const acceptTokenResponse = async (config: PublicConfig, response: Response, pat
 const requestToken = async (config: PublicConfig, path: TokenPath): Promise<string> => {
   const response = await sendAuthenticationRequest(config, path, 'POST');
   if (response.status === 401) clearAuthentication('unauthorized');
-  return acceptTokenResponse(config, response, path);
+  return acceptTokenResponse(response, path);
 };
 
 const trackLoginFailure = (error: unknown) => {
