@@ -14,6 +14,8 @@ public enum ErrorCode {
     // 회원 및 인증
     ACCESS_TOKEN_INVALID("ACCESS 인증 정보를 확인할 수 없습니다."),
     REFRESH_TOKEN_INVALID("REFRESH 인증 정보를 확인할 수 없습니다."),
+    OAUTH_AUTHENTICATION_FAILED("외부 계정 인증을 완료하지 못했습니다."),
+    OAUTH_PROVIDER_UNAVAILABLE("외부 계정 인증을 잠시 이용할 수 없습니다."),
     MEMBER_NOT_FOUND("회원을 찾을 수 없습니다."),
 
     // 체크리스트

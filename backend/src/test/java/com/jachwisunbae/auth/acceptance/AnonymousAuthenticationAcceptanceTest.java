@@ -1,6 +1,8 @@
 package com.jachwisunbae.auth.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jachwisunbae.auth.client.OAuthProviderClient;
+import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.auth.token.RefreshTokenProvider;
@@ -30,7 +34,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -56,17 +62,63 @@ class AnonymousAuthenticationAcceptanceTest {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @MockitoSpyBean
+    private OAuthProviderClient oauthProviderClient;
+
     @DynamicPropertySource
     static void configureDatabase(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("auth.oauth.kakao.client-id", () -> "test-client");
+        registry.add("auth.oauth.kakao.client-secret", () -> "test-secret");
+        registry.add("auth.oauth.kakao.redirect-uri",
+                () -> "https://example.com/api/auth/oauth/KAKAO/callback");
     }
 
     @BeforeEach
     void clearMembers() {
+        jdbcTemplate.update("DELETE FROM oauth_attempts");
         jdbcTemplate.update("DELETE FROM refresh_tokens");
         jdbcTemplate.update("DELETE FROM members");
+    }
+
+    @Test
+    @DisplayName("OAuth 콜백은 시작한 회원의 세션과 제공자가 일치할 때 한 번만 검증한다")
+    void verifiesOAuthCallbackOnceForStartingSession() throws Exception {
+        var login = mvc.perform(post("/api/auth/login")).andReturn();
+        String accessToken = objectMapper.readTree(login.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+        Cookie cookie = login.getResponse().getCookie("refresh_token");
+        Cookie otherCookie = startAnonymous().refreshCookie();
+        String startPath = "/api/auth/oauth/KAKAO/start";
+        String callbackPath = "/api/auth/oauth/KAKAO/callback";
+
+        mvc.perform(post(startPath).cookie(cookie)).andExpect(status().isUnauthorized());
+        mvc.perform(post(startPath).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken).cookie(otherCookie))
+                .andExpect(status().isUnauthorized());
+
+        var started = mvc.perform(post(startPath).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .cookie(cookie))
+                .andExpect(status().isOk()).andReturn();
+        String url = objectMapper.readTree(started.getResponse().getContentAsString())
+                .path("data").path("authorizationUrl").asText();
+        var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
+        String state = params.getFirst("state");
+        String nonce = params.getFirst("nonce");
+        assertThat(state).isNotBlank().isNotEqualTo(nonce);
+        doReturn("external-user").when(oauthProviderClient)
+                .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(nonce));
+
+        mvc.perform(get(callbackPath).cookie(otherCookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/oauth/APPLE/callback").cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("OAUTH_AUTHENTICATION_FAILED"));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM member_identities", Long.class)).isZero();
     }
 
     @Test
