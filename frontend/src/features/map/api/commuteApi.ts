@@ -182,5 +182,9 @@ export const commuteAreaToRegion = (area: CommuteArea): MapRegion => ({
   },
 });
 
+// `toLocaleString`은 부를 때마다 숫자 형식기를 새로 준비한다. 통근 결과의 동 수백 개를 지도 영역으로 바꿀 때 한 번에
+// 수백 번 불러 분석 직후 긴 작업이 길어지므로 형식기 하나를 만들어 둔다.
+const manwonNumberFormat = new Intl.NumberFormat('ko-KR');
+
 /** 원 단위 금액을 만원 단위 문구로 바꾼다. */
-export const formatManwon = (krw: number) => `${Math.round(krw / 10000).toLocaleString('ko-KR')}만원`;
+export const formatManwon = (krw: number) => `${manwonNumberFormat.format(Math.round(krw / 10000))}만원`;
