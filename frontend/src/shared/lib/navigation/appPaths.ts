@@ -13,6 +13,7 @@ export const RECORDS_PATH = '/properties';
 export const CHECKLISTS_PATH = '/checklists';
 export const MY_PATH = '/me';
 export const COMPARE_PATH = '/compare';
+/** 저렴한 한 끼. 탭마다 주소가 따로 있고(`/cheap-meals/restaurant` 등), 탭 없이 들어오면 마지막으로 연 탭(처음이면 식당 탭) 주소로 바꾼다. */
 export const CHEAP_MEALS_PATH = '/cheap-meals';
 export const GUIDE_PATH = '/guide';
 export const PRIVACY_PATH = '/privacy';
@@ -46,6 +47,7 @@ export const ROUTE_PATTERNS = {
   legacyExploreCommute: '/explore/commute/*',
   legacyExplorePrice: '/explore/price/*',
   legacyNeighborhoodsMap: '/neighborhoods/map/*',
+  cheapMeals: '/cheap-meals/:mealTab?',
   area: 'areas/:adminDongCode',
   areaDetails: 'areas/:adminDongCode/details',
   notFound: '*',
@@ -62,6 +64,9 @@ export const propertyActiveChecklistPath = (propertyId: PathId, stage: string) =
 export const propertyChecklistPath = (propertyId: PathId, propertyChecklistId: PathId) =>
   `${propertyDetailPath(propertyId)}/checklists/${propertyChecklistId}`;
 
+/** 저렴한 한 끼 탭 주소. 탭 이름은 `restaurant`, `convenience`, `delivery`이다. */
+export const cheapMealsTabPath = (tab: string) => `${CHEAP_MEALS_PATH}/${tab}`;
+
 /** 동네 찾기 주소. 회원은 `/neighborhoods`, 공개는 `/explore`이다. */
 export type NeighborhoodBasePath = typeof EXPLORE_PATH | typeof NEIGHBORHOODS_PATH;
 export const neighborhoodAreaPath = (base: string, adminDongCode: PathId) => `${base}/areas/${adminDongCode}`;
@@ -74,5 +79,8 @@ export const PROPERTY_DETAIL_TAB_PARAM = 'tab';
 export const RECORDS_VIEW_PARAM = 'view';
 /** 본 방 기록을 지도 보기로 연다. 매물은 지도의 빈 곳을 눌러 등록한다. */
 export const RECORDS_MAP_PATH = `${RECORDS_PATH}?${RECORDS_VIEW_PARAM}=map`;
-/** 저렴한 한 끼 탭(`?tab=`). */
+/** 예전 저렴한 한 끼 탭(`/cheap-meals?tab=`). 들어오면 탭 주소로 바꾼다. */
 export const CHEAP_MEALS_TAB_PARAM = 'tab';
+/** 저렴한 한 끼 식당 탭에서 연 가게 상세(`?store=`)와 주소 검색(`?search=1`). 식당 탭 주소에만 붙는다. */
+export const CHEAP_MEALS_STORE_PARAM = 'store';
+export const CHEAP_MEALS_SEARCH_PARAM = 'search';

@@ -3,10 +3,11 @@ import { css, cx } from '@emotion/css';
 import useAddressSearch from '@/features/map/api/useAddressSearch';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
+import MapCurrentLocationButton from '@/features/map/ui/map-current-location-button/MapCurrentLocationButton';
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 import { Button } from '@/shared/ui/button/Button';
-import EmptyState from '@/shared/ui/empty-state/EmptyState';
+import ContentState from '@/shared/ui/content-state/ContentState';
 import Icon from '@/shared/ui/icon/Icon';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
@@ -15,6 +16,8 @@ import SearchField from '@/shared/ui/search-field/SearchField';
 
 import type { MealLayout } from '../hooks/useMealTabs';
 import useRestaurantMap from '../hooks/useRestaurantMap';
+import BusinessTypeChips from './business-type-chips/BusinessTypeChips';
+import MealEmptyState from './MealEmptyState';
 import MealSheet from './MealSheet';
 import StoreCard from './store-card/StoreCard';
 import StoreDetail from './store-detail/StoreDetail';
@@ -30,32 +33,35 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   const search = useAddressSearch();
   const data = map.query.isError ? undefined : map.query.data;
   const locate = () => void map.locate();
-  const controls = (
-    <div className={styles.controls}>
-      {/* 검색창과 현재 위치를 한 줄에 두고 안내 문구를 바로 아래에 붙여 지도 위 빈 줄을 줄인다. */}
-      <div className={styles.row}>
-        <button type="button" className={styles.search} onClick={map.openSearch}>
-          <Icon name="search" size={18} />
-          <span>{map.area.label}</span>
-          <small>주소 검색</small>
-        </button>
-        <button
-          type="button"
-          className={styles.locate}
-          disabled={map.isLocating}
-          onClick={locate}
-          aria-label="현재 위치로 찾기"
-        >
-          <Icon name="locate" size={19} />
-          {map.isLocating ? '확인 중' : '현재 위치'}
-        </button>
-      </div>
-      <p className={styles.hint}>음식점 외 업종도 있어요. 가게별 업종을 확인해 주세요.</p>
-      {map.locationError && (
-        <p className={styles.hint} role="alert">
-          {map.locationError}
+  const searchButton = (
+    <button
+      type="button"
+      className={cx(styles.search, layout === 'desktop' && styles.searchDesktop)}
+      onClick={map.openSearch}
+    >
+      <Icon name="search" size={18} />
+      <span>{map.area.label}</span>
+      <small>주소 검색</small>
+    </button>
+  );
+  const chips = (
+    <BusinessTypeChips
+      floating={layout === 'mobile'}
+      types={map.businessTypes}
+      selected={map.businessType}
+      total={data?.count ?? 0}
+      onSelect={map.selectBusinessType}
+    />
+  );
+  // 다른 지도 화면처럼 현재 위치는 지도 위 동그란 공용 버튼으로 두고, 확인 중이거나 실패하면 그 옆에 짧게 알린다.
+  const locationControl = (
+    <div className={cx(styles.location, layout === 'desktop' && styles.locationDesktop)}>
+      {(map.isLocating || map.locationError) && (
+        <p className={styles.locationStatus} role={map.locationError ? 'alert' : 'status'}>
+          {map.isLocating ? '현재 위치를 확인하는 중이에요.' : map.locationError}
         </p>
       )}
+      <MapCurrentLocationButton isLocating={map.isLocating} onClick={locate} />
     </div>
   );
   const mapView = (
@@ -80,14 +86,15 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   const storeList = isLoadingVisible ? (
     <ProgressCircle size={24} label="주변 가게를 찾고 있어요." />
   ) : map.query.isError ? (
-    <div role="alert">
-      <p>가게 정보를 불러오지 못했어요.</p>
-      <Button onClick={() => void map.query.refetch()}>다시 시도</Button>
-    </div>
+    <ContentState
+      page={false}
+      tone="error"
+      title="가게 정보를 불러오지 못했어요"
+      description="연결 상태를 확인하고 다시 시도해 주세요."
+      onRetry={() => void map.query.refetch()}
+    />
   ) : data?.count === 0 ? (
-    <EmptyState
-      variant="plain"
-      icon="map"
+    <MealEmptyState
       title="이 반경 안에 등록된 가게가 없어요"
       description="지도를 옮겨 다시 찾거나 다른 동네를 검색해 보세요."
       action={
@@ -96,11 +103,21 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
         </Button>
       }
     />
+  ) : map.stores.length === 0 ? (
+    <MealEmptyState
+      title={`이 반경 안에 ${map.businessType ?? ''} 가게가 없어요`}
+      description="다른 업종을 고르거나 전체 업종으로 다시 살펴보세요."
+      action={
+        <Button variant="secondary" onClick={() => map.selectBusinessType(null)}>
+          전체 업종 보기
+        </Button>
+      }
+    />
   ) : (
     <>
       <p className={styles.notice}>가까운 순 · 기준 위치에서 직선거리 · 등록 가격</p>
       <ul className={styles.list} aria-label="가게 목록">
-        {data?.stores.map((store) => (
+        {map.stores.map((store) => (
           <li key={store.id}>
             <StoreCard store={store} onSelect={map.openStore} />
           </li>
@@ -109,7 +126,7 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
       <InlineNotice>
         행정안전부 착한가격업소 현황 · {data?.dataAsOf ?? '기준일 정보 없음'}
         <br />
-        방문 전 가격과 영업 여부를 확인해 주세요.
+        음식점 외 업종도 있어요. 방문 전 업종과 가격, 영업 여부를 확인해 주세요.
       </InlineNotice>
     </>
   );
@@ -151,9 +168,12 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
           className={styles.desktopLayout}
           list={
             <div className={styles.desktopList}>
-              {controls}
+              <div className={styles.desktopControls}>
+                {searchButton}
+                {chips}
+              </div>
               <div className={styles.desktopStores}>
-                <h2 className={styles.desktopTitle}>착한가격 가게 {data?.count ?? 0}곳</h2>
+                <h2 className={styles.desktopTitle}>착한가격 가게 {map.stores.length}곳</h2>
                 {storeList}
               </div>
             </div>
@@ -169,7 +189,10 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
           onCloseDetail={map.closeOverlay}
           closeLabel="가게 상세 닫기"
         >
-          <div className={cx(styles.map, styles.desktopMap)}>{mapView}</div>
+          <div className={cx(styles.map, styles.desktopMap)}>
+            {mapView}
+            {locationControl}
+          </div>
         </ListDetailLayout>
         {searchSheet}
       </section>
@@ -178,16 +201,21 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
 
   return (
     <section className={styles.panel} aria-label="주변 착한가격업소">
-      {controls}
       <div className={styles.map}>
         {mapView}
+        {/* 검색창과 업종 칩은 흰 띠 없이 지도 위에 띄운다. */}
+        <div className={styles.overlay}>
+          {searchButton}
+          {chips}
+          {locationControl}
+        </div>
         {!map.isListOpen ? (
-          <button type="button" className={styles.showList} onClick={map.openList}>
-            가게 목록 보기 {data ? `· ${data.count}곳` : ''}
-          </button>
+          <Button className={styles.showList} onClick={map.openList}>
+            가게 목록 보기 {data ? `${map.stores.length}곳` : ''}
+          </Button>
         ) : (
           <BottomSheet
-            title={map.selectedStore?.name ?? `착한가격 가게 ${data?.count ?? 0}곳`}
+            title={map.selectedStore?.name ?? `착한가격 가게 ${map.stores.length}곳`}
             initialHeightPercent={40}
             onClose={() => {
               if (map.selectedStore) map.closeOverlay();
@@ -218,24 +246,35 @@ const styles = {
     flex-direction: column;
     min-height: 0;
   `,
-  controls: css`
-    label: RestaurantPanel-controls;
-    padding: 0.8rem 1rem 0.6rem;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--color-border);
+  /* 휴대폰은 검색창, 업종 칩, 현재 위치를 지도 위에 띄운다. 빈 곳은 지도를 그대로 만질 수 있게 둔다. */
+  overlay: css`
+    label: RestaurantPanel-overlay;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 0.85rem 0;
+    pointer-events: none;
+    & > * {
+      pointer-events: auto;
+    }
   `,
   search: css`
     label: RestaurantPanel-search;
     display: flex;
-    flex: 1;
+    width: 100%;
     min-width: 0;
     align-items: center;
     gap: 0.55rem;
     min-height: 44px;
     padding: 0.6rem 0.8rem;
-    border: 0;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-search-surface);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-floating);
     color: var(--color-ink);
     font: inherit;
     cursor: pointer;
@@ -249,40 +288,52 @@ const styles = {
     }
     & small {
       flex-shrink: 0;
+      color: var(--color-ink-soft);
       font-size: 0.7rem;
     }
   `,
-  row: css`
-    label: RestaurantPanel-row;
+  location: css`
+    label: RestaurantPanel-location;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    justify-self: end;
   `,
-  locate: css`
-    label: RestaurantPanel-locate;
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 0.3rem;
-    min-height: 44px;
-    padding: 0.4rem;
-    background: none;
-    border: 0;
+  /* 데스크탑은 지도 칸 오른쪽 아래에 둔다. */
+  locationDesktop: css`
+    label: RestaurantPanel-locationDesktop;
+    position: absolute;
+    right: 1rem;
+    bottom: 1.5rem;
+    z-index: 20;
+  `,
+  locationStatus: css`
+    label: RestaurantPanel-locationStatus;
+    max-width: 16rem;
+    margin: 0;
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-floating);
     color: var(--color-ink);
-    font-size: 0.75rem;
-    cursor: pointer;
-  `,
-  hint: css`
-    label: RestaurantPanel-hint;
-    font-size: 0.7rem;
-    color: var(--color-ink-soft);
-    line-height: 1.5;
-    margin: 0.4rem 0 0;
-    /* 좁은 칸이나 큰 글씨에서 줄이 넘어가도 낱말 가운데서 끊지 않는다. */
+    font-size: 0.72rem;
+    line-height: 1.45;
     word-break: keep-all;
-    & + & {
-      margin-top: 0.15rem;
-    }
+  `,
+  desktopControls: css`
+    label: RestaurantPanel-desktopControls;
+    display: grid;
+    gap: 0.6rem;
+    padding: 1rem 1rem 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+  `,
+  /* 데스크탑 목록 칸에서는 띄우지 않고 다른 검색창처럼 회색 바탕에 둔다. */
+  searchDesktop: css`
+    label: RestaurantPanel-searchDesktop;
+    border-color: transparent;
+    background: var(--color-search-surface);
+    box-shadow: none;
   `,
   notice: css`
     label: RestaurantPanel-notice;
@@ -311,13 +362,8 @@ const styles = {
     left: 50%;
     transform: translateX(-50%);
     z-index: 25;
-    min-height: 44px;
-    padding: 0.7rem 1.2rem;
-    border: 0;
     border-radius: 99px;
-    background: var(--color-action);
-    color: var(--color-on-action);
-    cursor: pointer;
+    box-shadow: var(--shadow-floating);
     white-space: nowrap;
   `,
   list: css`

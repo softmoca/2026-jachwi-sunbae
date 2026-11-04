@@ -43,6 +43,6 @@ export const badge = css`
   border-radius: 0.4rem;
   font-size: 0.75rem;
   font-weight: 800;
-  background: color-mix(in srgb, var(--color-brand-yellow) 24%, white);
+  background: color-mix(in srgb, var(--color-brand-yellow) 24%, var(--color-surface));
   color: var(--color-ink);
 `;
