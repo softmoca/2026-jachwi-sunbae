@@ -5,6 +5,7 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { clampToSouthKorea } from '../lib/mapLocation';
 import { createMapMarkerLayer } from '../lib/mapMarkerLayer';
 import { COORDINATE_ACTION_Z_INDEX, COORDINATE_MENU_Z_INDEX } from '../lib/mapMarkerPresentation';
+import { pinchLevelDelta } from '../lib/mapPinchZoom';
 import { createMapRegionLayer, READY_TIMEOUT_MS } from '../lib/mapRegionLayer';
 import {
   isNaverSdkAvailable,
@@ -314,6 +315,41 @@ const useNaverMap = ({
       observer.disconnect();
       pendingRelayoutRef.current = null;
       if (relayoutFrame !== null) window.cancelAnimationFrame(relayoutFrame);
+    };
+  }, [engine, liveMode, mapReady]);
+
+  // 트랙패드 핀치(ctrl+휠)는 Naver 기본 처리가 손가락보다 훨씬 덜 움직여(deltaY -400에 0.64단계) 직접 받는다.
+  // 손가락을 벌린 비율만큼 확대하고 커서 자리를 제자리에 둔다. ctrl 없는 휠과 터치 핀치는 SDK에 그대로 맡긴다.
+  useEffect(() => {
+    const container = containerRef.current;
+    const map = mapRef.current;
+    if (!liveMode || !mapReady || container === null || map === null) return;
+    let pending = 0;
+    let offset = { x: 0, y: 0 };
+    let frame: number | null = null;
+    const apply = () => {
+      frame = null;
+      const delta = pending;
+      pending = 0;
+      if (delta === 0 || mapRef.current !== map || !isNaverSdkAvailable()) return;
+      engine.zoomAround(map, delta, offset);
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || !isNaverSdkAvailable()) return;
+      // SDK가 지원하지 않으면 기본 처리에 맡긴다.
+      if (typeof map.zoomBy !== 'function') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = container.getBoundingClientRect();
+      offset = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      pending += pinchLevelDelta(event.deltaY, event.deltaMode);
+      // 한 프레임에 온 이벤트는 모아 한 번만 옮긴다.
+      frame ??= window.requestAnimationFrame(apply);
+    };
+    container.addEventListener('wheel', onWheel, { capture: true, passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheel, { capture: true });
+      if (frame !== null) window.cancelAnimationFrame(frame);
     };
   }, [engine, liveMode, mapReady]);
 

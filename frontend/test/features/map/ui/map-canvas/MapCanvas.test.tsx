@@ -87,6 +87,7 @@ describe('Naver 지도 상태 동기화', () => {
     refresh: ReturnType<typeof vi.fn>;
     autoResize: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
+    container: HTMLElement;
   };
   let maps: FakeMapInstance[];
   let mapOptions: unknown[];
@@ -111,7 +112,10 @@ describe('Naver 지도 상태 동기화', () => {
       autoResize = vi.fn();
       destroy = vi.fn();
 
-      constructor(_: HTMLElement, options: { center: FakeLatLng; zoom: number }) {
+      container: HTMLElement;
+
+      constructor(container: HTMLElement, options: { center: FakeLatLng; zoom: number }) {
+        this.container = container;
         mapOptions.push(options);
         this.center = options.center;
         this.zoom = options.zoom;
@@ -516,6 +520,50 @@ describe('Naver 지도 상태 동기화', () => {
     act(() => idle());
     expect(onCenterChange).not.toHaveBeenCalled();
     await waitFor(() => expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03), { timeout: 1500 });
+  });
+
+  it('트랙패드 핀치(ctrl+휠)는 직접 받아 deltaY에 비례해 커서 자리를 기준으로 확대하고, ctrl 없는 휠은 SDK에 맡긴다', async () => {
+    renderWithConfig(<MapCanvas center={{ latitude: 37.5, longitude: 127 }} level={5} />);
+    await waitFor(() => expect(maps).toHaveLength(1));
+    const zoomBy = vi.fn();
+    const fromOffsetToCoord = vi.fn((point: { x: number; y: number }) => new FakeLatLng(point.y, point.x));
+    Object.assign(maps[0], { zoomBy, getProjection: () => ({ fromOffsetToCoord }) });
+    Object.assign(window.naver!.maps, {
+      Point: class {
+        constructor(
+          readonly x: number,
+          readonly y: number,
+        ) {}
+      },
+    });
+    const { container } = maps[0];
+
+    const plain = new WheelEvent('wheel', { deltaY: -100, cancelable: true, bubbles: true });
+    container.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(false);
+
+    const pinch = (deltaY: number) => {
+      const event = new WheelEvent('wheel', {
+        deltaY,
+        ctrlKey: true,
+        clientX: 30,
+        clientY: 40,
+        cancelable: true,
+        bubbles: true,
+      });
+      container.dispatchEvent(event);
+      return event;
+    };
+    expect(pinch(-20).defaultPrevented).toBe(true);
+    pinch(-20);
+    await act(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    // 한 프레임에 온 두 이벤트(deltaY -40)를 모아 Naver zoom을 40 / (100 ln 2)만큼 올린다.
+    expect(zoomBy).toHaveBeenCalledOnce();
+    expect(zoomBy.mock.calls[0][0]).toBeCloseTo(40 / (100 * Math.LN2), 5);
+    expect(fromOffsetToCoord).toHaveBeenCalledWith(expect.objectContaining({ x: 30, y: 40 }));
+    expect(zoomBy.mock.calls[0][2]).toBe(false);
   });
 
   it('앱 확대 단계를 반대 방향인 Naver zoom으로 바꿔 전달한다', async () => {
