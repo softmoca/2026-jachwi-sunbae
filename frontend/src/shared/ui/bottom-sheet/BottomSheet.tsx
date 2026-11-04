@@ -207,6 +207,10 @@ const styles = {
       background: var(--color-surface);
       color: var(--color-ink);
       box-shadow: 0 -0.35rem 1.4rem rgb(0 0 0 / 12%);
+      /* 아이폰 사파리는 GL 지도 캔버스 위에 겹친 시트를 겹침 때문에 뒤늦게 레이어로 올리면서, 첫 터치 전까지 배경을 칠하지 않아
+         양옆이 비어 보였다(#546). 처음부터 시트를 자기 레이어로 올려 만들 때 칠하게 한다. 끄는 동안은 인라인 translateY가 이 값을 덮는다. */
+      transform: translateZ(0);
+      backface-visibility: hidden;
       /* 시트 위로 띄운 버튼(floating)이 잘리지 않게 넘치는 것은 자르지 않는다. 내용은 content 안에서 스크롤한다. */
 
       &[data-mode='expanded'] {
