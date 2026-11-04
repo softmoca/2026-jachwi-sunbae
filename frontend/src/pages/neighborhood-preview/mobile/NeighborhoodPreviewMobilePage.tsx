@@ -17,7 +17,6 @@ import useNeighborhoodMapView from '../hooks/useNeighborhoodMapView';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
 import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
 import { areaCardDescription, emptyAreaMessage, placesHint, rentLabel, transferLabel } from '../model/criteriaLabels';
-import { STATION_FOCUS_LEVEL } from '../model/resultMapView';
 import type { NeighborhoodFilterField } from '../NeighborhoodFilters';
 import NeighborhoodFilters, { NeighborhoodFilterPicker } from '../NeighborhoodFilters';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
@@ -280,7 +279,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 onSelectStation={(station) => {
                   places.selectStation(areaStation(station));
                   preview.selectStation(station.stopId);
-                  preview.focusResultPoint(station, STATION_FOCUS_LEVEL);
+                  preview.focusRoute(station);
                 }}
                 onBack={places.closePlace}
                 onClose={() => {

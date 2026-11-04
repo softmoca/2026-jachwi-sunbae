@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   AREA_FOCUS_FALLBACK_LEVEL,
@@ -9,7 +9,9 @@ import {
   nextPlacesVisible,
   PLACES_HIDE_LEVEL,
   PLACES_SHOW_LEVEL,
+  RESULT_OVERVIEW_LEVEL,
   resultMapCenter,
+  routeFocusView,
 } from '@/pages/neighborhood-preview/model/resultMapView';
 
 it('지도 중심은 남쪽으로 옮겨 결과 위치가 중앙보다 위에 표시된다', () => {
@@ -72,4 +74,37 @@ it('마커는 6.5 이하에서 올리고, 올린 뒤에는 7을 넘어야 거둔
   expect(nextPlacesVisible(false, PLACES_SHOW_LEVEL + 1e-7)).toBe(true);
   expect(nextPlacesVisible(true, PLACES_HIDE_LEVEL)).toBe(true);
   expect(nextPlacesVisible(true, 7.11)).toBe(false);
+});
+
+describe('routeFocusView', () => {
+  const destination = { latitude: 37.3958, longitude: 127.111 };
+  // 위도 0.01도는 약 1.1km다.
+  const northOf = (km: number) => ({ latitude: destination.latitude + km / 111.32, longitude: destination.longitude });
+
+  it('출발 정류장에서 출퇴근 장소까지 경로가 길면 동네만 볼 때(6.5)보다 멀리 본다', () => {
+    const view = routeFocusView([northOf(8), destination]);
+    expect(view.level).toBeGreaterThan(AREA_FOCUS_MAX_LEVEL);
+    expect(view.level).toBeLessThanOrEqual(RESULT_OVERVIEW_LEVEL);
+  });
+
+  it('경로가 길수록 더 멀리 보고, 너무 가깝거나 멀지 않게 5~10단계 안으로 자른다', () => {
+    expect(routeFocusView([northOf(4), destination]).level).toBeLessThan(
+      routeFocusView([northOf(8), destination]).level,
+    );
+    expect(routeFocusView([northOf(0.05), destination]).level).toBe(AREA_FOCUS_MIN_LEVEL);
+    expect(routeFocusView([northOf(300), destination]).level).toBe(RESULT_OVERVIEW_LEVEL);
+  });
+
+  it('범위 가운데를 아래 시트만큼 위로 올려 둔다', () => {
+    const start = northOf(8);
+    const view = routeFocusView([start, destination]);
+    const middle = { latitude: (start.latitude + destination.latitude) / 2, longitude: destination.longitude };
+    expect(view).toEqual({ ...resultMapCenter(middle, view.level), level: view.level });
+  });
+
+  it('동네 경계를 함께 주면 경계 바깥 끝까지 화면에 담는다', () => {
+    const narrow = routeFocusView([northOf(1), destination]);
+    const withArea = routeFocusView([northOf(1), destination], squareArea(6000));
+    expect(withArea.level).toBeGreaterThan(narrow.level);
+  });
 });

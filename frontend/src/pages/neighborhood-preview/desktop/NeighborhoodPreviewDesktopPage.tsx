@@ -16,7 +16,6 @@ import type { AreaStation } from '../hooks/useNeighborhoodPlaces';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
 import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
 import { areaCardDescription, emptyAreaMessage, placesHint, transferLabel } from '../model/criteriaLabels';
-import { STATION_FOCUS_LEVEL } from '../model/resultMapView';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
 import AreaSummary, { areaStation } from '../ui/area-summary/AreaSummary';
 import ConditionPanel from '../ui/condition-panel/ConditionPanel';
@@ -53,7 +52,7 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
     places.selectStation(station);
     // 출발 정류장을 바꾼 지표(commute_departure_station_changed)는 동네 요약 목록에서 고를 때 남긴다.
     preview.selectStation(station.stopId);
-    preview.focusResultPoint(station, STATION_FOCUS_LEVEL);
+    preview.focusRoute(station);
   };
   // 정보 칸에서 같은 동네의 앞뒤 출발 정류장으로 넘긴다.
   const areaStations = preview.selected?.stations ?? [];

@@ -10,6 +10,7 @@ import { successEnvelope } from '@/app/mocks/fixtures/propertyFixtures';
 import { createCommuteAreaHandlers } from '@/app/mocks/handlers/commuteAreaHandlers';
 import { mapHandlers } from '@/app/mocks/handlers/mapHandlers';
 import { createStreetMemoHandlers } from '@/app/mocks/handlers/streetMemoHandlers';
+import { routeFocusView } from '@/pages/neighborhood-preview/model/resultMapView';
 import NeighborhoodPreviewPage from '@/pages/neighborhood-preview/NeighborhoodPreviewPage';
 import NeighborhoodRoutePage from '@/pages/neighborhood-preview/NeighborhoodRoutePage';
 import { MapLocationError, readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
@@ -45,6 +46,9 @@ vi.mock('@/features/map/ui/map-canvas/MapCanvas', async () => {
         )}
         <output aria-label="지도 시점">{JSON.stringify({ center: props.center, level: props.level })}</output>
         <output aria-label="목적지 좌표">{JSON.stringify(props.markers)}</output>
+        <output aria-label="고른 동네 경계">
+          {JSON.stringify(props.regions?.find((region) => region.id === props.selectedRegionId)?.polygons ?? [])}
+        </output>
         <output aria-label="지도 스타일">{props.customStyleId}</output>
         {props.coordinateAction && (
           <button onClick={props.coordinateAction.onClick} disabled={props.coordinateAction.disabled}>
@@ -183,6 +187,30 @@ const show = (isPublic = false, entries?: string[]) => {
     </PublicConfigProvider>,
   );
   return result;
+};
+/** 역삼1동의 첫 출발 정류장(픽스처). 동네를 고르면 이 정류장까지 경로가 보이게 지도를 옮긴다. */
+const YEOKSAM_STATION = { latitude: 37.5006, longitude: 127.0364 };
+/**
+ * 지도에 넘어간 시점이 출퇴근 장소부터 출발 정류장(동네를 골랐으면 그 경계까지)을 모두 담는 경로 시점인지 본다.
+ * 경로보다 가깝게 다가가면 출퇴근 장소가 화면 밖으로 나간다.
+ */
+const expectRouteView = (station: { latitude: number; longitude: number }, withArea: boolean) => {
+  const view = JSON.parse(screen.getByLabelText('지도 시점').textContent ?? '{}') as {
+    center: { latitude: number; longitude: number };
+    level: number;
+  };
+  const destination = (
+    JSON.parse(screen.getByLabelText('목적지 좌표').textContent ?? '[]') as {
+      id: string;
+      latitude: number;
+      longitude: number;
+    }[]
+  ).find((marker) => marker.id === 'destination')!;
+  const polygons = withArea ? JSON.parse(screen.getByLabelText('고른 동네 경계').textContent ?? '[]') : [];
+  const expected = routeFocusView([destination, station], polygons);
+  expect(view.level).toBeCloseTo(expected.level, 6);
+  expect(view.center.latitude).toBeCloseTo(expected.latitude, 6);
+  expect(view.center.longitude).toBeCloseTo(expected.longitude, 6);
 };
 const choosePoint = async () => {
   const user = userEvent.setup();
@@ -555,8 +583,8 @@ it('통근 필터·조회·동네 선택 및 닫기에도 결과와 시점을 �
   expect(screen.queryByRole('button', { name: '정자동' })).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: '역삼1동' }));
   expect(screen.getByRole('region', { name: '행정동 프리셋 지도' })).toBeInTheDocument();
-  // 동네 경계 전체가 보이게 다가가되, 큰 동네도 마커를 올리는 단계(6.5)보다 멀리 가지 않는다.
-  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":6.5');
+  // 동네 경계와 첫 출발 정류장부터 출퇴근 장소까지 경로 전체가 보이게 옮긴다.
+  expectRouteView(YEOKSAM_STATION, true);
   // 휴대폰은 동네를 고르면 지도 위 말풍선 대신 아래에 정류장·공인중개사 탭 시트를 올린다.
   expect(screen.getByRole('list', { name: '역삼1동 출발 정류장' })).toBeInTheDocument();
   // 동네 대중교통 상세로 넘기는 버튼과 닫기 버튼은 두지 않는다.
@@ -590,7 +618,7 @@ it('상위 동네 카드를 고르면 시트에서 출발 정류장을 골라 �
   await user.click(stop.getByRole('button', { name: '뒤로 가기' }));
   expect(screen.getByRole('list', { name: '역삼1동 출발 정류장' })).toBeInTheDocument();
 });
-it('데스크탑은 출발 정류장을 고르면 지도를 그 정류장으로 확대하고, 정보 칸의 < >로 다른 출발 정류장을 넘긴다', async () => {
+it('데스크탑은 출발 정류장을 고르면 그 정류장부터 출퇴근 장소까지 경로가 보이게 지도를 옮기고, 정보 칸의 < >로 다른 출발 정류장을 넘긴다', async () => {
   const matchMedia = useDesktopViewport();
   try {
     show();
@@ -599,9 +627,8 @@ it('데스크탑은 출발 정류장을 고르면 지도를 그 정류장으로 
     await user.click(await screen.findByRole('button', { name: /1위 역삼1동/ }));
     const summary = within(screen.getByRole('region', { name: '역삼1동 요약' }));
     await user.click(summary.getByRole('button', { name: /^역삼역\s?3분$/ }));
-    // 정류장 단계(3)로 다가가고, 고른 정류장은 확대 단계와 상관없이 지도에 따로 찍는다.
-    expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":3');
-    expect(screen.getByLabelText('지도 시점')).toHaveTextContent('127.0364');
+    // 정류장부터 출퇴근 장소까지 경로 전체가 보이게 옮기고, 고른 정류장은 확대 단계와 상관없이 지도에 따로 찍는다.
+    expectRouteView(YEOKSAM_STATION, false);
     expect(JSON.parse(screen.getByLabelText('목적지 좌표').textContent ?? '[]')).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'station:RS_ACC1_S-2-0222', label: '역삼역', latitude: 37.5006 }),
@@ -615,7 +642,8 @@ it('데스크탑은 출발 정류장을 고르면 지도를 그 정류장으로 
     const next = within(await screen.findByRole('region', { name: /역삼역\.포스코센터 .*정보/ }));
     expect(next.getByText('2 / 2')).toBeInTheDocument();
     expect(next.getByRole('button', { name: '다음 정류장' })).toBeDisabled();
-    expect(screen.getByLabelText('지도 시점')).toHaveTextContent('127.0399');
+    // 다음 정류장으로 넘기면 그 정류장부터 출퇴근 장소까지 경로가 보이게 다시 옮긴다.
+    expectRouteView({ latitude: 37.5021, longitude: 127.0399 }, false);
     await user.click(next.getByRole('button', { name: '이전 정류장' }));
     expect(await screen.findByRole('region', { name: '역삼역 정보' })).toBeInTheDocument();
   } finally {
@@ -773,9 +801,9 @@ it('휴대폰은 동네를 고르면 출발 정류장 시트를 올리고, 고�
   // 공인중개사 탭 없이 그 동네의 출발 정류장 목록만 둔다.
   expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   const stations = () => within(screen.getByRole('list', { name: '역삼1동 출발 정류장' }));
-  // 출발 정류장을 고르면 그 정류장으로 확대하고 시트 안에서 경로를 본다.
+  // 출발 정류장을 고르면 그 정류장부터 출퇴근 장소까지 경로가 보이게 옮기고 시트 안에서 경로를 본다.
   await user.click(stations().getByRole('button', { name: /역삼역\s?3분/ }));
-  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":3');
+  expectRouteView(YEOKSAM_STATION, false);
   const stop = within(await screen.findByRole('region', { name: '역삼역 정보' }));
   expect(await stop.findByLabelText('대중교통 경로')).toHaveTextContent('예상');
   expect(screen.queryByRole('list', { name: '역삼1동 출발 정류장' })).not.toBeInTheDocument();
@@ -793,8 +821,9 @@ it('동네를 고르면 그 동네로 다가가 확대하지 않아도 마커를
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
   await user.click(await screen.findByRole('button', { name: /1위 역삼1동/ }));
-  // 동네를 고르면 경계에 맞춘 단계로 다가가고, 이동이 끝나면(idle) 그 단계와 화면 범위를 알린다. 6.5는 마커를 올리는 단계 안이다.
-  expect(screen.getByLabelText('지도 시점')).toHaveTextContent('"level":6.5');
+  // 동네를 고르면 경로 전체가 보이게 옮기고, 이동이 끝나면(idle) 그 단계와 화면 범위를 알린다.
+  // 지도가 마커를 올리는 단계(6.5) 안에 멈췄다고 알리면 정류장 마커를 올린다.
+  expectRouteView(YEOKSAM_STATION, true);
   await user.click(screen.getByRole('button', { name: '동네 보기 이동 끝' }));
   const categories = () =>
     new Set(
