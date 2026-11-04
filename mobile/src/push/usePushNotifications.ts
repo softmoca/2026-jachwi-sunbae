@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking } from 'react-native';
+import { Alert, AppState, Linking, Platform } from 'react-native';
 import {
   getInitialNotification,
   onMessage,
@@ -91,7 +91,10 @@ export const usePushNotifications = (
         .catch(() => undefined);
     });
     const received = onMessage(messaging, message => {
+      // iOS는 firebase.json의 포그라운드 표시 옵션으로 OS가 배너를 띄우고,
+      // 배너를 누르면 onNotificationOpenedApp으로 이동한다.
       if (
+        Platform.OS === 'ios' ||
         !active ||
         AppState.currentState !== 'active' ||
         !message.notification
