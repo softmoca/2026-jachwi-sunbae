@@ -45,76 +45,12 @@ export const comingSoon = css`
   font-weight: 600;
 `;
 
-/* 툴바 오른쪽의 목적지·통근 시간 버튼 묶음. */
+/* 툴바 오른쪽 묶음. 지금은 '필터 준비 중' 표시만 둔다. */
 export const toolbarActions = css`
   label: RecordList-toolbarActions;
   display: flex;
   flex: none;
   gap: 0.35rem;
-`;
-
-/* 목적지 거리를 켰을 때 툴바 아래에 기준 목적지와 바꾸기를 둔다. */
-export const destinationRow = css`
-  label: RecordList-destinationRow;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: -0.5rem 0 0.75rem;
-  color: #6b7079;
-  font-size: 0.78rem;
-
-  & span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  & button {
-    flex: none;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--color-brand-blue-ink, #3f6fc4);
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-`;
-
-export const destinationSearch = css`
-  label: RecordList-destinationSearch;
-  display: flex;
-  margin: -0.25rem 0 1rem;
-`;
-
-/* 출퇴근 장소까지 통근 시간과 목적지 거리를 켜고 끄는 버튼. 켜면 파랗게 칠한다. */
-export const commuteToggle = css`
-  label: RecordList-commuteToggle;
-  flex: none;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid #e3e5e9;
-  border-radius: 999px;
-  background: #fff;
-  color: #41444b;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-
-  &[aria-pressed='true'] {
-    border-color: var(--color-brand-blue-ink, #3f6fc4);
-    background: var(--color-brand-blue-ink, #3f6fc4);
-    color: #fff;
-  }
-`;
-
-export const commuteError = css`
-  label: RecordList-commuteError;
-  margin: -0.5rem 0 0.75rem;
-  color: var(--color-danger, #d14d4d);
-  font-size: 0.78rem;
 `;
 
 export const items = css`

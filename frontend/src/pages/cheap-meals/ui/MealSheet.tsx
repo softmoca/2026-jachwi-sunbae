@@ -107,7 +107,7 @@ const styles = {
     max-height: min(100% - 4rem, 44rem);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
-    box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+    box-shadow: var(--shadow-dialog);
     overflow: hidden;
   `,
   windowHeader: css`

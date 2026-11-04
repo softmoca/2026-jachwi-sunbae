@@ -23,8 +23,13 @@ const ProductImage = ({ src, name }: ProductImageProps) => {
   );
 };
 const styles = {
+  /*
+   * 받은 상품 사진을 자르거나 옮기지 않고 정사각형 칸 안에 통째로 넣는다.
+   * 세로로 긴 사진(세븐일레븐 등)은 칸 높이를 넘겨 아래가 잘렸으므로, 사진을 칸에 딱 맞춰 깔고 비율대로 줄인다.
+   */
   frame: css`
     label: ProductImage-frame;
+    position: relative;
     aspect-ratio: 1;
     width: 100%;
     display: grid;
@@ -33,6 +38,8 @@ const styles = {
     border-radius: var(--radius-md);
     background: var(--color-surface-muted);
     & img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: contain;

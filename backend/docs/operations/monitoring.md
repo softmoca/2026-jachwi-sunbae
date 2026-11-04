@@ -54,7 +54,7 @@ CPU 경보는 인스턴스 ID 대신 `jachwi-sunbae-{dev|prod}-asg`를 차원으
 ## 원칙
 
 - 알림은 담당자가 행동할 수 있는 조건에만 설정한다.
-- 로그에 비밀번호, 토큰, 개인정보와 전체 요청·응답 본문을 남기지 않는다.
+- 로그에 비밀번호와 토큰을 남기지 않는다. 요청·응답 본문은 실패한 요청에 한해 허용한 필드만 남긴다.
 - 관찰하려는 질문과 판단 기준을 수집 전에 정한다.
 - 사실로 관찰한 값과 팀의 해석을 구분해 기록한다.
 
@@ -103,7 +103,7 @@ Dev와 Prod는 각각 Spring의 `dev`·`prod` 프로필을 사용하며 두 프�
 | `/var/log/jachwi-sunbae/gc.log`                | JVM GC·safepoint 기록               | JVM이 5MB마다 순환하며 파일 3개 보관            |
 | `/var/log/jachwi-diagnostics/thread-dumps.log` | 운영자가 수집한 Thread Dump         | logrotate가 2MB마다 순환하며 5개 보존           |
 
-요청 로그에는 `request_id`, `http_method`, `path`, `status`, `duration_ms`를 기본 필드로 넣는다. 쿼리 문자열, Authorization 헤더, 요청·응답 본문은 기록하지 않는다. 애플리케이션 내부 예외 로그도 같은 `request_id`를 가지므로 요청 완료 로그와 연결할 수 있다.
+요청 로그에는 `request_id`, `http_method`, `path`, `status`, `duration_ms`를 기본 필드로 넣는다. 애플리케이션 내부 예외 로그도 같은 `request_id`를 가지므로 요청 완료 로그와 연결할 수 있다.
 
 서버 예외로 실패한 요청 로그에는 `error_type`과 `message`의 `HTTP request failed: <오류 메시지>`를 기록한다. 따라서 5xx 요청 목록에서 오류 메시지를 바로 확인할 수 있다. 자세한 호출 위치와 원인은 같은 `request_id`의 예외 로그에 있는 `error.stack_trace`를 확인한다. 예외 객체 없이 5xx 상태만 반환된 경우에는 원인 메시지가 없으므로 `HTTP request failed`만 남는다. HTTP 응답에는 내부 오류 메시지 대신 공개 오류 메시지를 사용한다.
 
@@ -209,7 +209,7 @@ sudo tail -n 100 /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.l
 ### 최근 5xx 요청
 
 ```text
-fields @timestamp, request_id, http_method, path, status, duration_ms, message, error_type
+fields @timestamp, request_id, http_method, path, status, duration_ms, message, error_type, query_string, request_body
 | filter status >= 500
 | sort @timestamp desc
 | limit 100
@@ -218,7 +218,7 @@ fields @timestamp, request_id, http_method, path, status, duration_ms, message, 
 ### 최근 4xx 요청
 
 ```text
-fields @timestamp, request_id, http_method, path, status, duration_ms, message
+fields @timestamp, request_id, http_method, path, status, duration_ms, message, query_string, request_body, response_body
 | filter status >= 400 and status < 500
 | sort @timestamp desc
 | limit 100

@@ -12,7 +12,7 @@ const RecordDeleteButton = ({ propertyId, onDone }: RecordDeleteButtonProps) => 
       onClick={() =>
         removeProperty.mutate(undefined, {
           onSuccess: () => onDone('기록을 삭제했어요.'),
-          onError: () => onDone('기록을 삭제하지 못했어요. 다시 시도해주세요.'),
+          onError: () => onDone('기록을 삭제하지 못했어요. 다시 시도해 주세요.'),
         })
       }
     >

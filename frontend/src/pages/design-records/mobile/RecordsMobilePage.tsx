@@ -83,8 +83,8 @@ const RecordsMobilePage = () => {
           ) : (
             <RecordsMobileHeader view={view} onViewChange={setView} onSearchOpen={() => setIsSearching(true)} />
           )}
-          {/* 목적지 모드에서는 동네 뱃지도 거둬 목적지 고르기만 남긴다. 기록을 받는 동안은 뼈대처럼 칩 줄을 두지 않는다. */}
-          {!records.properties.isPending && !(showsMap && layers.destination.isPicking) && (
+          {/* 기록을 받는 동안은 뼈대처럼 칩 줄을 두지 않는다. */}
+          {!records.properties.isPending && (
             <RecordDistricts
               districts={records.districts}
               district={records.district}
@@ -111,8 +111,6 @@ const RecordsMobilePage = () => {
               className={styles.list}
               records={records.records}
               district={records.district}
-              commute={records.commute}
-              distance={records.distance}
               onNotice={setNotice}
             />
           )}

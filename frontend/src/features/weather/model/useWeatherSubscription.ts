@@ -3,13 +3,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { reverseGeocode } from '@/features/map/api/mapApi';
 import type { MapCoordinate } from '@/features/map/lib/mapLocation';
-import { MapLocationError, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
+import { MapLocationError } from '@/features/map/lib/mapLocation';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { isRunningInNativeApp } from '@/shared/lib/native-app/nativeApp';
 import { NativePushError, openNativeSettings, supportsNativePush } from '@/shared/lib/native-app/nativePush';
 
 import { fetchWeatherForecast, syncWeatherLocation } from '../api/weatherApi';
 import { readLastWeatherCoordinate, writeLastWeatherCoordinate } from '../lib/lastWeatherCoordinate';
+import { requestWeatherLocation } from '../lib/weatherLocation';
 import { useWeatherPushSync } from './useWeatherPushSync';
 import { changeWeatherPush } from './weatherPush';
 import { weatherQueryKeys } from './weatherQueryKeys';
@@ -53,7 +54,7 @@ export const useWeatherSubscription = () => {
     (persist = true): Promise<MapCoordinate | null> => {
       hasSyncedRef.current = true;
       setLocation((current) => ({ ...current, status: 'locating' }));
-      return requestCurrentMapLocation().then(
+      return requestWeatherLocation().then(
         async (coordinate) => {
           writeLastWeatherCoordinate(coordinate);
           setLocation({ status: 'ready', coordinate, isStale: false });
@@ -133,6 +134,8 @@ export const useWeatherSubscription = () => {
     isEnabled,
     isLoading: settings.isPending,
     isUpdating: toggle.isPending || settings.isFetching || location.status === 'locating',
+    // 토글을 누른 뒤 위치를 기다리는 중. 토글이 잠긴 까닭을 진행 표시로 알린다.
+    isLocating: toggle.isPending && location.status === 'locating',
     hasUpdateFailed: toggle.isError || hasLocationFailed,
     pushMessage,
     canRetry: settings.isError || settings.data?.problem === 'cleanup',

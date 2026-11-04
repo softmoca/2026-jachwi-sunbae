@@ -144,6 +144,10 @@ export const clusterProperties = (pins: PropertyPin[], level: number): MapMarker
   return clusters.map(markerFromPropertyCluster);
 };
 
+/** 시설을 묶지 않고 하나씩 마커로 만든다. 본 방 기록 지도는 화면 안 시설을 모두 낱개로 보여 준다. */
+export const placeMarkers = (places: NearbyPlace[]): MapMarker[] =>
+  places.map((place) => markerFromCluster({ latitude: place.latitude, longitude: place.longitude, places: [place] }));
+
 export const clusterNearbyPlaces = (places: NearbyPlace[], level: number): MapMarker[] => {
   const threshold = clusterDistanceForLevel(level);
   if (threshold === 0) {

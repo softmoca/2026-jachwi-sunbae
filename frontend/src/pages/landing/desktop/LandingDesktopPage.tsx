@@ -18,8 +18,14 @@ import LandingGetStarted from '../ui/LandingGetStarted';
 import LandingTech from '../ui/LandingTech';
 import LandingWhy from '../ui/LandingWhy';
 
+type LandingDesktopPageProps = {
+  search: string;
+  /** 서비스 안에서 들어왔을 때 돌아갈 주소 */
+  returnTo?: string;
+};
+
 /** 데스크탑 랜딩. 왼쪽 글과 오른쪽 영상으로 시작해, 아래로 운영 화면을 한 스크롤에 하나씩 보여준다. */
-const LandingDesktopPage = ({ search }: { search: string }) => (
+const LandingDesktopPage = ({ search, returnTo }: LandingDesktopPageProps) => (
   <main className={styles.page}>
     <section className={styles.screen} aria-labelledby="landing-title">
       <div className={styles.heroInner}>
@@ -34,7 +40,7 @@ const LandingDesktopPage = ({ search }: { search: string }) => (
             {HERO_TITLE[1]}
           </h1>
           <p className={styles.heroLead}>{HERO_LEAD}</p>
-          <LandingGetStarted search={search} position="top" layout="row" />
+          <LandingGetStarted search={search} returnTo={returnTo} position="top" layout="row" />
         </div>
         <figure className={styles.heroVideo}>
           <video src={flyoverVideo} autoPlay muted loop playsInline preload="metadata" aria-label={VIDEO_LABEL} />
@@ -50,6 +56,9 @@ const LandingDesktopPage = ({ search }: { search: string }) => (
       >
         <div className={`${styles.story} ${index % 2 === 1 ? styles.reversed : ''}`}>
           <div className={styles.storyCopy}>
+            <p className={styles.menu} style={{ '--landing-tone': STORY_TONE_COLOR[story.tone] } as CSSProperties}>
+              {story.menu}
+            </p>
             <h2
               id={`landing-${story.id}-title`}
               style={{ '--landing-tone': STORY_TONE_COLOR[story.tone] } as CSSProperties}
@@ -110,13 +119,26 @@ const LandingDesktopPage = ({ search }: { search: string }) => (
 
     <section className={`${styles.screen} ${styles.tinted} ${styles.closing}`} aria-labelledby="landing-closing-title">
       <h2 id="landing-closing-title">내 출퇴근 동네부터 찾아볼까요?</h2>
-      <LandingGetStarted search={search} position="bottom" layout="row" />
+      <LandingGetStarted search={search} returnTo={returnTo} position="bottom" layout="row" />
       <p className={styles.footer}>우아한테크코스 8기 팀 프로젝트</p>
     </section>
   </main>
 );
 
 const styles = {
+  /* 기능 섹션 제목 위에 서비스 메뉴 이름을 둬, 랜딩에서 본 기능을 서비스 어디에서 찾는지 알린다. */
+  menu: css`
+    label: LandingDesktopPage-menu;
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--landing-tone) 18%, transparent);
+    color: var(--color-ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+  `,
+
   /* 제목 왼쪽 색 막대로 동네 찾기(파랑), 본 방 기록(노랑), 만든 이야기를 구분한다. */
   toned: css`
     label: LandingDesktopPage-toned;

@@ -10,7 +10,6 @@ import NeighborhoodPageSkeleton from '@/pages/neighborhood-preview/NeighborhoodP
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import {
   ABOUT_PATH,
-  CHEAP_MEALS_PATH,
   CHECKLISTS_PATH,
   COMPARE_PATH,
   EXPLORE_NEARBY_PATH,
@@ -131,7 +130,8 @@ const AppRoutes = () => (
     <Route path={PROPERTY_NEW_PATH} element={<Navigate to={RECORDS_MAP_PATH} replace />} />
     {/* 첫 주소(`/`)를 포함한 회원 화면. 자동 로그인(복원 또는 익명 회원 생성)을 기다리는 동안에도 화면 뼈대를 바로 그린다. */}
     <Route element={<ProtectedRoute />}>
-      <Route path={CHEAP_MEALS_PATH} element={lazyPage(<CheapMealsPage />)} />
+      {/* 탭마다 주소가 따로 있다. 탭 없는 주소와 예전 `?tab=` 주소는 화면이 탭 주소로 바꾼다. */}
+      <Route path={ROUTE_PATTERNS.cheapMeals} element={lazyPage(<CheapMealsPage />)} />
       <Route path={HOME_PATH} element={lazyPage(<DesignHomePage />, <HomePageSkeleton />)} />
       <Route path={ROUTE_PATTERNS.propertyRecords} element={<RecordsRoute />}>
         <Route index element={lazyPage(<PropertyDetailPage />)} />

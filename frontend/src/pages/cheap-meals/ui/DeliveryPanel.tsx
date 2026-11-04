@@ -5,13 +5,13 @@ import { describeMealError, useDeliveryOffers } from '@/features/meal-deals/api/
 import { won } from '@/features/meal-deals/lib/presentation';
 import { type Platform, PLATFORMS } from '@/features/meal-deals/model/MealDeal';
 import { Button } from '@/shared/ui/button/Button';
-import EmptyState from '@/shared/ui/empty-state/EmptyState';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import { SegmentedControl, SegmentedControlItem } from '@/shared/ui/segmented-control/SegmentedControl';
 
 import type { MealLayout } from '../hooks/useMealTabs';
 import type { MealDetail } from '../model/MealNavigation';
+import MealEmptyState from './MealEmptyState';
 
 import * as shared from './MealContent.styles';
 
@@ -49,8 +49,7 @@ const DeliveryPanel = ({ isActive, layout, onDetail }: DeliveryPanelProps) => {
                 {offers.length}개 혜택
               </p>
               {offers.length === 0 ? (
-                <EmptyState
-                  variant="plain"
+                <MealEmptyState
                   title="현재 유효한 할인정보가 없어요"
                   description="다른 플랫폼을 고르거나 나중에 다시 확인해 주세요."
                 />

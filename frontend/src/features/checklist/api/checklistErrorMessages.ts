@@ -20,7 +20,20 @@ const messages: Record<string, string> = {
   PROPERTY_NOT_FOUND: '매물을 찾을 수 없어요.',
 };
 
+/** 체크리스트는 저장했지만 그 체크리스트를 쓰는 매물 일부에 다시 적용하지 못했을 때. 다시 저장하면 또 적용한다. */
+export class ChecklistReapplyError extends Error {
+  readonly failedCount: number;
+
+  constructor(failedCount: number) {
+    super('checklist-reapply');
+    this.name = 'ChecklistReapplyError';
+    this.failedCount = failedCount;
+  }
+}
+
 export const getChecklistErrorMessage = (error: unknown): string => {
+  if (error instanceof ChecklistReapplyError)
+    return `체크리스트는 저장했지만 매물 ${error.failedCount}곳에 바로 적용하지 못했어요. 다시 저장해 주세요.`;
   if (error instanceof ApiError && error.code !== null && error.code in messages) return messages[error.code];
   return getSafeApiErrorMessage(error);
 };

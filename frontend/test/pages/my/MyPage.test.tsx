@@ -4,11 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { StrictMode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockWeatherForecast } from '@/app/mocks/handlers/weatherHandlers';
 import AppRoutes from '@/app/router/AppRoutes';
 import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
+import { WEATHER_LOCATION_DEADLINE_MS } from '@/features/weather/lib/weatherLocation';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
@@ -59,11 +60,13 @@ const useWeatherServer = ({
 };
 
 const originalGeolocation = navigator.geolocation;
-const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable') => {
+/** silent: iOS가 위치를 잠깐 못 잡을 때(kCLErrorLocationUnknown)처럼 성공도 실패도 알리지 않는다. */
+const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable' | 'silent') => {
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: {
       getCurrentPosition: (onSuccess: PositionCallback, onError: PositionErrorCallback) => {
+        if (result === 'silent') return;
         if (result === 'allowed') {
           onSuccess({ coords: { ...SEOUL, accuracy: 10 } } as GeolocationPosition);
           return;
@@ -283,6 +286,32 @@ describe('생활 날씨 카드의 알림 받기', () => {
     expect(weather.savedLocations).toEqual([]);
     expect(await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
+  });
+
+  it('위치가 계속 답하지 않으면 확인 중 표시를 두고, 기다림이 끝나면 위치 없이 공통 알림을 켜고 이유를 알린다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      installNativePush();
+      const weather = useWeatherServer();
+      mockGeolocation('silent');
+      renderWeatherCard();
+      const toggle = await screen.findByRole('switch', { name: '알림 받기' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      await user.click(toggle);
+      expect(await screen.findByRole('progressbar', { name: '현재 위치를 확인하고 있어요.' })).toBeInTheDocument();
+      expect(toggle).toBeDisabled();
+
+      await vi.advanceTimersByTimeAsync(WEATHER_LOCATION_DEADLINE_MS);
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+      expect(await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+      expect(weather.updates).toEqual([true]);
+      expect(weather.savedLocations).toEqual([]);
+      expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('알림 받기 토글은 생활 날씨와 배달 할인 알림을 함께 받는다고 안내한다', async () => {
