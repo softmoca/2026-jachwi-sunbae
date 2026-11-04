@@ -51,7 +51,7 @@ class DeliveryDiscountNotificationSchedulerTest {
     }
 
     @Test
-    @DisplayName("스케줄러는 delivery-discount.notification.enabled=true일 때만 등록되고 기본은 꺼져 있다")
+    @DisplayName("스케줄러는 delivery-discount.notification.enabled=true일 때만 등록되고, 설정이 없거나 false면 등록되지 않는다")
     void registeredOnlyWhenEnabled() {
         ApplicationContextRunner runner = new ApplicationContextRunner()
                 .withBean(DeliveryDiscountNotificationService.class, () -> service)
@@ -66,8 +66,8 @@ class DeliveryDiscountNotificationSchedulerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"local", "dev", "prod"})
-    @DisplayName("실제 발송을 켜지 않도록 모든 환경 설정에서 배달 할인 스케줄러가 꺼져 있다")
-    void disabledInEveryProfile(final String profile) {
+    @DisplayName("모든 환경 설정에서 배달 할인 스케줄러가 켜져 있다")
+    void enabledInEveryProfile(final String profile) {
         new ApplicationContextRunner()
                 .withBean(DeliveryDiscountNotificationService.class, () -> service)
                 .withUserConfiguration(DeliveryDiscountNotificationScheduler.class)
@@ -79,8 +79,8 @@ class DeliveryDiscountNotificationSchedulerTest {
                 })
                 .run(context -> {
                     assertThat(context.getEnvironment().getProperty("delivery-discount.notification.enabled"))
-                            .isEqualTo("false");
-                    assertThat(context).doesNotHaveBean(DeliveryDiscountNotificationScheduler.class);
+                            .isEqualTo("true");
+                    assertThat(context).hasSingleBean(DeliveryDiscountNotificationScheduler.class);
                 });
     }
 }
