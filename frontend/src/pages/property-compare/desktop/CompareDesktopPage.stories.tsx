@@ -97,9 +97,16 @@ type Story = StoryObj<typeof meta>;
 /** 비교할 매물이 여러 개 있다. */
 export const Default: Story = {};
 
-/** 매물이 하나뿐이라 비교할 수 없다. */
+/** 매물이 하나뿐이라 그 매물을 보이고, 하나 더 등록하면 비교할 수 있다고 안내한다. */
 export const NotEnough: Story = {
   parameters: {
     queryData: [[propertyQueryKeys.list(''), listData(properties.slice(0, 1))]],
+  },
+};
+
+/** 등록한 매물이 없어 빈 화면 안내를 보인다. */
+export const Empty: Story = {
+  parameters: {
+    queryData: [[propertyQueryKeys.list(''), listData([])]],
   },
 };

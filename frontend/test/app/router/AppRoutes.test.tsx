@@ -222,11 +222,11 @@ describe('익명 자동 인증 흐름', () => {
       const release = holdLogin();
       renderRoutes('/me');
 
-      expect(screen.queryByText(/자취선배 MVP2/)).not.toBeInTheDocument();
+      expect(screen.queryByText('자취선배 (데모 지도)')).not.toBeInTheDocument();
       expect(screen.queryByText('기록을 불러올 준비를 하고 있어요.')).not.toBeInTheDocument();
       release();
 
-      expect(await screen.findByText(/자취선배 MVP2/)).toBeInTheDocument();
+      expect(await screen.findByText('자취선배 (데모 지도)')).toBeInTheDocument();
     });
   });
 

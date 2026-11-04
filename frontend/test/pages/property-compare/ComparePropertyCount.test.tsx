@@ -1,0 +1,91 @@
+import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
+
+import CompareDesktopPage from '@/pages/property-compare/desktop/CompareDesktopPage';
+import CompareMobilePage from '@/pages/property-compare/mobile/CompareMobilePage';
+import type { PropertySummary } from '@/features/property/model/Property';
+import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
+
+const { listQuery } = vi.hoisted(() => ({ listQuery: { current: null as unknown } }));
+vi.mock('@/features/property/api/useProperties', () => ({ usePropertyList: () => listQuery.current }));
+vi.mock('@/features/property/api/usePropertyMutations', () => ({
+  useRecordPropertyComparisonView: () => ({ mutate: vi.fn() }),
+}));
+vi.mock('@/shared/lib/analytics/posthog', () => ({ trackPostHogEvent: vi.fn() }));
+vi.mock('@/features/property/ui/authenticated-photo/AuthenticatedPhoto', () => ({ default: () => null }));
+
+const progress = {
+  totalCount: 0,
+  completedCount: 0,
+  goodCount: 0,
+  cautionCount: 0,
+  unconfirmedCount: 0,
+  progressRate: 0,
+};
+const property = (propertyId: number, name: string): PropertySummary => ({
+  propertyId,
+  name,
+  depositAmount: 1000,
+  monthlyRentAmount: 50,
+  discoverySource: { type: 'TEXT', value: '' },
+  location: { address: null, latitude: null, longitude: null },
+  representativePhoto: null,
+  progress,
+  stages: [],
+  photoCount: 0,
+});
+
+const withProperties = (content: PropertySummary[]) => {
+  listQuery.current = {
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    data: { pages: [{ content, page: 0, size: 20, totalElements: content.length, totalPages: 1, hasNext: false }] },
+  };
+};
+
+const renderPage = (Page: typeof CompareMobilePage) =>
+  render(
+    <PublicConfigProvider config={{ apiBaseUrl: 'http://localhost:8080' }}>
+      <MemoryRouter>
+        <Page />
+      </MemoryRouter>
+    </PublicConfigProvider>,
+  );
+
+describe.each([
+  ['휴대폰', CompareMobilePage],
+  ['데스크탑', CompareDesktopPage],
+])('%s 비교 화면의 매물 수별 모습', (_, Page) => {
+  it('매물이 없으면 빈 화면 안내만 보이고 아래 바는 없다', () => {
+    withProperties([]);
+    renderPage(Page);
+
+    expect(screen.getByText('비교하려면 매물이 2개 필요해요.')).toBeInTheDocument();
+    expect(screen.queryByText('매물을 하나 더 등록하면 비교할 수 있어요.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /PDF 받기/ })).not.toBeInTheDocument();
+  });
+
+  it('매물이 1개면 그 매물을 보이고, PDF 버튼 대신 하나 더 등록하라고 안내한다', () => {
+    withProperties([property(1, '성수동 투룸')]);
+    renderPage(Page);
+
+    expect(screen.getByText('성수동 투룸')).toBeInTheDocument();
+    expect(screen.queryByText('비교하려면 매물이 2개 필요해요.')).not.toBeInTheDocument();
+    expect(screen.getByText('매물을 하나 더 등록하면 비교할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '본 방 기록에서 등록하기' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /PDF 받기/ })).not.toBeInTheDocument();
+  });
+
+  it('매물이 2개 이상이면 목록과 PDF 받기 버튼을 보인다', () => {
+    withProperties([property(1, '성수동 투룸'), property(2, '망원동 원룸')]);
+    renderPage(Page);
+
+    expect(screen.getByText('성수동 투룸')).toBeInTheDocument();
+    expect(screen.getByText('망원동 원룸')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('button', { name: /PDF 받기/ })).toBeDisabled();
+    expect(screen.queryByText('매물을 하나 더 등록하면 비교할 수 있어요.')).not.toBeInTheDocument();
+  });
+});

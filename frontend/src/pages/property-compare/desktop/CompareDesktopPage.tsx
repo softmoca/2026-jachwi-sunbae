@@ -22,6 +22,7 @@ const CompareDesktopPage = () => {
   const properties = usePropertyList();
   const items = properties.data?.pages.flatMap((page) => page.content) ?? [];
   const { selectedIds, isExporting, hasExportError, toggle, downloadPdf } = usePropertyComparison();
+  const hasProperties = items.length > 0;
   const hasEnoughProperties = items.length >= MIN_SELECTION;
   const [filters, setFilters] = useState(DEFAULT_COMPARE_FILTERS);
   const visibleItems = filterCompareProperties(items, filters);
@@ -41,7 +42,7 @@ const CompareDesktopPage = () => {
                 <CompareFilters filters={filters} resultCount={visibleItems.length} onChange={setFilters} />
               )}
             </div>
-            {hasEnoughProperties ? (
+            {hasProperties ? (
               <CompareTable
                 properties={visibleItems}
                 selectedIds={selectedIds}
@@ -54,8 +55,9 @@ const CompareDesktopPage = () => {
             {hasExportError && (
               <InlineNotice tone="error">PDF를 만들지 못했어요. 잠시 후 다시 시도해 주세요.</InlineNotice>
             )}
-            {hasEnoughProperties && (
+            {hasProperties && (
               <CompareActionBar
+                propertyCount={items.length}
                 selectedCount={selectedIds.length}
                 isExporting={isExporting}
                 onDownload={() => void downloadPdf()}
