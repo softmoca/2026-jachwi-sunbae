@@ -54,6 +54,19 @@
   "engines": {
     "node": ">= 22.11.0"
   },
+  "codegenConfig": {
+    "name": "JachwiAuthSpec",
+    "type": "all",
+    "jsSrcsDir": "src/auth",
+    "android": {
+      "javaPackageName": "com.jachwisunbae.app.auth"
+    },
+    "ios": {
+      "modulesProvider": {
+        "JachwiAuth": "JachwiAuthModule"
+      }
+    }
+  },
   "overrides": {
     "@firebase/firestore": {
       "@grpc/grpc-js": "1.14.6"

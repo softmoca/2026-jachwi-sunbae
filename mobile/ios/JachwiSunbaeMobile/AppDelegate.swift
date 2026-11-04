@@ -3,6 +3,7 @@ import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 import FirebaseCore
+import JachwiNativeAuth
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -34,6 +35,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
 
     return true
+  }
+
+  // 실행 중인 앱으로 들어온 URL. 카카오 로그인 복귀(kakao{앱키}://oauth)를 먼저 SDK에 넘기고, 나머지는 RN Linking으로 보낸다.
+  // UIScene으로 옮기면(#589) 이 메서드는 불리지 않는다. 그때는 SceneDelegate가 부르는 handleIncomingURL 맨 앞에
+  // `if JachwiNativeAuth.handleOpenURL(url) { return true }` 한 줄을 넣는다.
+  func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if JachwiNativeAuth.handleOpenURL(url) {
+      return true
+    }
+    return RCTLinkingManager.application(app, open: url, options: options)
   }
 }
 

@@ -19,4 +19,14 @@ buildscript {
     }
 }
 
+allprojects {
+    repositories {
+        // 카카오 SDK(com.kakao.sdk)는 카카오 저장소에만 있다. 다른 의존성은 여기서 찾지 않는다.
+        maven {
+            url "https://devrepo.kakao.com/nexus/content/groups/public/"
+            content { includeGroup "com.kakao.sdk" }
+        }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"
