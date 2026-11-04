@@ -564,7 +564,7 @@ export const apiBlobRequest = async (options: Parameters<typeof apiBlobRequestIn
 
 export const getSafeApiErrorMessage = (error: unknown): string => {
   if (!(error instanceof ApiError)) {
-    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
   }
 
   if (error.kind === 'network') {
@@ -572,10 +572,10 @@ export const getSafeApiErrorMessage = (error: unknown): string => {
   }
 
   if (error.status === 401) {
-    return '인증이 만료되었습니다. 다시 로그인해 주세요.';
+    return '접속이 만료됐어요. 화면을 새로 고쳐 주세요.';
   }
 
-  return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 };
 
 export const isApiErrorCode = (error: unknown, code: string): error is ApiError =>

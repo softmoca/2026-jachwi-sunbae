@@ -507,7 +507,7 @@ describe('FE-2 사진과 삭제 확인', () => {
     ]);
 
     expect(await screen.findByText('JPEG, PNG 또는 WebP 사진을 선택해 주세요.')).toBeInTheDocument();
-    expect(screen.getByText('사진 한 장은 5MiB 이하만 등록할 수 있습니다.')).toBeInTheDocument();
+    expect(screen.getByText('사진 한 장은 5MB 이하만 올릴 수 있어요.')).toBeInTheDocument();
     expect(uploadCalls).toBe(0);
   });
 
@@ -554,7 +554,7 @@ describe('FE-2 사진과 삭제 확인', () => {
     await waitFor(() => expect(uploadCalls).toBe(3));
     expect(screen.queryByText('업로드 결과')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '결과 지우기' })).not.toBeInTheDocument();
-    expect(screen.getByText('사진을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.')).toBeInTheDocument();
+    expect(screen.getByText('사진을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')).toBeInTheDocument();
     expect(uploadCalls).toBe(3);
     expect(maxActiveUploads).toBe(1);
   });
@@ -723,7 +723,7 @@ describe('FE-2 사진과 삭제 확인', () => {
     await user.click(await screen.findByRole('button', { name: '삭제' }));
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: '매물 삭제' }));
-    expect(await within(dialog).findByText(/매물은 그대로 유지/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/매물은 그대로 있어요/)).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: '신림역 원룸', level: 1 })).toHaveLength(1);
   });
 

@@ -33,14 +33,13 @@ import useNeighborhoodAnalytics from './useNeighborhoodAnalytics';
 const describeError = (error: unknown) => {
   if (error instanceof ApiError) {
     if (error.code === 'COMMUTE_DESTINATION_UNREACHABLE')
-      return '목적지에서 걸어서 10분 안에 이용할 수 있는 정류장·역이 없습니다.';
+      return '목적지에서 걸어서 10분 안에 탈 수 있는 정류장이나 역이 없어요. 다른 목적지를 골라 주세요.';
     if (error.code === 'TRANSIT_NETWORK_UNAVAILABLE')
-      return '대중교통 정보를 준비하고 있습니다. 잠시 후 다시 시도해 주세요.';
-    if (error.code === 'ADMIN_DONG_NOT_FOUND') return '행정동을 찾을 수 없습니다.';
-    if (error.code === 'ACCESS_TOKEN_INVALID')
-      return '통근 서버가 인증을 요구하고 있어요. 머지된 공개 API가 dev 서버에 배포됐는지 확인이 필요합니다.';
+      return '대중교통 정보를 준비하고 있어요. 잠시 후 다시 시도해 주세요.';
+    if (error.code === 'ADMIN_DONG_NOT_FOUND')
+      return '이 위치의 동네를 찾지 못했어요. 지도에서 다른 위치를 골라 주세요.';
   }
-  return '정보를 불러오지 못했어요. 다시 시도해주세요.';
+  return '정보를 불러오지 못했어요. 다시 시도해 주세요.';
 };
 export const describeRouteError = (error: unknown) => {
   if (error instanceof ApiError) {
@@ -253,7 +252,7 @@ const useNeighborhoodPreview = () => {
             ? '위치 권한을 허용해 주세요.'
             : error instanceof MapLocationError && error.reason === 'insecure'
               ? 'HTTPS 주소에서 현재 위치를 확인할 수 있어요.'
-              : '현재 위치를 찾지 못했어요. 다시 시도해주세요.',
+              : '현재 위치를 찾지 못했어요. 다시 시도해 주세요.',
         );
       } finally {
         setIsLocating(false);
@@ -345,10 +344,10 @@ const useNeighborhoodPreview = () => {
         const results = await searchAddress(config, query.trim());
         if (intent !== locationIntent.current) return;
         setAddressResults(results);
-        if (!results.length) setSearchError('검색 결과가 없어요. 주소를 더 자세히 입력해주세요.');
+        if (!results.length) setSearchError('검색 결과가 없어요. 주소를 더 자세히 입력해 주세요.');
       } catch {
         if (intent === locationIntent.current)
-          setSearchError('주소를 찾지 못했어요. 지도에서 위치를 선택하거나 다시 검색해주세요.');
+          setSearchError('주소를 찾지 못했어요. 지도에서 위치를 선택하거나 다시 검색해 주세요.');
       } finally {
         if (intent === locationIntent.current) setIsSearching(false);
       }

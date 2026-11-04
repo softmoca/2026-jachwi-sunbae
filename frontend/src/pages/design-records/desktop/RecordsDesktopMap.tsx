@@ -10,8 +10,7 @@ import Icon from '@/shared/ui/icon/Icon';
 
 import type { RecordsState } from '../hooks/useRecords';
 import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
-import { destinationRailButton, recordsMapHint } from '../model/recordPresentation';
-import RecordDestinationControl from '../ui/record-destination/RecordDestinationControl';
+import { RECORDS_HIDDEN_CATEGORIES, recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
 
 type Props = {
@@ -27,55 +26,36 @@ type Props = {
  * 빈 곳을 찍으면 그 자리 말풍선에서 메모를 남기거나 매물을 등록한다. 메모는 지도 위 카드에서 보고,
  * 겹쳐 묶인 매물은 리스트에 이미 모두 보여 따로 늘어놓지 않고 누르면 갈라져 보일 때까지 다가간다.
  */
-const RecordsDesktopMap = ({ records, layers, districts, className }: Props) => {
-  // 목적지 모드에서는 동네 뱃지, 카테고리 레일, 안내, 메모 카드를 거두고 목적지 고르기만 남긴다.
-  const isPickingDestination = layers.destination.isPicking;
-  return (
-    <section className={`${styles.map} ${className ?? ''}`.trim()} aria-label="본 방 기록 지도">
-      <MapCanvas {...layers.canvasProps} coordinateMenu={layers.coordinateMenu} />
-      <StreetMemoImpressionLog memos={layers.memo.visibleMemos} />
-      {!isPickingDestination && (
-        <>
-          <div className={styles.districts}>{districts}</div>
-          <MapCategoryRail
-            showMemo
-            showIcons={false}
-            className={styles.rail}
-            selectedCategories={layers.category === null ? [] : [layers.category]}
-            counts={layers.counts}
-            onToggle={layers.toggleCategory}
-            extraButton={destinationRailButton(layers.destination)}
-          />
-        </>
-      )}
-      <button
-        className={styles.recenter}
-        type="button"
-        aria-label="현재 위치로 이동"
-        onClick={() => records.moveToCurrentLocation()}
-      >
-        <Icon name="target" size={22} />
-      </button>
-      <MapZoomControl className={styles.zoom} level={records.level} onChange={records.setLevel} />
-      <RecordDestinationControl
-        destination={layers.destination}
-        className={isPickingDestination ? styles.destinationPicking : styles.destination}
-      />
-      {!isPickingDestination && (
-        <>
-          {!records.selected && layers.memo.mode === null && (
-            <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>
-          )}
-          <StreetMemoPanel layer={layers.memo} onCreated={layers.showMemos} className={styles.memoCard} />
-          <RecordMapTapIntro
-            setLevel={records.setLevel}
-            hasTapped={layers.tapPoint !== null || layers.destination.isShown}
-          />
-        </>
-      )}
-    </section>
-  );
-};
+const RecordsDesktopMap = ({ records, layers, districts, className }: Props) => (
+  <section className={`${styles.map} ${className ?? ''}`.trim()} aria-label="본 방 기록 지도">
+    <MapCanvas {...layers.canvasProps} coordinateMenu={layers.coordinateMenu} />
+    <StreetMemoImpressionLog memos={layers.memo.visibleMemos} />
+    <div className={styles.districts}>{districts}</div>
+    <MapCategoryRail
+      showMemo
+      showIcons={false}
+      hiddenCategories={RECORDS_HIDDEN_CATEGORIES}
+      className={styles.rail}
+      selectedCategories={layers.category === null ? [] : [layers.category]}
+      counts={layers.counts}
+      onToggle={layers.toggleCategory}
+    />
+    <button
+      className={styles.recenter}
+      type="button"
+      aria-label="현재 위치로 이동"
+      onClick={() => records.moveToCurrentLocation()}
+    >
+      <Icon name="target" size={22} />
+    </button>
+    <MapZoomControl className={styles.zoom} level={records.level} onChange={records.setLevel} />
+    {!records.selected && layers.memo.mode === null && (
+      <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>
+    )}
+    <StreetMemoPanel layer={layers.memo} onCreated={layers.showMemos} className={styles.memoCard} />
+    <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
+  </section>
+);
 
 const styles = {
   /* 데스크탑 본 방 기록 지도: 오른쪽 칸 전체. 동네 뱃지는 위에, 카테고리 레일·현재 위치는 오른쪽에, 메모 카드는 왼쪽 위에 띄운다. */
@@ -106,11 +86,11 @@ const styles = {
     z-index: 12;
   `,
 
-  /* 메모부터 목적지까지 일곱 칸인 레일 아래에 둔다. */
+  /* 메모부터 편의점까지 다섯 칸인 레일 아래에 둔다. */
   recenter: css`
     label: RecordsDesktopMap-recenter;
     position: absolute;
-    top: 22.6rem;
+    top: 17.6rem;
     right: 1.15rem;
     z-index: 12;
     display: grid;
@@ -128,22 +108,6 @@ const styles = {
       outline: 2px solid #25282d;
       outline-offset: 3px;
     }
-  `,
-
-  /* 목적지 모드 안내는 다른 조작을 거둔 지도 위쪽 가운데에 둔다. */
-  destinationPicking: css`
-    label: RecordsDesktopMap-destinationPicking;
-    top: 1.35rem;
-    left: 50%;
-    transform: translateX(-50%);
-  `,
-
-  /* 목적지까지 거리 안내는 지도 아래 왼쪽, 지도 안내 위에 둔다. 위쪽 메모 카드와 겹치지 않는다. */
-  destination: css`
-    label: RecordsDesktopMap-destination;
-    bottom: 5.5rem;
-    left: 1rem;
-    max-width: min(26rem, calc(100% - 6rem));
   `,
 
   /* 지도 오른쪽 위, 동네 뱃지 줄과 같은 높이에 둔다. */

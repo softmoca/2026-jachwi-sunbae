@@ -7,6 +7,11 @@ type MapTapIntroProps = {
   description?: string;
   /** 있으면 건너뛰기 버튼을 둔다. 안내를 언제 다시 띄울지는 쓰는 화면이 정한다. */
   onSkip?: () => void;
+  /**
+   * 켜면 안내가 화면을 덮어 누른 손가락이 밑의 지도와 마커에 닿지 않게 막고, 어디를 누르든 `onSkip`으로 안내만 닫는다(본 방 기록).
+   * 끄면 안내 위를 눌러도 그대로 지도에 닿는다(동네 찾기는 지도를 눌러 출퇴근 장소를 찍어야 한다). 건너뛰기만 누를 수 있다.
+   */
+  blocking?: boolean;
   /** 화면마다 다른 겹침 순서(z-index) 등을 덧씌운다. */
   className?: string;
 };
@@ -16,8 +21,13 @@ type MapTapIntroProps = {
  * 안내는 지도 조작을 막지 않아 그대로 지도를 누를 수 있다(건너뛰기만 누를 수 있다).
  * 본 방 기록 지도의 첫 진입 안내와 동네 찾기의 출퇴근 장소 고르기 안내가 함께 쓴다. 언제 띄우고 닫을지는 쓰는 화면이 정한다.
  */
-const MapTapIntro = ({ title, description, onSkip, className }: MapTapIntroProps) => (
-  <div className={cx(styles.overlay, className)} role="note" aria-label="지도 사용 안내">
+const MapTapIntro = ({ title, description, onSkip, blocking = false, className }: MapTapIntroProps) => (
+  <div
+    className={cx(styles.overlay, className)}
+    data-blocking={blocking || undefined}
+    role="note"
+    aria-label="지도 사용 안내"
+  >
     <div className={styles.stage} aria-hidden="true">
       <span className={styles.ripple} />
       <svg className={styles.finger} viewBox="0 0 64 80" width="64" height="80">
@@ -40,6 +50,10 @@ const MapTapIntro = ({ title, description, onSkip, className }: MapTapIntroProps
       <button type="button" className={styles.skip} onClick={onSkip}>
         건너뛰기
       </button>
+    )}
+    {/* 안내 아무 곳이나 눌러도 닫는다. 밑의 마커가 눌리지 않게 화면 전체를 덮는다. 키보드는 건너뛰기 버튼으로 닫는다. */}
+    {blocking && onSkip && (
+      <button type="button" className={styles.dismissArea} aria-hidden="true" tabIndex={-1} onClick={onSkip} />
     )}
   </div>
 );
@@ -94,6 +108,11 @@ const styles = {
     text-align: center;
     /* 안내 위로 누른 손가락도 그대로 지도에 닿게 한다. 건너뛰기만 누를 수 있다. */
     pointer-events: none;
+
+    /* 덮는 안내는 밑의 지도와 마커가 눌리지 않는다. 누르면 안내만 닫는다(dismissArea). */
+    &[data-blocking='true'] {
+      pointer-events: auto;
+    }
   `,
 
   stage: css`
@@ -157,8 +176,22 @@ const styles = {
     }
   `,
 
+  dismissArea: css`
+    label: MapTapIntro-dismissArea;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  `,
+
+  /* 화면을 덮는 dismissArea보다 위에 두어 건너뛰기를 바로 누를 수 있게 한다. 손가락 그림과 글은 그 밑에 깔려 눌러도 안내를 닫는다. */
   skip: css`
     label: MapTapIntro-skip;
+    position: relative;
+    z-index: 1;
     padding: 0.55rem 1.2rem;
     border: 1px solid rgb(255 255 255 / 70%);
     border-radius: 2rem;
