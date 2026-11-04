@@ -4,7 +4,7 @@
  */
 
 /** 앱이 웹에 알려 주는 네이티브 기능. 웹은 이 목록을 보고 자기 하단바를 숨긴다. */
-export type NativeAppFeature = 'tab-bar' | 'push';
+export type NativeAppFeature = 'tab-bar' | 'push' | 'auth';
 
 export type RouteMessage = {
   type: 'route';

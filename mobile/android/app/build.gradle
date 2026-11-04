@@ -144,6 +144,8 @@ gradle.taskGraph.whenReady { taskGraph ->
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    // OAuth 인증 화면을 Custom Tabs로 연다.
+    implementation("androidx.browser:browser:1.8.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
