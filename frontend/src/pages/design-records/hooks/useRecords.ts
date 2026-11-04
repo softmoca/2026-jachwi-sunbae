@@ -177,6 +177,17 @@ const useRecords = (selection?: RecordsSelection) => {
     setLevel(next === '전체' ? 8 : 5);
   };
 
+  /**
+   * 리스트에서 고른 매물을 열고 지도를 그 매물 핀 자리로 옮긴다. 배율은 그대로 두어 주변을 함께 본다.
+   * 위치가 없는 매물은 고르기만 한다.
+   */
+  const showRecord = (recordId: string) => {
+    setSelectedId(recordId);
+    const record = records.find((item) => item.id === recordId);
+    if (record !== undefined && record.latitude !== null && record.longitude !== null)
+      setCenter({ latitude: record.latitude, longitude: record.longitude });
+  };
+
   /** 주소 검색 결과처럼 고른 자리로 지도를 옮기고 동네 수준으로 확대한다. */
   const moveTo = (coordinate: MapCoordinate) => {
     setCenter({ latitude: coordinate.latitude, longitude: coordinate.longitude });
@@ -221,6 +232,7 @@ const useRecords = (selection?: RecordsSelection) => {
     moveTo,
     moveToCurrentLocation,
     revealCreated,
+    showRecord,
     notice,
     setNotice,
     commute,
