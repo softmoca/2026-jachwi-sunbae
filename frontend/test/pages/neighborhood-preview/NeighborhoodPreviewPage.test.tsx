@@ -697,7 +697,7 @@ it('결과 지도를 가까이 확대하면 화면 안 정류장·부동산을 �
   show();
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(await screen.findByText('동네를 고르거나 가까이 확대하면 정류장·부동산·메모가 보여요')).toBeInTheDocument();
+  expect(await screen.findByText('동네를 고르거나 가까이 확대하면 정류장·부동산이 보여요')).toBeInTheDocument();
   // 멀리 볼 때는 정류장·부동산 대신 상위 동네의 순위 알약만 올린다.
   expect(screen.getAllByRole('button', { name: /^마커 / }).map((button) => button.textContent)).toEqual([
     '마커 역삼1동 1위',
@@ -732,6 +732,27 @@ it('결과 지도를 가까이 확대하면 화면 안 정류장·부동산을 �
   expect(screen.getByRole('region', { name: '역삼역 정보' })).toHaveAttribute('data-resizable', 'true');
   await user.click(stop.getByRole('button', { name: '뒤로 가기' }));
   expect(screen.getByRole('tablist', { name: '역삼1동 주변 장소' })).toBeInTheDocument();
+});
+it('결과 지도는 가까이 확대해도 거리 메모를 조회하거나 올리지 않는다', async () => {
+  let memoRequests = 0;
+  server.use(
+    ...mapHandlers,
+    http.get('*/api/street-memos', () => {
+      memoRequests += 1;
+      return HttpResponse.json({ data: [] });
+    }),
+  );
+  show();
+  const user = await choosePoint();
+  await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
+  await user.click(await screen.findByRole('button', { name: '가까이 확대' }));
+  await waitFor(() =>
+    expect(JSON.parse(screen.getByLabelText('목적지 좌표').textContent ?? '[]')).toEqual(
+      expect.arrayContaining([expect.objectContaining({ category: 'TRANSPORT', tone: 'place' })]),
+    ),
+  );
+  expect(memoRequests).toBe(0);
+  expect(screen.queryByRole('button', { name: /메모/ })).not.toBeInTheDocument();
 });
 it('휴대폰은 동네를 고르면 정류장·공인중개사 탭 시트를 올리고, 고른 항목은 시트 안에서 열어 뒤로가기로 돌아온다', async () => {
   server.use(...mapHandlers, ...createStreetMemoHandlers([]));

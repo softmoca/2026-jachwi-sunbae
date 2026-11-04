@@ -4,8 +4,6 @@ import { Outlet, useMatch } from 'react-router-dom';
 import { SERVICE_MAP_STYLE_ID } from '@/features/map/lib/mapStyle';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
 import ExplorationRecordAction from '@/features/onboarding/ui/exploration-record-action/ExplorationRecordAction';
-import StreetMemoImpressionLog from '@/features/street-memo/ui/street-memo-impression-log/StreetMemoImpressionLog';
-import StreetMemoSheet from '@/features/street-memo/ui/street-memo-sheet/StreetMemoSheet';
 import { LogClick } from '@/shared/lib/analytics/logging';
 import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
@@ -57,7 +55,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   const areaTab: AreaPlacesTab =
     placeTab && placeTab.areaId === preview.selected?.adminDongCode ? placeTab.tab : 'stations';
   // 고른 동네의 정보는 지도 위 말풍선 대신 아래 시트(AreaPlacesSheet)에 둔다.
-  const { isResultMap, mapProps, places, memo, closeLayers } = useNeighborhoodMapView(preview, {
+  const { isResultMap, mapProps, places, closeLayers } = useNeighborhoodMapView(preview, {
     showAreaAction: false,
     onEmptyTap: () => setPeekSignal((value) => value + 1),
     // 시트가 열린 채 지도의 동네를 찍으면 시트를 닫고 랭킹을 다시 보여 준다.
@@ -65,7 +63,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
     placeMarkers: isRoutePage && preview.selected ? areaTab : undefined,
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
-  const hasAreaSheet = !!isRoutePage && !!preview.selected && memo.mode === null;
+  const hasAreaSheet = !!isRoutePage && !!preview.selected;
   // 통근, 환승, 월세 조건 칸. 위치를 고르기 전후 모두 아래 시트에 둔다.
   // 칸마다 위에 항목, 아래에 값을 적고, 읽을 때는 `통근 40분 이내`처럼 한 문장으로 읽게 한다.
   const filterCells: { field: NeighborhoodFilterField; title: string; value: string; label: string }[] = [
@@ -128,7 +126,6 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
           onReady={preview.prefetchBoundaries}
           {...mapProps}
         />
-        <StreetMemoImpressionLog memos={memo.visibleMemos} />
         <AnalysisOverlay preview={preview} />
         {preview.isSelectingOnMap && (
           <>
@@ -216,7 +213,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                     </span>
                   )}
                   <small className={shared.placesHint}>
-                    {placesHint({ isClose: places.isClose, failed: places.failed || memo.isFailed })}
+                    {placesHint({ isClose: places.isClose, failed: places.failed })}
                   </small>
                 </div>
               </div>
@@ -308,7 +305,6 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 onClose={places.closePlace}
               />
             )}
-            <StreetMemoSheet layer={memo} />
             {filterField === 'rent' && (
               <BottomSheet
                 title="월세 시세"

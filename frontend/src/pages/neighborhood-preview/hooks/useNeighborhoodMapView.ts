@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { formatManwon } from '@/features/map/api/commuteApi';
 import type { MapMarker } from '@/features/map/model/Map';
 import type { MapCanvasProps, MapRegion } from '@/features/map/model/MapCanvas';
-import useStreetMemoLayer from '@/features/street-memo/hooks/useStreetMemoLayer';
 
 import useNeighborhoodPlaces from './useNeighborhoodPlaces';
 import type { NeighborhoodPreviewContext } from './useNeighborhoodPreview';
@@ -25,7 +24,7 @@ type MapViewOptions = {
   onEmptyTap?: () => void;
   /** 동네를 고른 채 지도의 동네(같은 동네든 다른 동네든)를 찍으면 동네 선택을 풀고 랭킹으로 돌아간다. 휴대폰은 시트를 닫는다. */
   deselectOnRegionTap?: boolean;
-  /** 휴대폰 동네 시트의 탭. 정류장 탭이면 정류장 마커만, 공인중개사 탭이면 공인중개사 마커만 올린다(메모는 숨긴다). */
+  /** 휴대폰 동네 시트의 탭. 정류장 탭이면 정류장 마커만, 공인중개사 탭이면 공인중개사 마커만 올린다. */
   placeMarkers?: 'stations' | 'agencies';
 };
 
@@ -35,18 +34,12 @@ const useNeighborhoodMapView = (
 ) => {
   const isResultMap = !preview.isAnalyzing && !preview.error && !preview.isSelectingOnMap;
   const places = useNeighborhoodPlaces(isResultMap);
-  // 거리 메모는 정류장·부동산과 같이 가까이 확대했을 때만 화면 범위로 올린다.
-  // 동네 찾기에서는 남긴 메모를 보기만 하고, 새 메모는 본 방 기록 지도에서 남긴다.
-  const memo = useStreetMemoLayer(places.isClose, places.bounds);
-  const hasOpenLayer = places.selectedPlace !== null || memo.mode !== null;
-  const closeLayers = () => {
-    places.closePlace();
-    memo.close();
-  };
-  /** 지도 빈 곳·고른 동네 안을 찍었을 때. 메모는 닫고, 그 밖에는 화면별 동작(시트 내리기) 또는 열린 정보 닫기를 한다. */
+  // 거리 메모는 본 방 기록 지도에서만 남기고 본다. 동네 찾기 결과 지도는 동네, 정류장, 부동산만 올린다.
+  const hasOpenLayer = places.selectedPlace !== null;
+  const closeLayers = () => places.closePlace();
+  /** 지도 빈 곳·고른 동네 안을 찍었을 때. 화면별 동작(시트 내리기) 또는 열린 정보 닫기를 한다. */
   const tapEmpty = () => {
-    if (memo.mode !== null) memo.close();
-    else if (onEmptyTap) onEmptyTap();
+    if (onEmptyTap) onEmptyTap();
     else if (hasOpenLayer) closeLayers();
   };
   /** 지도의 동네(구역이나 순위 알약)를 찍었을 때. 이미 고른 동네 안을 다시 찍으면 열어 둔 정보만 닫고, 다른 동네를 찍으면 동네를 바꾼다. */
@@ -69,11 +62,6 @@ const useNeighborhoodMapView = (
       selectRegion(marker.id.slice(RANK_MARKER_PREFIX.length));
       return;
     }
-    if (memo.selectMarker(marker)) {
-      places.closePlace();
-      return;
-    }
-    memo.close();
     places.selectMarker(marker);
   };
   // 상위 1~5위 동네는 동네 가운데에 순위 알약을 띄운다.
@@ -99,10 +87,9 @@ const useNeighborhoodMapView = (
       ...(placeMarkers
         ? places.markers.filter((marker) => marker.category === (placeMarkers === 'stations' ? 'TRANSPORT' : 'AGENCY'))
         : places.markers),
-      ...(placeMarkers ? [] : memo.markers),
       { ...preview.destination, id: 'destination', label: DESTINATION_LABEL, tone: 'destination' as const },
     ],
-    [rankMarkers, preview.destination, places.markers, memo.markers, placeMarkers],
+    [rankMarkers, preview.destination, places.markers, placeMarkers],
   );
   const candidateMarkers = useMemo(
     () => [
@@ -125,16 +112,15 @@ const useNeighborhoodMapView = (
         onBoundsChange: places.rememberBounds,
         selectedMarkerId:
           places.selectedMarkerId ??
-          memo.selectedMarkerId ??
           (preview.selected ? `${RANK_MARKER_PREFIX}${preview.selected.adminDongCode}` : null),
         onSelectMarker: selectMarker,
-        // 빈 곳을 찍으면 열어 둔 정류장·부동산·메모 정보를 닫는다(휴대폰은 시트를 내린다).
+        // 빈 곳을 찍으면 열어 둔 정류장·부동산 정보를 닫는다(휴대폰은 시트를 내린다).
         onSelectLocation: tapEmpty,
         regions: preview.regions,
         selectedRegionId: preview.selected?.adminDongCode,
         onSelectRegion: selectRegion,
         coordinateAction:
-          // 정류장·부동산·메모 정보를 띄우는 동안은 동네 말풍선을 숨겨 마커와 시트를 가리지 않게 한다.
+          // 정류장·부동산 정보를 띄우는 동안은 동네 말풍선을 숨겨 마커와 시트를 가리지 않게 한다.
           showAreaAction && preview.selected && !hasOpenLayer
             ? {
                 ...preview.selected.center,
@@ -157,8 +143,7 @@ const useNeighborhoodMapView = (
     isResultMap,
     mapProps,
     places,
-    memo,
-    /** 동네·조건을 바꾸거나 다시 고를 때 열어 둔 정류장·부동산·메모 정보를 모두 닫는다. */
+    /** 동네·조건을 바꾸거나 다시 고를 때 열어 둔 정류장·부동산 정보를 모두 닫는다. */
     closeLayers,
   };
 };
