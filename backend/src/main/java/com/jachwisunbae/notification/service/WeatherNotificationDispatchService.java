@@ -63,7 +63,8 @@ public class WeatherNotificationDispatchService {
             return;
         }
         boolean success = settings.canSend(device)
-                && sender.send(new Push(notification.notificationId(), device.token(), report.title(), report.body()));
+                && sender.send(new Push(notification.notificationId(), PushSender.Type.WEATHER, device.token(),
+                        report.title(), report.body()));
         LOG.info("weather-notification notificationId={} success={}", notification.notificationId(), success);
     }
 }

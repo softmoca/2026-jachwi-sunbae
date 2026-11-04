@@ -140,6 +140,7 @@ class WeatherNotificationIntegrationTest {
         var saved = notification();
         assertThat(saved.notices()).extracting(Notice::condition).containsExactly(Condition.LAUNDRY);
         assertThat(pushes.getFirst().notificationId()).isEqualTo(saved.notificationId());
+        assertThat(pushes.getFirst().type()).isEqualTo(PushSender.Type.WEATHER);
         String json = jdbc.queryForObject("SELECT notices FROM weather_notifications", String.class);
         assertThat(new ObjectMapper().readTree(json)).isEqualTo(new ObjectMapper().readTree("""
                 [{"condition":"LAUNDRY","message":"오늘은 비 예보가 없고 습도가 낮아요. 빨래하기 괜찮겠어요!"}]
@@ -189,6 +190,7 @@ class WeatherNotificationIntegrationTest {
         verify(sender).send(push.capture());
         assertThat(push.getValue().token()).isEqualTo(device.token());
         assertThat(push.getValue().title()).isEqualTo("날씨 알림 테스트");
+        assertThat(push.getValue().type()).isEqualTo(PushSender.Type.TEST);
         assertThat(notificationCount()).isZero();
     }
 
@@ -415,7 +417,7 @@ class WeatherNotificationIntegrationTest {
         var request = new com.jachwisunbae.notification.controller.dto.NotificationDeviceRequest(device.installationId(), SECRET, token);
         assertThat(request.toString()).doesNotContain(SECRET, token);
         assertThat(device.toString()).doesNotContain(SECRET, device.secretHash(), device.token());
-        var push = new Push(UUID.randomUUID(), token, "제목", "본문");
+        var push = new Push(UUID.randomUUID(), PushSender.Type.WEATHER, token, "제목", "본문");
         assertThat(push.toString()).doesNotContain(token);
         dispatch.dispatch(NotificationSlot.MORNING);
         assertThat(notification().toString()).isEqualTo("WeatherNotification[notificationId=" + notification().notificationId() + "]");

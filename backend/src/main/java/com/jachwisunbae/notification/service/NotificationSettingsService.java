@@ -52,8 +52,8 @@ public class NotificationSettingsService {
 
     // 수신 확인용이라 수신 동의·위치·예보를 보지 않고 이력도 저장하지 않는다.
     public boolean sendTest(final long memberId) {
-        return device(memberId).map(device -> sender.send(
-                new Push(UUID.randomUUID(), device.token(), "날씨 알림 테스트", "알림이 정상적으로 도착했어요"))).orElse(false);
+        return device(memberId).map(device -> sender.send(new Push(UUID.randomUUID(), PushSender.Type.TEST,
+                device.token(), "날씨 알림 테스트", "알림이 정상적으로 도착했어요"))).orElse(false);
     }
 
     @Transactional

@@ -56,8 +56,8 @@ public class DeliveryDiscountNotificationService {
 
     private boolean send(final NotificationDevice device, final DeliveryDiscountNotificationType type) {
         try {
-            return sender.send(new Push(UUID.randomUUID(), device.token(), type.title(), type.body(),
-                    DeliveryDiscountNotificationType.LINK));
+            return sender.send(new Push(UUID.randomUUID(), PushSender.Type.DELIVERY_COUPON, device.token(),
+                    type.title(), type.body(), DeliveryDiscountNotificationType.LINK));
         } catch (RuntimeException exception) {
             // 한 기기의 실패가 다른 기기 발송을 막지 않게 하고, 토큰이 섞일 수 있는 예외 본문은 남기지 않는다.
             LOG.warn("delivery-discount-notification-failed type={} exceptionType={}", type,

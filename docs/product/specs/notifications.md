@@ -59,6 +59,16 @@
 - `POL-NOTIFICATION-013`: 한 기기 발송이 실패해도 다른 기기 발송을 계속한다. 실패를 재시도하거나 이력으로 저장하지 않고 성공·실패 건수만 로그로 남긴다. 토큰과 외부 예외 본문은 로그에 남기지 않는다.
 - `POL-NOTIFICATION-014`: 스케줄러는 `delivery-discount.notification.enabled=true`일 때만 등록되며 모든 환경에서 기본 OFF다. FCM 발송은 `weather.notification.enabled=true`일 때 만들어지는 공통 발송기를 사용한다. 22시 광고성 푸시에 필요한 야간 수신 동의와 광고 표기, 중복 발송 방지를 정하기 전에는 켜지 않는다.
 
+### 3.4. 푸시 data
+
+- `POL-NOTIFICATION-015`: 모든 푸시 data에는 `notificationId`와 알림 종류 `type`을 싣는다. `type`은 푸시 클릭부터 목표 행동까지의 퍼널을 알림 종류별로 나누는 기준이므로 값을 바꾸지 않는다. 눌렀을 때 열 화면이 있으면 `url`도 싣는다.
+
+| `type`            | 알림                    |
+| ----------------- | ----------------------- |
+| `weather`         | 생활 날씨 알림          |
+| `delivery_coupon` | 배달 할인 알림          |
+| `test`            | 수신 확인용 테스트 알림 |
+
 ## 4. 인수 기준
 
 | ID                  | 조건과 행동                                                                  | 관찰할 결과                                                       |

@@ -103,6 +103,7 @@ class DeliveryDiscountNotificationIntegrationTest {
             assertThat(push.title()).isEqualTo("오늘 하루도 고생 많았어요! 🍗");
             assertThat(push.body()).isEqualTo("고된 하루, 오늘 저녁은 배달 할인으로 맛있게 즐겨보세요!");
             assertThat(push.url()).isEqualTo("/cheap-meals?tab=delivery");
+            assertThat(push.type()).isEqualTo(PushSender.Type.DELIVERY_COUPON);
         });
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM member_weather_locations", Integer.class)).isZero();
     }
