@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { useViewportPlaces } from '@/features/map/api/useViewportPlaces';
 import { stationVariant } from '@/features/map/lib/mapIconAssets';
@@ -31,6 +31,27 @@ const STATION_PREFIX = 'station:';
 const useNeighborhoodPlaces = (enabled: boolean) => {
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [isNear, setIsNear] = useState(false);
+  // 지도는 멈출 때마다(idle) 확대 단계와 범위를 알린다. 범위는 가까이 확대해 정류장, 부동산을 조회할 때만 쓰므로
+  // 멀리 볼 때는 ref에만 기억하고 상태로 올리지 않는다. 그래야 멀리서 지도를 옮길 때 동네 찾기 화면 전체가 다시 그려지지 않는다.
+  const nearRef = useRef(false);
+  const latestBoundsRef = useRef<MapBounds | null>(null);
+  // 마지막으로 상태에 올린 범위. 같은 범위로 다시 멈추면 상태를 건드리지 않는다.
+  const shownBoundsRef = useRef<MapBounds | null>(null);
+  const showBounds = (next: MapBounds | null) => {
+    const current = shownBoundsRef.current;
+    if (
+      current === next ||
+      (current !== null &&
+        next !== null &&
+        current.south === next.south &&
+        current.west === next.west &&
+        current.north === next.north &&
+        current.east === next.east)
+    )
+      return;
+    shownBoundsRef.current = next;
+    setBounds(next);
+  };
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [station, setStation] = useState<AreaStation | null>(null);
   // 결과 지도가 아닌 동안(다시 고르기, 분석 중)은 지도가 확대 단계와 범위를 알려 주지 않는다.
@@ -39,6 +60,9 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
   if (wasEnabled !== enabled) {
     setWasEnabled(enabled);
     if (!enabled) {
+      nearRef.current = false;
+      latestBoundsRef.current = null;
+      shownBoundsRef.current = null;
       setIsNear(false);
       setBounds(null);
     }
@@ -123,8 +147,19 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
     },
     closePlace: () => setSelectedId(null),
     bounds,
-    rememberBounds: setBounds,
-    rememberLevel: (level: number) => setIsNear((wasNear) => nextPlacesVisible(wasNear, level)),
+    rememberBounds: (next: MapBounds) => {
+      latestBoundsRef.current = next;
+      if (nearRef.current) showBounds(next);
+    },
+    /** 지도가 멈춘 확대 단계. 지도는 범위(`rememberBounds`)보다 먼저 알린다. */
+    rememberLevel: (level: number) => {
+      const near = nextPlacesVisible(nearRef.current, level);
+      // 같은 값으로 상태를 다시 넣어도 React가 한 번 더 렌더할 수 있어 바뀔 때만 넣는다.
+      if (near !== nearRef.current) setIsNear(near);
+      nearRef.current = near;
+      // 가까이 다가간 순간에는 이미 기억한 범위로 바로 조회를 시작한다. 멀어지면 범위는 쓰지 않는다.
+      if (near) showBounds(latestBoundsRef.current);
+    },
   };
 };
 
