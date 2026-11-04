@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -100,33 +101,60 @@ public class AuthService {
         return createLoginResult(member, true, token.rawToken(), token.expiresIn());
     }
 
-    // 계정 연결과 토큰 교체를 함께 처리해 중간에 실패해도 기존 인증을 유지한다.
-    @Transactional
-    public IssuedRefreshToken linkNewIdentity(VerifiedIdentity identity) {
-        Long memberId = identity.memberId();
-        // 같은 회원의 동시 연결이나 탈퇴와 겹치지 않도록 회원 행을 잠근다.
-        memberRepository.findByIdForUpdate(memberId).orElseThrow(AuthService::invalidOAuthSession);
-        LocalDateTime now = LocalDateTime.now(clock);
-        RefreshToken session = refreshTokenRepository.findByTokenHash(identity.refreshTokenHash())
-                .filter(token -> token.getMemberId().equals(memberId) && !token.isExpiredAt(now))
-                .orElseThrow(AuthService::invalidOAuthSession);
-
-        if (identities.findByMemberId(memberId).isPresent()
-                || identities.findByProviderAndSubject(identity.provider(), identity.subject()).isPresent()) {
-            throw new BusinessRuleViolationException(ErrorCode.OAUTH_IDENTITY_ALREADY_LINKED,
-                    "현재 회원 또는 외부 계정에 이미 OAuth 연결이 있습니다.");
+    // 회원 상태와 토큰 교체를 한 트랜잭션에서 확정한다.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public IssuedRefreshToken completeOAuth(VerifiedIdentity identity) {
+        Long source = identity.memberId();
+        Optional<Long> existingTarget = findOAuthMember(identity);
+        lockOAuthMembers(source, existingTarget.orElse(source));
+        if (!existingTarget.equals(findOAuthMember(identity))) {
+            throw oauthLinkChanged();
         }
-        if (refreshTokenRepository.deleteByTokenHash(session.getTokenHash()) != 1) {
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        refreshTokenRepository.findByTokenHash(identity.refreshTokenHash())
+                .filter(token -> token.getMemberId().equals(source) && !token.isExpiredAt(now))
+                .orElseThrow(AuthService::invalidOAuthSession);
+        if (refreshTokenRepository.deleteByTokenHash(identity.refreshTokenHash()) != 1) {
             throw invalidOAuthSession();
         }
+
+        boolean anonymous = identities.findByMemberId(source).isEmpty();
+        Long target = existingTarget.orElseGet(() -> anonymous ? source : memberRepository.save(Member.create(now)).getId());
+        if (existingTarget.isEmpty()) {
+            saveIdentity(identity, target, now);
+        }
+        if (anonymous && !source.equals(target)) {
+            memberRepository.mergeOwnedData(source, target, now);
+            refreshTokenRepository.deleteByMemberId(source);
+        }
+        return issueRefreshToken(target, now);
+    }
+
+    private Optional<Long> findOAuthMember(VerifiedIdentity identity) {
+        return identities.findByProviderAndSubject(identity.provider(), identity.subject())
+                .map(MemberIdentity::getMemberId);
+    }
+
+    private void lockOAuthMembers(Long source, Long target) {
+        // 교차 전환 요청도 회원 ID 순서대로 잠가 교착을 피한다.
+        memberRepository.findByIdForUpdate(Math.min(source, target)).orElseThrow(AuthService::invalidOAuthSession);
+        if (!source.equals(target)) {
+            memberRepository.findByIdForUpdate(Math.max(source, target)).orElseThrow(AuthService::invalidOAuthSession);
+        }
+    }
+
+    private void saveIdentity(VerifiedIdentity identity, Long memberId, LocalDateTime now) {
         try {
             identities.save(MemberIdentity.create(memberId, identity.provider(), identity.subject(), now));
         } catch (DuplicateKeyException exception) {
-            // 사전 조회를 통과해도 다른 회원이 같은 외부 계정을 먼저 연결할 수 있다.
-            throw new BusinessRuleViolationException(ErrorCode.OAUTH_IDENTITY_ALREADY_LINKED,
-                    "OAuth 계정이 다른 요청에서 먼저 연결됐습니다.");
+            throw oauthLinkChanged();
         }
-        return issueRefreshToken(memberId, now);
+    }
+
+    private static BusinessRuleViolationException oauthLinkChanged() {
+        return new BusinessRuleViolationException(ErrorCode.OAUTH_IDENTITY_ALREADY_LINKED,
+                "OAuth 연결 상태가 변경됐습니다. 인증을 다시 시작해 주세요.");
     }
 
     private IssuedRefreshToken issueRefreshToken(Long memberId, LocalDateTime now) {

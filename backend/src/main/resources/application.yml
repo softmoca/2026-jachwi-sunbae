@@ -27,6 +27,7 @@ auth:
   refresh-token:
     validity-days: 365
   oauth:
+    success-redirect-uri: ${OAUTH_SUCCESS_REDIRECT_URI:}
     kakao:
       client-id: ${KAKAO_OAUTH_CLIENT_ID:}
       client-secret: ${KAKAO_OAUTH_CLIENT_SECRET:}

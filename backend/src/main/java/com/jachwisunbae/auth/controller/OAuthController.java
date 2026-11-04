@@ -9,8 +9,10 @@ import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import java.net.URI;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,12 +27,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class OAuthController {
 
     private final OAuthAuthenticationService service;
-
     private final AuthService authService;
+    private final URI successRedirect;
 
-    public OAuthController(OAuthAuthenticationService service, AuthService authService) {
+    public OAuthController(OAuthAuthenticationService service, AuthService authService,
+                           @Value("${auth.oauth.success-redirect-uri:}") String successRedirect) {
         this.service = service;
         this.authService = authService;
+        this.successRedirect = successRedirect.isBlank() ? null : URI.create(successRedirect);
+        if (this.successRedirect != null && (!"https".equals(this.successRedirect.getScheme())
+                || this.successRedirect.getHost() == null || this.successRedirect.getUserInfo() != null)) {
+            throw new IllegalArgumentException("OAuth 완료 주소는 HTTPS URL이어야 합니다.");
+        }
     }
 
     @PostMapping("/start")
@@ -46,7 +54,7 @@ public class OAuthController {
 
     @GetMapping("/callback")
     @Operation(summary = "OAuth 인증 결과 검증",
-            description = "시작 시 사용한 Refresh 쿠키와 일회용 state가 필요합니다. 새 계정 연결 성공 시 204와 Refresh 쿠키, 이미 연결된 경우 400, "
+            description = "시작 시 사용한 Refresh 쿠키와 일회용 state가 필요합니다. 성공 시 새 Refresh 쿠키와 303(완료 주소 미설정 시 204), "
                     + "인증 실패 시 401, 제공자 설정 누락·장애 시 503을 반환합니다.")
     public ResponseEntity<Void> callback(
             @PathVariable OAuthProvider provider,
@@ -55,9 +63,12 @@ public class OAuthController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error) {
         VerifiedIdentity identity = service.verifyCallback(provider, refreshCookie, state, code, error);
-        IssuedRefreshToken token = authService.linkNewIdentity(identity);
-        // 콜백은 새 Refresh 쿠키를 설정하고, 프론트는 /refresh로 Access Token을 받는다.
-        return ResponseEntity.noContent().cacheControl(CacheControl.noStore())
+        IssuedRefreshToken token = authService.completeOAuth(identity);
+        // 화면을 다시 열면 프론트의 기존 인증 초기화가 새 쿠키로 회원을 복원한다.
+        ResponseEntity.BodyBuilder response = successRedirect == null
+                ? ResponseEntity.status(HttpStatus.NO_CONTENT)
+                : ResponseEntity.status(HttpStatus.SEE_OTHER).location(successRedirect);
+        return response.cacheControl(CacheControl.noStore())
                 .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.create(token.rawToken(), token.expiresIn()).toString())
                 .header("Referrer-Policy", "no-referrer").build();
     }

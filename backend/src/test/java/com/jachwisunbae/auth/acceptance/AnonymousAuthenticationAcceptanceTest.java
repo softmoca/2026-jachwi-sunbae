@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -70,6 +71,7 @@ class AnonymousAuthenticationAcceptanceTest {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("auth.oauth.success-redirect-uri", () -> "https://app.example.com/");
         registry.add("auth.oauth.kakao.client-id", () -> "test-client");
         registry.add("auth.oauth.kakao.client-secret", () -> "test-secret");
         registry.add("auth.oauth.kakao.redirect-uri",
@@ -80,6 +82,8 @@ class AnonymousAuthenticationAcceptanceTest {
     void clearMembers() {
         jdbcTemplate.update("DELETE FROM oauth_attempts");
         jdbcTemplate.update("DELETE FROM refresh_tokens");
+        jdbcTemplate.update("DELETE FROM property_photos");
+        jdbcTemplate.update("DELETE FROM properties");
         jdbcTemplate.update("DELETE FROM member_identities");
         jdbcTemplate.update("DELETE FROM members");
     }
@@ -118,7 +122,8 @@ class AnonymousAuthenticationAcceptanceTest {
         mvc.perform(get("/api/auth/oauth/APPLE/callback").cookie(cookie).param("state", state).param("code", "valid-code"))
                 .andExpect(status().isUnauthorized());
         var linked = mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
-                .andExpect(status().isNoContent()).andReturn();
+                .andExpect(status().isSeeOther())
+                .andExpect(header().string(HttpHeaders.LOCATION, "https://app.example.com/")).andReturn();
         Cookie replacement = linked.getResponse().getCookie("refresh_token");
         assertThat(replacement).isNotNull();
         assertThat(replacement.getValue()).isNotEqualTo(cookie.getValue());
@@ -133,6 +138,102 @@ class AnonymousAuthenticationAcceptanceTest {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT member_id FROM member_identities WHERE provider = 'KAKAO' AND provider_subject = 'external-user'",
                 Long.class)).isEqualTo(memberId);
+    }
+
+    @Test
+    @DisplayName("익명 기록을 연결된 회원으로 이전하고 기존 회원의 인증은 유지한다")
+    void mergesAnonymousRecordsIntoLinkedMember() throws Exception {
+        AnonymousLogin source = startAnonymous();
+        AnonymousLogin target = startAnonymous();
+        AnonymousLogin secondSourceSession = addSession(source);
+        attachIdentity(target, "target");
+        String oldAccess = accessToken(source);
+        jdbcTemplate.update("INSERT INTO properties (id, member_id, name, created_at) VALUES (999, ?, '집', NOW(6))",
+                source.memberId());
+        jdbcTemplate.update("""
+                INSERT INTO property_photos (property_id, member_id, storage_key, content_type, size_bytes, created_at, deleted_at)
+                VALUES (999, ?, 'original/photo', 'image/jpeg', 100, NOW(6), NOW(6))
+                """, source.memberId());
+
+        jdbcTemplate.update("""
+                INSERT INTO member_weather_locations (member_id, grid_x, grid_y, updated_at)
+                VALUES (?, 60, 127, NOW(6))
+                """, source.memberId());
+        jdbcTemplate.update("""
+                INSERT INTO member_weather_notification_settings (member_id, enabled, updated_at)
+                VALUES (?, TRUE, NOW(6)), (?, FALSE, NOW(6))
+                """, source.memberId(), target.memberId());
+
+        Cookie replacement = completeOAuth(source, "target");
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(target.memberId()));
+        mvc.perform(post("/api/auth/refresh").cookie(target.refreshCookie())).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/refresh").cookie(secondSourceSession.refreshCookie()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + oldAccess))
+                .andExpect(status().isUnauthorized());
+        assertThat(jdbcTemplate.queryForObject("SELECT member_id FROM properties WHERE id = 999", Long.class))
+                .isEqualTo(target.memberId());
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM property_photos
+                WHERE property_id = 999 AND member_id = ? AND storage_key = 'original/photo' AND deleted_at IS NOT NULL
+                """, Long.class, target.memberId())).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT grid_x FROM member_weather_locations WHERE member_id = ?", Integer.class, target.memberId()))
+                .isEqualTo(60);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT enabled FROM member_weather_notification_settings WHERE member_id = ?", Boolean.class,
+                target.memberId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("OAuth 회원이 다른 연결 계정으로 전환해도 기존 기록과 다른 기기 인증은 유지한다")
+    void switchesLinkedAccountsWithoutMerging() throws Exception {
+        AnonymousLogin source = startAnonymous();
+        AnonymousLogin target = startAnonymous();
+        AnonymousLogin secondSourceSession = addSession(source);
+        attachIdentity(source, "source");
+        attachIdentity(target, "target");
+        jdbcTemplate.update("INSERT INTO properties (id, member_id, name, created_at) VALUES (999, ?, '집', NOW(6))",
+                source.memberId());
+
+        Cookie replacement = completeOAuth(source, "target");
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(target.memberId()));
+        mvc.perform(post("/api/auth/refresh").cookie(source.refreshCookie())).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").cookie(secondSourceSession.refreshCookie()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(source.memberId()));
+        assertThat(jdbcTemplate.queryForObject("SELECT member_id FROM properties WHERE id = 999", Long.class))
+                .isEqualTo(source.memberId());
+    }
+
+    private void attachIdentity(AnonymousLogin login, String subject) {
+        jdbcTemplate.update("""
+                INSERT INTO member_identities (member_id, provider, provider_subject, created_at)
+                VALUES (?, 'KAKAO', ?, NOW(6))
+                """, login.memberId(), subject);
+    }
+
+    private String accessToken(AnonymousLogin login) throws Exception {
+        var response = mvc.perform(post("/api/auth/refresh").cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        return objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+    }
+
+    private Cookie completeOAuth(AnonymousLogin login, String subject) throws Exception {
+        var response = mvc.perform(post("/api/auth/oauth/KAKAO/start")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(login)).cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        String url = objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("authorizationUrl").asText();
+        var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
+        doReturn(subject).when(oauthProviderClient)
+                .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(params.getFirst("nonce")));
+        return mvc.perform(get("/api/auth/oauth/KAKAO/callback").cookie(login.refreshCookie())
+                        .param("state", params.getFirst("state")).param("code", "valid-code"))
+                .andExpect(status().isSeeOther())
+                .andExpect(header().string(HttpHeaders.LOCATION, "https://app.example.com/")).andReturn().getResponse().getCookie("refresh_token");
     }
 
     @Test
