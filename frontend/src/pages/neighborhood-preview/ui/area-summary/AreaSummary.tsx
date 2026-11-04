@@ -30,13 +30,7 @@ type Props = {
  * 데스크탑 랭킹에서 동네를 고르면 목록 옆 칸에 여는 요약. 동네의 경로를 바로 그리지 않고 월세 시세와 출발 정류장 목록을 보여 준다.
  * 정류장을 고르면 같은 칸에서 그 정류장에서 출발하는 경로를 연다. 공인중개사는 지도에서 마커를 눌러 본다.
  */
-const AreaSummary = ({
-  area,
-  selectedStopId,
-  onSelectStation,
-  onOpenListing,
-  maxRent = 0,
-}: Props) => (
+const AreaSummary = ({ area, selectedStopId, onSelectStation, onOpenListing, maxRent = 0 }: Props) => (
   <section className={styles.summary} aria-label={`${area.name} 요약`}>
     <p className={styles.rent}>
       {area.rent
