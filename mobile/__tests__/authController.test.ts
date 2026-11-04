@@ -1,5 +1,5 @@
 import { createAuthController, type AuthPort } from '../src/auth/controller';
-import type { NativeAuthResult } from '../src/auth/NativeJachwiAuth';
+import type { NativeAuthResult } from '../src/native/NativeJachwiAuth';
 import type { AuthLoginRequest, AuthProvider } from '../src/auth/policy';
 
 const request = (

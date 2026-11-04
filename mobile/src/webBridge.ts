@@ -15,20 +15,31 @@ export type RouteMessage = {
   isTabBarVisible: boolean;
 };
 
+export type NativeContextExtras = {
+  /** 키까지 갖춰 지금 바로 쓸 수 있는 로그인 제공자(예: iOS ['apple','kakao'], Android ['kakao']). */
+  authProviders?: readonly string[];
+  /** 설치된 앱 버전(예: '2.2.0'). 네이티브가 읽은 값이고, 못 읽으면 null. */
+  appVersion?: string | null;
+  /** 설치된 앱 빌드 번호(iOS CFBundleVersion, Android versionCode). 못 읽으면 null. */
+  appBuild?: string | null;
+};
+
 /**
- * version은 그대로 2로 둔다. 필드를 더하기만 하므로 예전 웹도 그대로 읽는다.
- * authProviders: 키까지 갖춰 지금 바로 쓸 수 있는 로그인 제공자(예: iOS ['apple','kakao'], Android ['kakao']).
+ * version은 브리지 프로토콜 버전이라 그대로 2로 둔다. 앱 버전은 appVersion, appBuild를 본다.
+ * 필드를 더하기만 하므로 예전 웹도 그대로 읽는다.
  */
 export const createNativeContextScript = (
   platform: string,
   features: readonly NativeAppFeature[],
-  authProviders: readonly string[] = [],
+  { authProviders = [], appVersion = null, appBuild = null }: NativeContextExtras = {},
 ) => `
   window.__JACHWI_NATIVE_APP__ = Object.freeze({
     platform: ${JSON.stringify(platform)},
     version: 2,
     features: Object.freeze(${JSON.stringify(features)}),
-    authProviders: Object.freeze(${JSON.stringify(authProviders)})
+    authProviders: Object.freeze(${JSON.stringify(authProviders)}),
+    appVersion: ${JSON.stringify(appVersion)},
+    appBuild: ${JSON.stringify(appBuild)}
   });
   window.dispatchEvent(new CustomEvent('jachwi-native-ready', {
     detail: window.__JACHWI_NATIVE_APP__

@@ -44,6 +44,8 @@ Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.k
 
 웹이 `{type:'auth', action:'login', requestId, provider, nonce}`를 보내면 앱이 Apple 로그인 시트나 카카오 SDK로 `id_token`을 받아 `jachwi-auth` 이벤트로 돌려준다. 앱은 서버를 부르지 않는다. 브리지 계약은 `src/auth/policy.ts`에 있고, 앱이 나간 뒤에는 필드를 지우거나 뜻을 바꾸지 않는다. 웹은 `window.__JACHWI_NATIVE_APP__`의 `features`에 `auth`가 있고 `authProviders`에 제공자가 있을 때만 이 경로를 쓴다.
 
+`window.__JACHWI_NATIVE_APP__`의 `version`은 브리지 프로토콜 버전(2)이고, 설치된 앱의 버전과 빌드 번호는 `appVersion`, `appBuild`로 따로 알린다. 두 값은 네이티브(`JachwiAppInfo` 모듈)가 iOS `CFBundleShortVersionString`, `CFBundleVersion`과 Android `versionName`, `versionCode`에서 읽고, 읽지 못하면 `null`이다.
+
 카카오 네이티브 앱 키는 커밋하지 않는다. 비어 있어도 빌드되며, 그때 앱은 카카오 요청에 `not_configured`로 답한다.
 
 - iOS: `ios/Config/Kakao.local.xcconfig`에 `KAKAO_NATIVE_APP_KEY = <키>`를 적는다. Info.plist의 `KAKAO_NATIVE_APP_KEY`와 URL 스킴 `kakao<키>`가 이 값을 쓴다.

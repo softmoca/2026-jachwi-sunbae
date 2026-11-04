@@ -54,15 +54,16 @@
     "node": ">= 22.11.0"
   },
   "codegenConfig": {
-    "name": "JachwiAuthSpec",
+    "name": "JachwiNativeSpec",
     "type": "all",
-    "jsSrcsDir": "src/auth",
+    "jsSrcsDir": "src/native",
     "android": {
-      "javaPackageName": "com.jachwisunbae.app.auth"
+      "javaPackageName": "com.jachwisunbae.app.nativespec"
     },
     "ios": {
       "modulesProvider": {
-        "JachwiAuth": "JachwiAuthModule"
+        "JachwiAuth": "JachwiAuthModule",
+        "JachwiAppInfo": "JachwiAppInfoModule"
       }
     }
   },
