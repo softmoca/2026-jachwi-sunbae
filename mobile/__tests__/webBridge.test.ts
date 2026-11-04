@@ -27,6 +27,26 @@ describe('webBridge', () => {
     expect(script).toContain('["tab-bar"]');
   });
 
+  it('version은 2로 두고 로그인 제공자 목록을 더한다', () => {
+    const read = (script: string) => {
+      const window: Record<string, unknown> = { dispatchEvent: () => true };
+      class FakeCustomEvent {}
+      // eslint-disable-next-line no-new-func
+      new Function('window', 'CustomEvent', script)(window, FakeCustomEvent);
+      return window.__JACHWI_NATIVE_APP__;
+    };
+    expect(read(createNativeContextScript('ios', ['push', 'auth'], ['apple', 'kakao']))).toEqual({
+      platform: 'ios',
+      version: 2,
+      features: ['push', 'auth'],
+      authProviders: ['apple', 'kakao'],
+    });
+    expect(read(createNativeContextScript('android', ['push']))).toMatchObject({
+      version: 2,
+      authProviders: [],
+    });
+  });
+
   it('탭 키와 높이를 안전하게 스크립트에 넣는다', () => {
     expect(createSelectTabScript('map')).toContain('selectTab("map")');
     expect(createSelectTabScript('");alert(1);("')).toContain('selectTab("\\");alert(1);(\\"")');
