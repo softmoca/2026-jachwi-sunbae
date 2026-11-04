@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
-import com.jachwisunbae.auth.token.RefreshTokenProvider;
+import com.jachwisunbae.auth.token.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +51,7 @@ class MemberDeletionAcceptanceTest {
     @Autowired
     private RefreshTokenRepository refreshTokens;
     @Autowired
-    private RefreshTokenProvider refreshTokenProvider;
+    private JwtTokenProvider tokenProvider;
 
     @DynamicPropertySource
     static void configureDatabase(DynamicPropertyRegistry registry) {
@@ -83,10 +83,10 @@ class MemberDeletionAcceptanceTest {
         String accessToken = loginData.path("accessToken").asText();
         Cookie refreshCookie = login.getResponse().getCookie("refresh_token");
         assertThat(refreshCookie).isNotNull();
-        String anotherRawToken = refreshTokenProvider.generateToken();
-        LocalDateTime issuedAt = refreshTokens.findByTokenHash(refreshTokenProvider.hash(refreshCookie.getValue()))
+        String anotherRawToken = tokenProvider.generateOpaqueToken();
+        LocalDateTime issuedAt = refreshTokens.findByTokenHash(tokenProvider.hashOpaqueToken(refreshCookie.getValue()))
                 .orElseThrow().getCreatedAt();
-        refreshTokens.save(RefreshToken.create(memberId, refreshTokenProvider.hash(anotherRawToken), issuedAt, 365));
+        refreshTokens.save(RefreshToken.create(memberId, tokenProvider.hashOpaqueToken(anotherRawToken), issuedAt, 365));
 
         LocalDateTime now = LocalDateTime.now();
         jdbc.update("INSERT INTO properties (member_id, name, created_at) VALUES (?, '내 매물', ?)", memberId, now);

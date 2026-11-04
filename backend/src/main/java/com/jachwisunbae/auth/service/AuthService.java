@@ -7,7 +7,6 @@ import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.auth.service.OAuthAuthenticationService.VerifiedIdentity;
 import com.jachwisunbae.auth.service.dto.LoginResult;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
-import com.jachwisunbae.auth.token.RefreshTokenProvider;
 import com.jachwisunbae.common.exception.client.AuthenticationFailedException;
 import com.jachwisunbae.common.exception.client.BusinessRuleViolationException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
@@ -17,7 +16,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -30,28 +28,19 @@ public class AuthService {
     private final MemberIdentityRepository identities;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtProvider;
-    private final RefreshTokenProvider refreshTokenProvider;
     private final Clock clock;
-    private final long accessTokenSeconds;
-    private final long refreshTokenValidityDays;
 
     public AuthService(
             MemberRepository memberRepository,
             MemberIdentityRepository identities,
             RefreshTokenRepository refreshTokenRepository,
             JwtTokenProvider jwtProvider,
-            RefreshTokenProvider refreshTokenProvider,
-            Clock clock,
-            @Value("${auth.jwt.access-token-seconds}") long accessTokenSeconds,
-            @Value("${auth.refresh-token.validity-days}") long refreshTokenValidityDays) {
+            Clock clock) {
         this.memberRepository = memberRepository;
         this.identities = identities;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtProvider = jwtProvider;
-        this.refreshTokenProvider = refreshTokenProvider;
         this.clock = clock;
-        this.accessTokenSeconds = accessTokenSeconds;
-        this.refreshTokenValidityDays = refreshTokenValidityDays;
     }
 
     @Transactional
@@ -74,7 +63,7 @@ public class AuthService {
             return;
         }
 
-        String hash = refreshTokenProvider.hash(rawToken);
+        String hash = jwtProvider.hashOpaqueToken(rawToken);
         refreshTokenRepository.findByTokenHash(hash).ifPresent(token -> {
             if (!memberId.equals(token.getMemberId())) {
                 throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_INVALID,
@@ -89,7 +78,7 @@ public class AuthService {
             return Optional.empty();
         }
 
-        String tokenHash = refreshTokenProvider.hash(rawToken);
+        String tokenHash = jwtProvider.hashOpaqueToken(rawToken);
         Optional<RefreshToken> storedToken = refreshTokenRepository.findByTokenHash(tokenHash);
         if (storedToken.isEmpty() || storedToken.get().isExpiredAt(now)) {
             return Optional.empty();
@@ -101,7 +90,7 @@ public class AuthService {
             return Optional.empty();
         }
 
-        refreshToken.extendExpiry(now, refreshTokenValidityDays);
+        refreshToken.extendExpiry(now, jwtProvider.refreshTokenValidityDays());
         if (refreshTokenRepository.updateExpiry(refreshToken) == 0) {
             return Optional.empty();
         }
@@ -174,9 +163,9 @@ public class AuthService {
     }
 
     private IssuedRefreshToken issueRefreshToken(Long memberId, LocalDateTime now) {
-        String rawToken = refreshTokenProvider.generateToken();
-        RefreshToken refreshToken = RefreshToken.create(memberId, refreshTokenProvider.hash(rawToken), now,
-                refreshTokenValidityDays);
+        String rawToken = jwtProvider.generateOpaqueToken();
+        RefreshToken refreshToken = RefreshToken.create(memberId, jwtProvider.hashOpaqueToken(rawToken), now,
+                jwtProvider.refreshTokenValidityDays());
         refreshTokenRepository.save(refreshToken);
         return new IssuedRefreshToken(rawToken, Duration.between(now, refreshToken.getExpiresAt()).getSeconds());
     }
@@ -192,7 +181,7 @@ public class AuthService {
     private LoginResult createLoginResult(Member member, boolean newMember,
                                          String rawToken, long refreshTokenExpiresIn) {
         return new LoginResult(member.getId(), newMember,
-                jwtProvider.createAccessToken(member.getId()), accessTokenSeconds,
+                jwtProvider.createAccessToken(member.getId()), jwtProvider.accessTokenSeconds(),
                 rawToken, refreshTokenExpiresIn);
     }
 }

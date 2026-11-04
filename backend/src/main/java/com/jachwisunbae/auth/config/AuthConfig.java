@@ -1,7 +1,6 @@
 package com.jachwisunbae.auth.config;
 
 import com.jachwisunbae.auth.token.JwtTokenProvider;
-import com.jachwisunbae.auth.token.RefreshTokenProvider;
 import com.jachwisunbae.auth.web.AuthenticatedMemberIdResolver;
 import java.time.Clock;
 import java.util.List;
@@ -29,13 +28,9 @@ public class AuthConfig {
             @Value("${auth.jwt.secret}") String secret,
             @Value("${auth.jwt.issuer}") String issuer,
             @Value("${auth.jwt.audience}") String audience,
-            @Value("${auth.jwt.access-token-seconds}") long seconds,
+            @Value("${auth.jwt.access-token-seconds}") long accessTokenSeconds,
+            @Value("${auth.refresh-token.validity-days}") long refreshTokenValidityDays,
             Clock clock) {
-        return new JwtTokenProvider(secret, issuer, audience, seconds, clock);
-    }
-
-    @Bean
-    public RefreshTokenProvider refreshTokenProvider() {
-        return new RefreshTokenProvider();
+        return new JwtTokenProvider(secret, issuer, audience, accessTokenSeconds, refreshTokenValidityDays, clock);
     }
 }

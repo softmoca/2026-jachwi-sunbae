@@ -15,7 +15,7 @@ import com.jachwisunbae.auth.client.OAuthProviderClient;
 import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
-import com.jachwisunbae.auth.token.RefreshTokenProvider;
+import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.Cookie;
 import java.time.LocalDateTime;
@@ -59,7 +59,7 @@ class AnonymousAuthenticationAcceptanceTest {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private RefreshTokenProvider refreshTokenProvider;
+    private JwtTokenProvider tokenProvider;
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
@@ -265,7 +265,7 @@ class AnonymousAuthenticationAcceptanceTest {
         assertThat(refreshCookie.getSecure()).isTrue();
         assertThat(refreshCookie.getPath()).isEqualTo("/api/auth");
         assertThat(refreshCookie.getMaxAge()).isEqualTo(31_536_000);
-        String tokenHash = refreshTokenProvider.hash(refreshCookie.getValue());
+        String tokenHash = tokenProvider.hashOpaqueToken(refreshCookie.getValue());
 
         mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
@@ -537,13 +537,13 @@ class AnonymousAuthenticationAcceptanceTest {
     }
 
     private RefreshToken storedToken(AnonymousLogin login) {
-        return refreshTokenRepository.findByTokenHash(refreshTokenProvider.hash(login.refreshCookie().getValue()))
+        return refreshTokenRepository.findByTokenHash(tokenProvider.hashOpaqueToken(login.refreshCookie().getValue()))
                 .orElseThrow();
     }
 
     private AnonymousLogin addSession(AnonymousLogin original) {
-        String rawToken = refreshTokenProvider.generateToken();
-        refreshTokenRepository.save(RefreshToken.create(original.memberId(), refreshTokenProvider.hash(rawToken),
+        String rawToken = tokenProvider.generateOpaqueToken();
+        refreshTokenRepository.save(RefreshToken.create(original.memberId(), tokenProvider.hashOpaqueToken(rawToken),
                 storedToken(original).getCreatedAt(), 365));
         return new AnonymousLogin(original.memberId(), new Cookie("refresh_token", rawToken));
     }
