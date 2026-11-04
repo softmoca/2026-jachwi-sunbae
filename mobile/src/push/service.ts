@@ -14,14 +14,14 @@ import {
   unsubscribeFromTopic,
 } from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { APP_ENV } from '../config';
 import { createPushController } from './controller';
 
 const CHOICE_KEY = '@jachwi/push/choice-v1';
 const REGISTERED_KEY = '@jachwi/push/registered-v1';
 // 공개 서비스 안내만 허용한다. 개인 정보·개인 매물 알림에는 토픽을 사용하지 않는다.
-export const PUSH_TOPIC = __DEV__
-  ? 'jachwi-service-dev'
-  : 'jachwi-service-prod';
+export const PUSH_TOPIC =
+  APP_ENV === 'dev' ? 'jachwi-service-dev' : 'jachwi-service-prod';
 export const getConfiguredMessaging = () =>
   getApps().length ? getMessaging() : null;
 

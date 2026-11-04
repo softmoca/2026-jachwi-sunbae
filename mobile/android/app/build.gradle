@@ -126,12 +126,31 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+        // dev 서버를 보는 릴리스 빌드. 서명과 최적화는 release와 같다.
+        staging {
+            initWith release
+            matchingFallbacks = ["release"]
+        }
+    }
+}
+
+// buildType별 JS 앱 환경. Firebase 설정은 src/<buildType>/google-services.json에 둔다.
+def appEnvByBuildType = [debug: "dev", staging: "dev", release: "prod"]
+afterEvaluate {
+    tasks.withType(com.facebook.react.tasks.BundleHermesCTask).configureEach { task ->
+        def buildType = appEnvByBuildType.keySet().find {
+            task.name == "createBundle${it.capitalize()}JsAndAssets"
+        }
+        if (buildType) {
+            def nodeCommand = task.nodeExecutableAndArgs.get()
+            task.nodeExecutableAndArgs.set(["env", "JACHWI_APP_ENV=${appEnvByBuildType[buildType]}"] + nodeCommand)
+        }
     }
 }
 
 gradle.taskGraph.whenReady { taskGraph ->
     def buildsReleaseArtifact = taskGraph.allTasks.any {
-        it.project == project && (it.name == "bundleRelease" || it.name == "assembleRelease")
+        it.project == project && (it.name in ["bundleRelease", "assembleRelease", "bundleStaging", "assembleStaging"])
     }
     if (buildsReleaseArtifact && !hasReleaseSigning) {
         throw new GradleException(
