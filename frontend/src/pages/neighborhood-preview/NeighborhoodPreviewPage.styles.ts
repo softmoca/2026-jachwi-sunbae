@@ -1068,7 +1068,8 @@ export const placesHint = css`
   font-size: 0.65rem;
 `;
 
-/* 휴대폰에서 위치를 고르면 아래에 올리는 찾기 버튼. 버튼 글자에 고른 장소 이름을 넣는다. */
+/* 휴대폰에서 위치를 고르면 아래에 올리는 찾기 버튼. 버튼 글자에 고른 장소 이름을 넣는다.
+   공용 바텀시트처럼 태블릿(1023px까지)도 화면 폭을 채운다. 1024px부터는 데스크탑 화면이라 이 시트를 쓰지 않는다. */
 export const searchCard = css`
   label: NeighborhoodPreviewPage-searchCard;
   position: absolute;
@@ -1078,8 +1079,6 @@ export const searchCard = css`
   z-index: 20;
   display: grid;
   gap: 0.75rem;
-  max-width: 30rem;
-  margin: 0 auto;
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom) + 1rem);
   border-radius: 1.25rem 1.25rem 0 0;
   background: white;
