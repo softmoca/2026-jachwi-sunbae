@@ -1,5 +1,4 @@
 import { css } from '@emotion/css';
-import { useState } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 
 import { SERVICE_MAP_STYLE_ID } from '@/features/map/lib/mapStyle';
@@ -19,7 +18,6 @@ import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commu
 import { areaCardDescription, emptyAreaMessage, placesHint, transferLabel } from '../model/criteriaLabels';
 import { STATION_FOCUS_LEVEL } from '../model/resultMapView';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
-import type { AreaPlacesTab } from '../ui/area-places-sheet/AreaPlacesSheet';
 import AreaSummary, { areaStation } from '../ui/area-summary/AreaSummary';
 import ConditionPanel from '../ui/condition-panel/ConditionPanel';
 import LocationControls from '../ui/location-controls/LocationControls';
@@ -45,13 +43,9 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
   const isRoutePage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.area}/*`);
   const isDetailPage = useMatch(`${preview.mapPath}/${ROUTE_PATTERNS.areaDetails}`);
   const submitSearch = preview.startAnalysis;
-  // 동네 요약의 탭은 동네마다 정류장 탭에서 시작한다. 지도 마커도 탭에 맞춰 거른다.
-  const [placeTab, setPlaceTab] = useState<{ areaId: string; tab: AreaPlacesTab } | null>(null);
-  const areaTab: AreaPlacesTab =
-    placeTab && placeTab.areaId === preview.selected?.adminDongCode ? placeTab.tab : 'stations';
   const { isResultMap, mapProps, places, closeLayers } = useNeighborhoodMapView(preview, {
     showAreaAction: false,
-    placeMarkers: preview.selected ? areaTab : undefined,
+    stationMarkersOnly: !!preview.selected,
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
   /** 출발 정류장을 고르면 정보 칸에 경로를 열고 지도를 그 정류장으로 확대한다. */
@@ -156,13 +150,6 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
                 area={preview.selected}
                 selectedStopId={null}
                 onSelectStation={selectAreaStation}
-                agencies={places.agencies}
-                onSelectAgency={(agency) => {
-                  places.selectAgency(agency);
-                  preview.focusResultPoint(agency, STATION_FOCUS_LEVEL);
-                }}
-                tab={areaTab}
-                onTabChange={(tab) => setPlaceTab({ areaId: preview.selected!.adminDongCode, tab })}
                 onOpenListing={preview.openListing}
                 maxRent={preview.maxRent}
               />

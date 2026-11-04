@@ -21,7 +21,7 @@ import { STATION_FOCUS_LEVEL } from '../model/resultMapView';
 import type { NeighborhoodFilterField } from '../NeighborhoodFilters';
 import NeighborhoodFilters, { NeighborhoodFilterPicker } from '../NeighborhoodFilters';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
-import AreaPlacesSheet, { type AreaPlacesTab } from '../ui/area-places-sheet/AreaPlacesSheet';
+import AreaPlacesSheet from '../ui/area-places-sheet/AreaPlacesSheet';
 import { areaStation } from '../ui/area-summary/AreaSummary';
 import LocationControls from '../ui/location-controls/LocationControls';
 import NeighborhoodMapSearch from '../ui/map-search/NeighborhoodMapSearch';
@@ -50,17 +50,13 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   const submitSearch = preview.startAnalysis;
   // 지도 빈 곳을 찍으면 시트를 닫지 않고 제목만 보이게 내린다.
   const [peekSignal, setPeekSignal] = useState(0);
-  // 동네 시트의 탭은 동네마다 정류장 탭에서 시작한다. 지도 마커도 탭에 맞춰 거른다.
-  const [placeTab, setPlaceTab] = useState<{ areaId: string; tab: AreaPlacesTab } | null>(null);
-  const areaTab: AreaPlacesTab =
-    placeTab && placeTab.areaId === preview.selected?.adminDongCode ? placeTab.tab : 'stations';
   // 고른 동네의 정보는 지도 위 말풍선 대신 아래 시트(AreaPlacesSheet)에 둔다.
   const { isResultMap, mapProps, places, closeLayers } = useNeighborhoodMapView(preview, {
     showAreaAction: false,
     onEmptyTap: () => setPeekSignal((value) => value + 1),
     // 시트가 열린 채 지도의 동네를 찍으면 시트를 닫고 랭킹을 다시 보여 준다.
     deselectOnRegionTap: true,
-    placeMarkers: isRoutePage && preview.selected ? areaTab : undefined,
+    stationMarkersOnly: !!isRoutePage && !!preview.selected,
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
   const hasAreaSheet = !!isRoutePage && !!preview.selected;
@@ -269,25 +265,18 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 </HorizontalRail>
               </div>
             )}
-            {/* 동네를 고르면 정류장·공인중개사 탭 시트를 올리고, 항목을 고르면 시트 안에서 그 정보로 넘어간다. 뒤로가기로 목록에 돌아온다. */}
+            {/* 동네를 고르면 출발 정류장 시트를 올리고, 정류장을 고르면 시트 안에서 경로로 넘어간다. 뒤로가기로 목록에 돌아온다. */}
             {hasAreaSheet && preview.selected && (
               <AreaPlacesSheet
                 key={preview.selected.adminDongCode}
                 area={preview.selected}
-                agencies={places.agencies}
                 place={places.selectedPlace}
                 preview={preview}
                 peekSignal={peekSignal}
-                tab={areaTab}
-                onTabChange={(tab) => setPlaceTab({ areaId: preview.selected!.adminDongCode, tab })}
                 onSelectStation={(station) => {
                   places.selectStation(areaStation(station));
                   preview.selectStation(station.stopId);
                   preview.focusResultPoint(station, STATION_FOCUS_LEVEL);
-                }}
-                onSelectAgency={(agency) => {
-                  places.selectAgency(agency);
-                  preview.focusResultPoint(agency, STATION_FOCUS_LEVEL);
                 }}
                 onBack={places.closePlace}
                 onClose={() => {

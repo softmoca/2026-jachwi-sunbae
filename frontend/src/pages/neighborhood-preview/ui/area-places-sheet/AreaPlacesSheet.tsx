@@ -1,9 +1,7 @@
 import { css } from '@emotion/css';
 
 import { formatManwon } from '@/features/map/api/commuteApi';
-import { mapCategoryIconSrc, stationIconSrc } from '@/features/map/lib/mapIconAssets';
-import type { NearbyAgency } from '@/features/map/model/Map';
-import { LogClick } from '@/shared/lib/analytics/logging';
+import { stationIconSrc } from '@/features/map/lib/mapIconAssets';
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 
 import { type NeighborhoodPlace, placeTitle } from '../../hooks/useNeighborhoodPlaces';
@@ -13,23 +11,16 @@ import ListingLink from '../listing-link/ListingLink';
 import PlaceDetails from '../place-panel/PlaceDetails';
 
 type Area = NonNullable<NeighborhoodPreviewContext['selected']>;
-export type AreaPlacesTab = 'stations' | 'agencies';
 
 type Props = {
   area: Area;
-  /** 지금 화면 범위의 공인중개사. 공인중개사는 동네 단위로 받을 수 없어 화면 기준으로 보여 준다. */
-  agencies: NearbyAgency[];
   /** 고른 정류장·공인중개사. 있으면 같은 시트 안에서 그 정보로 넘어가고, 뒤로가기로 목록에 돌아온다. */
   place: NeighborhoodPlace | null;
   preview: Pick<
     NeighborhoodPreviewContext,
     'destination' | 'maxMinutes' | 'maxTransfers' | 'rentPeriod' | 'openListing' | 'maxRent'
   >;
-  /** 지금 탭. 지도도 탭에 맞춰 정류장만, 또는 공인중개사만 올리므로 화면이 들고 있다. */
-  tab: AreaPlacesTab;
-  onTabChange: (tab: AreaPlacesTab) => void;
   onSelectStation: (station: Area['stations'][number]) => void;
-  onSelectAgency: (agency: NearbyAgency) => void;
   onBack: () => void;
   /** 끌어 내려 닫으면 동네 선택을 푼다. */
   onClose: () => void;
@@ -38,22 +29,18 @@ type Props = {
 };
 
 /**
- * 휴대폰에서 동네를 고르면 아래에 올리는 시트. `정류장`·`공인중개사` 탭으로 그 동네의 출발 정류장과
- * 지금 화면 안의 공인중개사를 고르게 하고, 고르면 시트를 바꾸지 않고 그 안에서 정보로 넘어간다.
+ * 휴대폰에서 동네를 고르면 아래에 올리는 시트. 그 동네의 시세와 출발 정류장 목록을 보여 주고,
+ * 정류장을 고르면 시트를 바꾸지 않고 그 안에서 경로로 넘어간다. 지도에서 공인중개사 마커를 눌러도 같은 시트 안에서 연다.
  * 닫기 버튼은 두지 않는다. 끌어 내려 닫고, 끝까지 끌어 올리면 헤더에 뒤로가기·닫기가 있는 페이지로 본다.
  */
 const AreaPlacesSheet = ({
   area,
-  agencies,
   place,
   preview,
   onSelectStation,
-  onSelectAgency,
   onBack,
   onClose,
   peekSignal,
-  tab,
-  onTabChange: setTab,
 }: Props) => {
   const overRent = overRentNotice(area.rent, preview.maxRent);
   return (
@@ -96,67 +83,17 @@ const AreaPlacesSheet = ({
             )}
             {overRent && <p className={styles.overRent}>{overRent}</p>}
           </section>
-          <div className={styles.tabs} role="tablist" aria-label={`${area.name} 주변 장소`}>
-            <LogClick event="neighborhood_area_places_tab_changed" params={{ tab: 'stations', layout: 'mobile' }}>
-              <button
-                type="button"
-                role="tab"
-                id="area-places-stations"
-                aria-selected={tab === 'stations'}
-                aria-controls="area-places-panel"
-                onClick={() => setTab('stations')}
-              >
-                정류장 {area.stations.length}
-              </button>
-            </LogClick>
-            <LogClick event="neighborhood_area_places_tab_changed" params={{ tab: 'agencies', layout: 'mobile' }}>
-              <button
-                type="button"
-                role="tab"
-                id="area-places-agencies"
-                aria-selected={tab === 'agencies'}
-                aria-controls="area-places-panel"
-                onClick={() => setTab('agencies')}
-              >
-                공인중개사 {agencies.length}
-              </button>
-            </LogClick>
-          </div>
-          <div
-            id="area-places-panel"
-            role="tabpanel"
-            aria-labelledby={tab === 'stations' ? 'area-places-stations' : 'area-places-agencies'}
-          >
-            {tab === 'stations' ? (
-              <ul className={styles.items}>
-                {area.stations.map((station) => (
-                  <li key={station.stopId}>
-                    <button type="button" onClick={() => onSelectStation(station)}>
-                      <img src={stationIconSrc(station.stopId)} alt="" draggable={false} decoding="async" />
-                      <span>{station.stopName}</span>
-                      <small>{station.travelMinutes}분</small>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : agencies.length ? (
-              <ul className={styles.items}>
-                {agencies.map((agency) => (
-                  <li key={agency.providerPlaceId}>
-                    <LogClick event="neighborhood_agency_selected" params={{ layout: 'mobile' }}>
-                      <button type="button" onClick={() => onSelectAgency(agency)}>
-                        <img src={mapCategoryIconSrc('AGENCY')} alt="" draggable={false} decoding="async" />
-                        <span>{agency.name}</span>
-                        <small>{agency.address}</small>
-                      </button>
-                    </LogClick>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.empty}>지금 화면 안에는 공인중개사가 없어요. 지도를 옮겨 보세요.</p>
-            )}
-          </div>
+          <ul className={styles.items} aria-label={`${area.name} 출발 정류장`}>
+            {area.stations.map((station) => (
+              <li key={station.stopId}>
+                <button type="button" onClick={() => onSelectStation(station)}>
+                  <img src={stationIconSrc(station.stopId)} alt="" draggable={false} decoding="async" />
+                  <span>{station.stopName}</span>
+                  <small>{station.travelMinutes}분</small>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </BottomSheet>
@@ -191,35 +128,6 @@ const styles = {
     color: var(--color-danger, #d14d4d);
     font-size: 0.78rem;
     font-weight: 600;
-  `,
-
-  /* 네이버 지도 하단 시트처럼 두 칸짜리 분할 탭. */
-  tabs: css`
-    label: AreaPlacesSheet-tabs;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.25rem;
-    padding: 0.25rem;
-    border-radius: 0.75rem;
-    background: var(--color-surface-muted, #f2f3f5);
-
-    & button {
-      padding: 0.65rem 0.5rem;
-      border: 0;
-      border-radius: 0.6rem;
-      background: transparent;
-      color: var(--color-ink-soft);
-      font: inherit;
-      font-size: 0.9rem;
-      font-weight: 650;
-      cursor: pointer;
-    }
-
-    & button[aria-selected='true'] {
-      background: white;
-      box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
-      color: var(--color-ink);
-    }
   `,
 
   items: css`
@@ -272,12 +180,6 @@ const styles = {
     }
   `,
 
-  empty: css`
-    label: AreaPlacesSheet-empty;
-    margin: 0.5rem 0;
-    color: var(--color-ink-soft);
-    font-size: 0.85rem;
-  `,
 };
 
 export default AreaPlacesSheet;
