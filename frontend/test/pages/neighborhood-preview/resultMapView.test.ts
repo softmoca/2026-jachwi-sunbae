@@ -6,6 +6,8 @@ import {
   AREA_FOCUS_MAX_LEVEL,
   AREA_FOCUS_MIN_LEVEL,
   areaFocusLevel,
+  desktopMapViewport,
+  mobileMapViewport,
   nextPlacesVisible,
   PLACES_HIDE_LEVEL,
   PLACES_SHOW_LEVEL,
@@ -100,6 +102,32 @@ describe('routeFocusView', () => {
     const view = routeFocusView([start, destination]);
     const middle = { latitude: (start.latitude + destination.latitude) / 2, longitude: destination.longitude };
     expect(view).toEqual({ ...resultMapCenter(middle, view.level), level: view.level });
+  });
+
+  it('지도 칸을 주면 시트와 상세 칸이 가리는 여백을 빼고, 주변이 보이게 고정 칸으로 볼 때보다 덜 다가간다', () => {
+    const route = [northOf(1.5), destination];
+    const phone = mobileMapViewport({ width: 390, height: 844 }, 110)!;
+    expect(routeFocusView(route, [], phone).level).toBeGreaterThan(routeFocusView(route).level);
+    // 여백을 크게 주면 남은 칸이 좁아져 더 멀리 본다.
+    const covered = { ...phone, padding: { ...phone.padding, bottom: 600 } };
+    expect(routeFocusView(route, [], covered).level).toBeGreaterThan(routeFocusView(route, [], phone).level);
+  });
+
+  it('아래 시트가 가리면 경로 가운데가 남은 칸 가운데에 오게 지도 중심을 남쪽으로 둔다', () => {
+    const route = [northOf(1.5), destination];
+    const middleLatitude = (route[0].latitude + destination.latitude) / 2;
+    const view = routeFocusView(route, [], mobileMapViewport({ width: 390, height: 844 }, 110)!);
+    expect(view.latitude).toBeLessThan(middleLatitude);
+    // 좌우 여백이 같으면 가로로는 옮기지 않는다.
+    expect(view.longitude).toBeCloseTo(destination.longitude, 9);
+  });
+
+  it('데스크탑은 상세 칸이 아직 닫혀 있으면 열릴 폭(clamp(22rem, 28%, 26rem))을 미리 빼고, 크기를 모르면 고정 칸을 쓴다', () => {
+    const closed = desktopMapViewport({ width: 922, height: 736 }, { width: 1280, isDetailOpen: false });
+    expect(closed?.width).toBeCloseTo(922 - 358.4, 6);
+    expect(desktopMapViewport({ width: 563, height: 736 }, { width: 1280, isDetailOpen: true })?.width).toBe(563);
+    expect(desktopMapViewport({ width: 0, height: 0 }, { width: 1280, isDetailOpen: false })).toBeNull();
+    expect(mobileMapViewport({ width: 0, height: 0 }, 0)).toBeNull();
   });
 
   it('동네 경계를 함께 주면 경계 바깥 끝까지 화면에 담는다', () => {
