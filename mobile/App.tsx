@@ -24,9 +24,11 @@ import { startLaunchGate } from './src/push/launchGate';
 import { WEB_APP_URL } from './src/config';
 import { isAllowedWebAppUrl, toWebAppUrl } from './src/navigationPolicy';
 import { createNativeContextScript } from './src/webBridge';
+import { useAuthBridge } from './src/auth/useAuthBridge';
 
 // 네이티브 탭바를 광고하지 않는다. 웹의 탭바가 그대로 표시된다.
-const NATIVE_FEATURES = ['push'] as const;
+// 'auth'는 시스템 인증 화면을 열어 주는 브리지가 있다는 뜻이다. 지금 웹은 아직 쓰지 않는다.
+const NATIVE_FEATURES = ['push', 'auth'] as const;
 
 type ErrorViewProps = {
   onRetry: () => void;
@@ -73,14 +75,21 @@ const AppContent = () => {
     webViewRef.current?.injectJavaScript(script);
   }, []);
   const push = usePushNotifications(navigateFromPush, injectPushScript);
+  const { onMessageFromWeb: onAuthMessage, handleDeepLink: handleAuthLink } =
+    useAuthBridge(injectPushScript);
 
-  const openDeepLink = useCallback((url: string) => {
-    const nextUrl = toWebAppUrl(url);
-    if (nextUrl !== null) {
-      setFailed(false);
-      setAppUrl(nextUrl);
-    }
-  }, []);
+  const openDeepLink = useCallback(
+    (url: string) => {
+      // 인증 화면이 열려 있는 동안 돌아온 콜백은 웹 화면으로 열지 않고 인증 결과로 넘긴다.
+      if (handleAuthLink(url)) return;
+      const nextUrl = toWebAppUrl(url);
+      if (nextUrl !== null) {
+        setFailed(false);
+        setAppUrl(nextUrl);
+      }
+    },
+    [handleAuthLink],
+  );
 
   useEffect(() => {
     Linking.getInitialURL().then(url => {
@@ -114,11 +123,12 @@ const AppContent = () => {
 
   const handleWebMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      push
-        .onMessageFromWeb(event.nativeEvent.data, event.nativeEvent.url)
-        .catch(() => undefined);
+      const { data, url } = event.nativeEvent;
+      // 각 브리지는 자기 type의 메시지만 처리하고 나머지는 무시한다.
+      push.onMessageFromWeb(data, url).catch(() => undefined);
+      onAuthMessage(data, url).catch(() => undefined);
     },
-    [push],
+    [push, onAuthMessage],
   );
 
   const handleWebViewLoadEnd = useCallback(() => {
