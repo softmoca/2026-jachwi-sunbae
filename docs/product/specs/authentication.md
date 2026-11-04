@@ -67,6 +67,13 @@ PostHog에서 기존 로그인 화면 방문자의 85%가 이탈한 것을 확�
 - `POL-AUTH-021`: 연결 전에 익명 기록이 선택한 OAuth 계정에 저장되며 다른 계정으로 이전할 수 없음을 안내한다.
 - `POL-AUTH-022`: 카카오·Apple 인증 결과는 백엔드에서 검증한다. 카카오 토큰은 사용자 확인에만 사용하고 클라이언트에 전달하지 않는다. 카카오 Refresh Token의 장기 보관·주기적 갱신은 하지 않으며, 카카오 토큰 만료만으로 계정 연결이나 우리 인증을 종료하지 않는다.
 
+현재 웹 인증 검증 계약은 다음과 같다. `{provider}`에는 `KAKAO` 또는 `APPLE`을 사용한다.
+
+- `POST /api/auth/oauth/{provider}/start`는 같은 회원의 Bearer JWT와 Refresh 쿠키를 확인하고 `data.authorizationUrl`을 반환한다. 브라우저는 받은 URL로 이동한다.
+- `GET /api/auth/oauth/{provider}/callback`은 시작할 때 사용한 Refresh 쿠키와 5분 이내의 일회용 `state`를 확인한다. 제공자가 발급한 인가 코드를 서버에서 교환하고 ID Token의 서명·발급자·대상·만료·`nonce`를 검증한다.
+- 현재 콜백은 검증 성공 시 `204`를 반환한다. 검증 실패·취소는 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정 누락·장애는 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답한다. 연결·기록 통합·새 서비스 토큰 발급은 후속 작업이다.
+- 환경별로 `KAKAO_OAUTH_CLIENT_ID`, `KAKAO_OAUTH_CLIENT_SECRET`, `KAKAO_OAUTH_REDIRECT_URI`와 대응하는 `APPLE_OAUTH_*`를 설정한다. 제공자 콘솔에 위 콜백의 HTTPS 주소를 등록하고, 카카오는 OpenID Connect를 활성화한다. Apple의 Client ID는 웹용 Services ID, Client Secret은 만료 전에 갱신해야 하는 개발자 서명 JWT다.
+
 ### 3.5. 익명 기록 통합
 
 - `POL-AUTH-023`: 매물·사진 메타데이터·사용자 체크리스트·거리 메모와 관련 기록의 소유권을 기준 회원으로 이전한다. 중복 제거 없이 ID·내용·삭제 상태와 기록 간 연결을 보존한다.
@@ -128,7 +135,7 @@ OAuth 연결·통합과 기기별 이용은 다음 기준으로 확인한다.
 
 ## 5. 미정 사항
 
-- OAuth 시작·완료·계정 전환·로그아웃 API의 경로·응답·오류 코드와 현재 회원 인증 전달 방식
+- OAuth 검증 후 계정 연결·전환 및 로그아웃 API의 응답과 화면 복귀 방식
 - 브라우저·WebView 환경별 리다이렉트·쿠키·CORS·CSRF 설정과 여러 탭의 인증 전환·토큰 갱신 조정 방식
 - 앱에서 OAuth를 마친 뒤 WebView 인증으로 연결하는 완료 결과 전달 계약
 - 사진의 복합 외래키와 기기 푸시 등록 등 기존 제약을 지키는 소유권·인증 세션 이전 방식
