@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { logoutAuthentication } from '@/features/auth/api/apiClient';
+import { isOAuthLinkAvailable } from '@/features/auth/model/oauthAvailability';
 import { startOAuthLink } from '@/features/auth/model/oauthFlow';
 import {
   OAUTH_PROVIDER_LABELS,
@@ -50,6 +51,9 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   const [status, setStatus] = useState<Status>('idle');
   const [notice, setNotice] = useState<OAuthNotice | null>(() => readOAuthNoticeFromState(location.state));
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+
+  // 앱 WebView는 네이티브 로그인을 지원할 때까지 계정 연결과 로그아웃을 보여 주지 않는다.
+  if (!isOAuthLinkAvailable()) return null;
 
   const open = (next: Exclude<DialogState, null>, trigger: HTMLButtonElement) => {
     returnFocusRef.current = trigger;

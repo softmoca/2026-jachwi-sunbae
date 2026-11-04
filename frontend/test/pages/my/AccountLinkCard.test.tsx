@@ -17,11 +17,11 @@ const success = (data: unknown) => HttpResponse.json({ code: 'SUCCESS', message:
 
 const CurrentPath = () => <output aria-label="현재 경로">{useLocation().pathname}</output>;
 
-const renderMyPage = () =>
+const renderMyPage = (initialPath = '/me') =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })}>
       <PublicConfigProvider config={config}>
-        <MemoryRouter initialEntries={['/me']}>
+        <MemoryRouter initialEntries={[initialPath]}>
           <AppRoutes />
           <CurrentPath />
         </MemoryRouter>
@@ -99,12 +99,39 @@ describe('마이 화면 계정 연결', () => {
     expect(getAuthenticationSnapshot().session?.memberId).toBe(2);
   });
 
-  it('앱 WebView에서도 브라우저와 같은 계정 연결을 보여 준다', async () => {
-    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2 };
+  it('앱 WebView에서는 계정 연결 카드와 버튼을 숨긴다', async () => {
+    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['push'] };
+    saveLinkedProvider(1, 'KAKAO');
+    renderMyPage();
+
+    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '카카오로 계속하기' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
+  });
+
+  it('앱 WebView에서 복귀 화면으로 들어오면 다시 로그인하지 않고 마이로 보낸다', async () => {
+    window.__JACHWI_NATIVE_APP__ = { platform: 'android', version: 2 };
+    let loginCalls = 0;
+    server.use(
+      http.post('*/api/auth/login', () => {
+        loginCalls += 1;
+        return success({ accessToken: 'token', tokenType: 'Bearer', expiresIn: 900, member: { memberId: 1 } });
+      }),
+    );
+    renderMyPage('/oauth/complete');
+
+    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
+    expect(screen.queryByRole('status', { name: /계정/ })).not.toBeInTheDocument();
+    // 마이 화면의 자동 로그인 한 번뿐이다. 복귀 화면의 다시 로그인은 하지 않는다.
+    expect(loginCalls).toBe(1);
+  });
+
+  it('네이티브 로그인을 알린 앱에서는 계정 연결을 보여 준다', async () => {
+    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'] };
     renderMyPage();
 
     expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '카카오로 계속하기' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apple로 계속하기' })).toBeInTheDocument();
   });
 });
