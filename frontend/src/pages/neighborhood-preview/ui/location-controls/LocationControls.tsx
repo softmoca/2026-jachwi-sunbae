@@ -24,7 +24,8 @@ const LocationControls = ({ preview, isResult, isFilterOpen = false, zoom, docke
   <div
     className={shared.locationControls}
     data-docked={docked || undefined}
-    data-result={isResult || undefined}
+    // 시트 위에 붙이면 결과 화면용 높이(카드 레일, 기록 버튼 피하기)를 쓰지 않는다.
+    data-result={(isResult && !docked) || undefined}
     data-filter-open={isFilterOpen || undefined}
   >
     {(preview.isLocating || preview.locationError) && (
