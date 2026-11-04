@@ -20,6 +20,7 @@ const WeatherSummaryCard = () => {
     isEnabled,
     isLoading,
     isUpdating,
+    isLocating,
     hasUpdateFailed,
     location,
     placeName,
@@ -109,6 +110,8 @@ const WeatherSummaryCard = () => {
         <NotificationToggle
           checked={isEnabled}
           disabled={isLoading || isUpdating}
+          isBusy={isLocating}
+          busyLabel="현재 위치를 확인하고 있어요."
           message={message}
           onToggle={toggle}
         />

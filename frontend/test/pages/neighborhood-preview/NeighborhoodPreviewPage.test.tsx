@@ -856,7 +856,7 @@ it('통근 서버 오류는 가짜 결과로 대체하지 않는다', async () =
   show();
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('대중교통 정보를 준비하고 있습니다.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('대중교통 정보를 준비하고 있어요.');
   expect(screen.queryByRole('region', { name: '행정동 프리셋 지도' })).not.toBeInTheDocument();
   await waitFor(() =>
     expect(trackPostHogEvent).toHaveBeenCalledWith(

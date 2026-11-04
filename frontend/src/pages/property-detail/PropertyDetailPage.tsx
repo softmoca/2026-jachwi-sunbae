@@ -313,7 +313,7 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
         >
           {removeMutation.isError && (
             <p role="alert" className={styles.deleteError}>
-              매물을 삭제하지 못했습니다. 매물은 그대로 유지됩니다.
+              매물을 삭제하지 못했어요. 매물은 그대로 있어요. 다시 시도해 주세요.
             </p>
           )}
         </ConfirmDialog>

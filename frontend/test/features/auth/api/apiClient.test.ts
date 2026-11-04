@@ -2,7 +2,13 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, apiRequest, getApiErrorTrackingContext, resetAuthentication } from '@/features/auth/api/apiClient';
+import {
+  ApiError,
+  apiRequest,
+  getApiErrorTrackingContext,
+  getSafeApiErrorMessage,
+  resetAuthentication,
+} from '@/features/auth/api/apiClient';
 import {
   clearAuthentication,
   getAccessToken,
@@ -35,6 +41,22 @@ describe('API 클라이언트', () => {
       error_category: 'api_contract',
       severity: 'P1',
     });
+  });
+
+  it('오류 원문 대신 지금 말투의 사용자 문구를 돌려준다', () => {
+    expect(getSafeApiErrorMessage(new ApiError({ kind: 'network' }))).toBe(
+      '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+    );
+    expect(getSafeApiErrorMessage(new ApiError({ kind: 'server', status: 401, code: 'ACCESS_TOKEN_INVALID' }))).toBe(
+      '접속이 만료됐어요. 화면을 새로 고쳐 주세요.',
+    );
+    for (const error of [
+      new ApiError({ kind: 'server', status: 500, code: 'INTERNAL_ERROR' }),
+      new Error('TypeError: Failed to fetch'),
+      { message: 'raw' },
+    ]) {
+      expect(getSafeApiErrorMessage(error)).toBe('요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }
   });
 
   it('204 No Content 응답을 JSON 파싱 없이 처리할 수 있다', async () => {

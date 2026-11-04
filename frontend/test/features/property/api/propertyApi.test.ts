@@ -458,7 +458,7 @@ describe('FE-2 API 경계', () => {
     );
 
     const error = await fetchPropertyPhotos(config, 10).catch((caught: unknown) => caught);
-    expect(getPropertyErrorMessage(error)).toBe('사진을 불러오지 못했습니다. 다시 시도해 주세요.');
+    expect(getPropertyErrorMessage(error)).toBe('사진을 불러오지 못했어요. 다시 시도해 주세요.');
     expect(getPropertyErrorMessage(error)).not.toContain('서버 내부 상세 메시지');
   });
 });

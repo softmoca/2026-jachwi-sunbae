@@ -20,9 +20,15 @@ const App = ({ config }: AppProps) => {
   try {
     resolvedConfig = config ?? getPublicConfig();
   } catch (error) {
-    const description = error instanceof Error ? error.message : '공개 환경변수 설정을 확인해 주세요.';
-
-    return <StatusPanel title="애플리케이션 설정이 필요합니다" description={description} tone="error" />;
+    // 빠진 환경변수 이름은 배포한 사람이 콘솔에서 확인한다. 화면에는 사용자 문구만 보인다.
+    console.error(error);
+    return (
+      <StatusPanel
+        title="서비스를 열지 못했어요"
+        description="잠시 후 다시 열어 주세요. 계속 열리지 않으면 자취선배 팀에 알려 주세요."
+        tone="error"
+      />
+    );
   }
 
   return (
