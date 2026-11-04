@@ -223,12 +223,14 @@ const styles = {
         will-change: transform;
       }
 
-      /* 끝까지 올리면 지도를 덮는 페이지가 된다. */
+      /* 끝까지 올리면 화면 전체를 덮는 페이지가 된다. 시트가 지도 칸 안에 있어도(저렴한 한 끼처럼 위에 머리와 탭이 있는 화면)
+         그 칸이 아니라 화면 맨 위까지 덮는다. */
       &[data-mode='full'] {
-        bottom: 0;
+        position: fixed;
+        inset: 0;
         z-index: 50;
-        height: var(--sheet-height, 100%);
-        max-height: 100%;
+        height: auto;
+        max-height: none;
         border-radius: 0;
         box-shadow: none;
       }
