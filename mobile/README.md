@@ -8,6 +8,7 @@
 | 준비 중 버전 | `2.1.1`               | `2.1.1`            |
 | 빌드 번호    | `8`                   | `8`                |
 | 푸시         | FCM → APNs            | FCM                |
+| 네이티브 로그인 | Apple, 카카오 | 카카오 |
 
 두 앱에 같은 확대 크롭 오리 아이콘을 적용했다. 네이티브 하단 탭바는 사용하지 않고 웹 UI를 표시한다. 웹 라우팅·로그인·기존 서비스 기능은 웹 배포를 따른다.
 
@@ -39,6 +40,15 @@ Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.k
 
 **설정 파일, APNs 인증 연결, 실제 기기 수신 검증이 완료되기 전에는 배포하지 않는다.** 사용자별 발송은 웹/서버의 인증된 토큰 등록·로그아웃 해제 연동이 추가로 필요하다. 현재 준비 범위와 서버 연동 규약은 [푸시 운영 문서](docs/push-notifications.md)를 따른다.
 
+## 네이티브 로그인
+
+웹이 `{type:'auth', action:'login', requestId, provider, nonce}`를 보내면 앱이 Apple 로그인 시트나 카카오 SDK로 `id_token`을 받아 `jachwi-auth` 이벤트로 돌려준다. 앱은 서버를 부르지 않는다. 브리지 계약은 `src/auth/policy.ts`에 있고, 앱이 나간 뒤에는 필드를 지우거나 뜻을 바꾸지 않는다. 웹은 `window.__JACHWI_NATIVE_APP__`의 `features`에 `auth`가 있고 `authProviders`에 제공자가 있을 때만 이 경로를 쓴다.
+
+카카오 네이티브 앱 키는 커밋하지 않는다. 비어 있어도 빌드되며, 그때 앱은 카카오 요청에 `not_configured`로 답한다.
+
+- iOS: `ios/Config/Kakao.local.xcconfig`에 `KAKAO_NATIVE_APP_KEY = <키>`를 적는다. Info.plist의 `KAKAO_NATIVE_APP_KEY`와 URL 스킴 `kakao<키>`가 이 값을 쓴다.
+- Android: `android/local.properties`나 `~/.gradle/gradle.properties`에 `KAKAO_NATIVE_APP_KEY=<키>`를 적는다.
+
 ## 검사
 
 ```bash
@@ -55,7 +65,7 @@ npm run format:docs:check
 
 ## 스토어 준비
 
-- iOS는 `.xcworkspace`로 열고 Push Notifications entitlement를 포함한 올바른 팀/프로파일로 서명한다. APNs 키를 Firebase에 연결한 후 실기기에서 확인한다.
+- iOS는 `.xcworkspace`로 열고 Push Notifications, Sign in with Apple entitlement를 포함한 올바른 팀/프로파일로 서명한다. APNs 키를 Firebase에 연결한 후 실기기에서 확인한다.
 - Android는 기존 업로드 키를 유지한다. 환경 변수 또는 개인 Gradle 설정에 `JACHWI_UPLOAD_STORE_FILE`, `JACHWI_UPLOAD_STORE_PASSWORD`, `JACHWI_UPLOAD_KEY_ALIAS`, `JACHWI_UPLOAD_KEY_PASSWORD`를 제공한 뒤 `cd android && ./gradlew bundleRelease`로 만든다.
 - Play Store 등록용 아이콘은 `store-assets/android/play-store-icon-512.png`, App Store 아이콘은 iOS AppIcon asset catalog에 있다.
 - 스토어 스크린샷은 `store-assets/ios/6.7-inch/`와 `store-assets/android/phone/`에 있고, `store-assets/template/render.sh`로 다시 만든다. 자세한 방법은 [스토어 스크린샷](store-assets/ios/README.md)을 따른다.
