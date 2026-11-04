@@ -109,6 +109,8 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
               tone: 'place' as const,
               category: 'TRANSPORT' as const,
               variant: stationVariant(station.stopId),
+              // 누르면 지도 빈 곳 누르기로 넘어가 열어 둔 경로를 닫지 않게, 고른 정류장 그대로 둔다.
+              actionable: true,
             },
           ]
         : [],
@@ -138,7 +140,12 @@ const useNeighborhoodPlaces = (enabled: boolean) => {
     selectAgency: (agency: NearbyAgency) => setSelectedId(`${AGENCY_PREFIX}${agency.providerPlaceId}`),
     /** 정류장·부동산 마커만 고른다. 다른 마커(목적지 등)는 무시한다. */
     selectMarker: (marker: MapMarker) => {
-      if (marker.id.startsWith(AGENCY_PREFIX) || marker.id.startsWith(BUS_STOP_PREFIX)) setSelectedId(marker.id);
+      if (
+        marker.id.startsWith(AGENCY_PREFIX) ||
+        marker.id.startsWith(BUS_STOP_PREFIX) ||
+        (station !== null && marker.id === `${STATION_PREFIX}${station.stopId}`)
+      )
+        setSelectedId(marker.id);
     },
     /** 동네 목록에서 출발 정류장을 고른다. */
     selectStation: (next: AreaStation) => {

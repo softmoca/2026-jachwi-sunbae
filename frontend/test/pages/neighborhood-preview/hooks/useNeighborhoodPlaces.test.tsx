@@ -92,3 +92,15 @@ it('멀리 볼 때는 지도가 멈출 때마다 범위가 바뀌어도 다시 �
   });
   expect(renders).toBe(near);
 });
+
+it('고른 출발 정류장 마커는 누를 수 있고, 눌러도 지도 빈 곳 누르기로 넘어가 열어 둔 경로를 닫지 않는다', () => {
+  const { result } = renderHook(useNeighborhoodPlaces, { initialProps: true });
+  const station = { stopId: 'start-1', name: '출발 정류장', latitude: 37.5, longitude: 127 };
+  act(() => result.current.selectStation(station));
+  const marker = result.current.markers.find((item) => item.id.endsWith(station.stopId))!;
+  // 누를 수 있는 마커만 지도 클릭으로 흘려보내지 않는다(MapMarkerView).
+  expect(marker.actionable).toBe(true);
+
+  act(() => result.current.selectMarker(marker));
+  expect(result.current.selectedPlace).toEqual({ kind: 'station', station });
+});
