@@ -25,7 +25,7 @@ public class JdbcMemberRepository implements MemberRepository {
         String sql = """
                 SELECT id, created_at, updated_at
                 FROM members
-                WHERE id = ? AND deleted_at IS NULL
+                WHERE id = ? AND deleted_at IS NULL AND merged_into_member_id IS NULL
                 """;
         return jdbcTemplate.query(sql, memberRowMapper(), memberId).stream().findFirst();
     }
@@ -35,7 +35,7 @@ public class JdbcMemberRepository implements MemberRepository {
         String sql = """
                 SELECT id, created_at, updated_at
                 FROM members
-                WHERE id = ? AND deleted_at IS NULL
+                WHERE id = ? AND deleted_at IS NULL AND merged_into_member_id IS NULL
                 FOR UPDATE
                 """;
         return jdbcTemplate.query(sql, memberRowMapper(), memberId).stream().findFirst();
@@ -57,6 +57,43 @@ public class JdbcMemberRepository implements MemberRepository {
         }, keyHolder);
         long memberId = keyHolder.getKey().longValue();
         return Member.reconstruct(memberId, member.getCreatedAt(), member.getUpdatedAt(), member.getDeletedAt());
+    }
+
+    @Override
+    public void mergeOwnedData(Long source, Long target, LocalDateTime mergedAt) {
+        // 사진의 복합 외래키는 매물 소유권 변경을 따라간다.
+        jdbcTemplate.update("UPDATE properties SET member_id = ? WHERE member_id = ?", target, source);
+        jdbcTemplate.update("UPDATE user_checklists SET member_id = ? WHERE member_id = ?", target, source);
+        jdbcTemplate.update("UPDATE street_memos SET member_id = ? WHERE member_id = ?", target, source);
+        jdbcTemplate.update("""
+                UPDATE member_checklist_preferences source
+                LEFT JOIN member_checklist_preferences target
+                    ON target.member_id = ? AND target.stage = source.stage
+                SET source.member_id = ?
+                WHERE source.member_id = ? AND target.member_id IS NULL
+                """, target, target, source);
+        jdbcTemplate.update("DELETE FROM member_checklist_preferences WHERE member_id = ?", source);
+        jdbcTemplate.update("""
+                UPDATE member_weather_locations source
+                LEFT JOIN member_weather_locations target ON target.member_id = ?
+                SET source.member_id = ?
+                WHERE source.member_id = ? AND target.member_id IS NULL
+                """, target, target, source);
+        jdbcTemplate.update("""
+                UPDATE member_weather_notification_settings source
+                LEFT JOIN member_weather_notification_settings target ON target.member_id = ?
+                SET source.member_id = ?
+                WHERE source.member_id = ? AND target.member_id IS NULL
+                """, target, target, source);
+        jdbcTemplate.update("DELETE FROM member_weather_locations WHERE member_id = ?", source);
+        jdbcTemplate.update("DELETE FROM member_weather_notification_settings WHERE member_id = ?", source);
+        jdbcTemplate.update("""
+                UPDATE weather_notification_devices SET token = NULL, token_hash = NULL, updated_at = ?
+                WHERE member_id = ?
+                """, mergedAt, source);
+        jdbcTemplate.update("""
+                UPDATE members SET merged_into_member_id = ?, updated_at = ? WHERE id = ?
+                """, target, mergedAt, source);
     }
 
     @Override
@@ -98,7 +135,7 @@ public class JdbcMemberRepository implements MemberRepository {
         jdbcTemplate.update("""
                 UPDATE members
                 SET updated_at = ?, deleted_at = ?
-                WHERE id = ? AND deleted_at IS NULL
+                WHERE id = ? AND deleted_at IS NULL AND merged_into_member_id IS NULL
                 """, deletedAt, deletedAt, memberId);
     }
 
