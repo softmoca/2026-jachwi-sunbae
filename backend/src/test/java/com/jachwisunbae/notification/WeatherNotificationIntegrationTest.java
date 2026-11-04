@@ -141,6 +141,7 @@ class WeatherNotificationIntegrationTest {
         assertThat(saved.notices()).extracting(Notice::condition).containsExactly(Condition.LAUNDRY);
         assertThat(pushes.getFirst().notificationId()).isEqualTo(saved.notificationId());
         assertThat(pushes.getFirst().type()).isEqualTo(PushSender.Type.WEATHER);
+        assertThat(pushes.getFirst().url()).isEqualTo("/me");
         String json = jdbc.queryForObject("SELECT notices FROM weather_notifications", String.class);
         assertThat(new ObjectMapper().readTree(json)).isEqualTo(new ObjectMapper().readTree("""
                 [{"condition":"LAUNDRY","message":"오늘은 비 예보가 없고 습도가 낮아요. 빨래하기 괜찮겠어요!"}]
