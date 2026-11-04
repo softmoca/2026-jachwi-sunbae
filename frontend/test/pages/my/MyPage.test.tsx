@@ -304,7 +304,9 @@ describe('생활 날씨 카드의 알림 받기', () => {
 
       await vi.advanceTimersByTimeAsync(WEATHER_LOCATION_DEADLINE_MS);
       await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
-      expect(await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.')).toBeInTheDocument();
+      expect(
+        await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.'),
+      ).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
       expect(weather.updates).toEqual([true]);
       expect(weather.savedLocations).toEqual([]);
