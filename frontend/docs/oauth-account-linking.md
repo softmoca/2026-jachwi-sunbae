@@ -50,7 +50,20 @@ OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 �
 
 ## 분석 이벤트
 
-`oauth_started`(`provider`, `client`, `linked`), `oauth_completed`(`provider`, `client`, `outcome`), `oauth_failed`(`provider`, `client`, `reason`), `logout_succeeded`, `logout_failed`(`error_kind`, `error_code`)를 남긴다. `client`는 앱이면 `app`, 아니면 `web`이다. 제공자 응답이나 토큰은 싣지 않는다.
+연결은 마이 카드에서만 시작한다. 화면 흐름 중간에 연결을 권하는 진입점은 아직 없다(매물 등록 수 같은 시점의 제안은 따로 만든다). 이벤트 이름과 속성 타입은 `features/auth/lib/oauthAnalytics.ts`에 둔다.
+
+| 이벤트                 | 발생 시점                                                        | 속성                                                                  |
+| ---------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `oauth_link_started`   | 시작 API가 성공해 제공자 화면으로 떠나기 직전. Beacon으로 보낸다 | `provider`, `already_linked`, `property_count`                        |
+| `oauth_link_completed` | 복귀 화면에서 새 쿠키로 다시 로그인한 뒤                         | `provider`, `outcome`(`linked`/`merged`/`switched`), `property_count` |
+| `oauth_link_cancelled` | 제공자가 거부(`?error=access_denied`)를 알리며 돌아왔을 때       | `provider`, `property_count`                                          |
+| `oauth_link_failed`    | 시작 API 실패, 또는 그 밖의 오류로 돌아왔을 때                   | `provider`, `reason`(`unavailable`/`failed`), `property_count`        |
+
+- `provider`는 `kakao`, `apple`이다. 복귀 화면에서 시작 정보를 잃었으면 `unknown`이다.
+- `property_count`는 그 시점 지금 회원의 매물 수다. 완료는 바뀐 회원(통합이면 합친 뒤) 기준이다. 목록 캐시가 없으면 목록을 한 번 받아 세고, 받지 못하면 `first_property`처럼 속성을 빼고 보낸다.
+- `outcome`은 시작 정보가 없어 결과를 모르면 뺀다.
+- 지금 #570은 취소와 콜백 실패를 웹으로 돌려보내지 않고 JSON 오류를 보여 줘서, `oauth_link_cancelled`와 복귀 화면의 `oauth_link_failed`는 백엔드가 `/oauth/complete?error=`로 돌려보내야 쌓인다.
+- 로그아웃은 `logout_succeeded`, `logout_failed`(`error_kind`, `error_code`)로 남긴다. 제공자 응답이나 토큰은 싣지 않는다.
 
 ## 한계
 
