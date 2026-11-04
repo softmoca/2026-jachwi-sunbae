@@ -41,7 +41,6 @@ const BottomSheet = ({
   headerEnd,
   subtitle,
 }: BottomSheetProps) => {
-  const [height, setHeight] = useState<number | null>(null);
   const [mode, setMode] = useState<SheetMode>('default');
   const modes: SheetMode[] = fullPage ? ['peek', 'default', 'expanded', 'full'] : ['peek', 'default', 'expanded'];
   const lastPeekSignal = useRef(peekSignal);
@@ -50,7 +49,8 @@ const BottomSheet = ({
     lastPeekSignal.current = peekSignal;
     setMode('peek');
   }, [peekSignal]);
-  const gesture = useRef<{ startY: number; height: number; limit: number } | null>(null);
+  // frame: 끌기 시작에 한 번 늘려 둔 시트 실제 높이. 끄는 동안은 이 높이를 그대로 두고 transform으로만 움직인다.
+  const gesture = useRef<{ startY: number; height: number; limit: number; frame: number | null } | null>(null);
   const dragged = useRef(false);
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -63,16 +63,24 @@ const BottomSheet = ({
   }, [showCloseButton, resizable]);
   // 페이지로 열리면 끌개가 사라지므로 헤더의 뒤로가기·닫기로 다룬다.
   const back = onBack ?? (isFullPage ? () => setMode('default') : undefined);
+  // 끄는 동안 직접 넣은 인라인 높이와 위치를 지운다. 놓은 뒤 높이는 mode가 정한다.
+  const clearDrag = () => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    sheet.style.removeProperty('--sheet-height');
+    sheet.style.removeProperty('transform');
+    delete sheet.dataset.dragging;
+  };
   const finish = (event: PointerEvent<HTMLButtonElement>) => {
     const start = gesture.current;
     gesture.current = null;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
+    clearDrag();
     if (!start || !dragged.current) return;
     const released = start.height + start.startY - event.clientY;
     if (released < start.limit * 0.25) onClose();
     else if (fullPage && released > start.limit * 0.85) setMode('full');
     else setMode(released > start.limit * 0.6 ? 'expanded' : 'default');
-    setHeight(null);
   };
   return (
     <section
@@ -86,7 +94,6 @@ const BottomSheet = ({
       style={
         {
           '--sheet-default-height': `${Math.max(25, Math.min(88, initialHeightPercent))}%`,
-          ...(height === null ? {} : { '--sheet-height': `${height}px` }),
         } as CSSProperties
       }
       onKeyDown={(event) => {
@@ -112,21 +119,31 @@ const BottomSheet = ({
               startY: event.clientY,
               height: sheet.getBoundingClientRect().height,
               limit: sheet.parentElement?.getBoundingClientRect().height ?? window.innerHeight,
+              frame: null,
             };
             event.currentTarget.setPointerCapture?.(event.pointerId);
           }}
           onPointerMove={(event) => {
             const start = gesture.current;
-            if (!start || Math.abs(event.clientY - start.startY) < 6) return;
+            const sheet = sheetRef.current;
+            if (!start || !sheet || Math.abs(event.clientY - start.startY) < 6) return;
             dragged.current = true;
-            setHeight(
-              Math.max(80, Math.min(start.limit * (fullPage ? 1 : 0.9), start.height + start.startY - event.clientY)),
-            );
+            const max = start.limit * (fullPage ? 1 : 0.9);
+            const target = Math.max(80, Math.min(max, start.height + start.startY - event.clientY));
+            // 높이를 바꾸면 움직일 때마다 시트 안 전체를 다시 배치하고 그린다. 시작에 한 번만 최대 높이로 늘리고,
+            // 그 뒤로는 보이는 높이만큼만 올라오게 아래로 밀어(transform) 합성만 일어나게 한다.
+            if (start.frame === null) {
+              sheet.dataset.dragging = 'true';
+              sheet.style.setProperty('--sheet-height', `${max}px`);
+              // max-height에 걸리면 덜 늘어나므로 실제 높이를 기준으로 민다.
+              start.frame = sheet.getBoundingClientRect().height;
+            }
+            sheet.style.transform = `translateY(${Math.max(0, start.frame - Math.min(target, start.frame))}px)`;
           }}
           onPointerUp={finish}
           onPointerCancel={(event) => {
             gesture.current = null;
-            setHeight(null);
+            clearDrag();
             event.currentTarget.releasePointerCapture?.(event.pointerId);
           }}
           // 누르기만 해서는 높이를 바꾸지 않는다. 끌어서 바꾸고, 키보드는 위·아래 화살표로 한 단계씩 바꾼다.
@@ -192,6 +209,11 @@ const styles = {
       /* 제목만 남기고 내린다. */
       &[data-mode='peek'] {
         height: var(--sheet-height, 5.5rem);
+      }
+
+      /* 끄는 동안은 transform만 바꾸므로 미리 레이어로 올려 둔다. */
+      &[data-dragging='true'] {
+        will-change: transform;
       }
 
       /* 끝까지 올리면 지도를 덮는 페이지가 된다. */
