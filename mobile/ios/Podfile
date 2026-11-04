@@ -24,6 +24,8 @@ target 'JachwiSunbaeMobile' do
 
   # 앱 셸 전용 네이티브 UI(탭바 등)
   pod 'JachwiNativeUI', :path => './JachwiNativeUI'
+  # 앱 셸 전용 네이티브 로그인(Apple, 카카오). 웹 auth 브리지가 쓴다.
+  pod 'JachwiNativeAuth', :path => './JachwiNativeAuth'
 
   use_react_native!(
     :path => config[:reactNativePath],

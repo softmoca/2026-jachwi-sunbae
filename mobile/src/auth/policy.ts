@@ -29,7 +29,12 @@ export type AuthReply =
       nonce: string;
     }
   | { status: 'cancelled'; provider: AuthProvider }
-  | { status: 'error'; provider: string; code: AuthErrorCode; message?: string };
+  | {
+      status: 'error';
+      provider: string;
+      code: AuthErrorCode;
+      message?: string;
+    };
 
 export type ParsedAuthMessage =
   | { kind: 'login'; request: AuthLoginRequest }
@@ -40,7 +45,8 @@ const REQUEST_ID = /^[a-zA-Z0-9_-]{1,64}$/;
 const NONCE = /^[\x21-\x7e]{1,256}$/;
 
 export const isAuthProvider = (value: unknown): value is AuthProvider =>
-  typeof value === 'string' && (AUTH_PROVIDERS as readonly string[]).includes(value);
+  typeof value === 'string' &&
+  (AUTH_PROVIDERS as readonly string[]).includes(value);
 
 /**
  * auth 메시지가 아니거나 requestId가 없으면 null(답할 수 없으니 무시한다).
@@ -64,7 +70,10 @@ export const parseAuthMessage = (raw: string): ParsedAuthMessage | null => {
 
   const echoedProvider =
     typeof provider === 'string' ? provider.slice(0, 32) : '';
-  const invalid = (code: AuthErrorCode, message: string): ParsedAuthMessage => ({
+  const invalid = (
+    code: AuthErrorCode,
+    message: string,
+  ): ParsedAuthMessage => ({
     kind: 'invalid',
     requestId,
     reply: { status: 'error', provider: echoedProvider, code, message },

@@ -33,5 +33,16 @@
             <data android:scheme="jachwisunbae" />
         </intent-filter>
       </activity>
+      <!-- 카카오계정 로그인(Custom Tabs) 뒤 kakao{네이티브 앱 키}://oauth 로 돌아온다. -->
+      <activity
+        android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:host="oauth" android:scheme="kakao${kakaoNativeAppKey}" />
+        </intent-filter>
+      </activity>
     </application>
 </manifest>

@@ -107,14 +107,12 @@ describe('auth 컨트롤러', () => {
   });
 
   it('모듈이 없거나 플랫폼이 지원하지 않으면 unavailable로 답한다', async () => {
-    expect(await createAuthController(null).handle(request('kakao'))).toEqual(
-      {
-        status: 'error',
-        provider: 'kakao',
-        code: 'unavailable',
-        message: 'module_missing',
-      },
-    );
+    expect(await createAuthController(null).handle(request('kakao'))).toEqual({
+      status: 'error',
+      provider: 'kakao',
+      code: 'unavailable',
+      message: 'module_missing',
+    });
     const login = jest.fn();
     const android = createAuthController(
       port(login, { supported: ['kakao'], configured: ['kakao'] }),
