@@ -4,6 +4,8 @@ import { expect, it, vi } from 'vitest';
 
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 
+import { expectSheetStages } from './sheetStages';
+
 const renderSheet = (props: Partial<Parameters<typeof BottomSheet>[0]> = {}) => {
   const onClose = vi.fn();
   const view = render(
@@ -156,4 +158,27 @@ it('끌다가 취소되면 원래 높이로 돌아간다', () => {
   expect(sheet().style.transform).toBe('');
   expect(sheet().style.getPropertyValue('--sheet-height')).toBe('');
   expect(sheet()).toHaveAttribute('data-mode', 'default');
+});
+
+it('fullPage를 따로 주지 않아도 끝까지 올리면 페이지로 연다', async () => {
+  const user = userEvent.setup();
+  render(
+    <BottomSheet title="기본 시트" onClose={() => undefined}>
+      <p>내용</p>
+    </BottomSheet>,
+  );
+  await expectSheetStages(user, screen.getByRole('region', { name: '기본 시트' }));
+});
+
+it('fullPage={false}를 주면 끝까지 올려도 크게에서 멈춘다', async () => {
+  const user = userEvent.setup();
+  render(
+    <BottomSheet title="페이지 없는 시트" onClose={() => undefined} fullPage={false}>
+      <p>내용</p>
+    </BottomSheet>,
+  );
+  const sheet = screen.getByRole('region', { name: '페이지 없는 시트' });
+  screen.getByRole('button', { name: '상세 패널 높이 조절' }).focus();
+  await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+  expect(sheet).toHaveAttribute('data-mode', 'expanded');
 });

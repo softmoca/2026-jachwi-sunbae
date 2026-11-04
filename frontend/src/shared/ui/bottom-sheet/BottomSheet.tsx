@@ -12,7 +12,7 @@ type BottomSheetProps = {
   showCloseButton?: boolean;
   initialHeightPercent?: number;
   resizable?: boolean;
-  /** 끝까지 끌어 올리면 모서리와 위 여백 없이 화면 전체를 덮는 페이지로 연다. */
+  /** 끝까지 끌어 올리면 모서리와 위 여백 없이 화면 전체를 덮는 페이지로 연다. 기본으로 켜고, 페이지로 열면 안 되는 화면만 끈다. */
   fullPage?: boolean;
   /** 값이 바뀔 때마다 제목만 보이는 높이로 내린다. 지도 빈 곳을 찍으면 시트를 비키게 할 때 쓴다. */
   peekSignal?: number;
@@ -35,7 +35,7 @@ const BottomSheet = ({
   showCloseButton = true,
   initialHeightPercent = 58,
   resizable = true,
-  fullPage = false,
+  fullPage = true,
   peekSignal,
   onBack,
   headerEnd,
@@ -226,8 +226,8 @@ const styles = {
         box-shadow: none;
       }
 
-      /* 태블릿부터는 넓은 화면을 가로지르지 않게 30rem 폭으로 가운데에 띄운다. */
-      @media (min-width: 768px) {
+      /* 태블릿(768~1023px)은 휴대폰 화면 구성을 써서 시트도 화면 폭을 채운다. 데스크탑만 30rem 폭으로 가운데에 띄운다. */
+      @media (min-width: 1024px) {
         max-width: 30rem;
         margin-right: auto;
         margin-left: auto;
