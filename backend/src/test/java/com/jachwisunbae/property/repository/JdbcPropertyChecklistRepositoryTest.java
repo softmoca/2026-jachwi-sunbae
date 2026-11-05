@@ -25,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JdbcPropertyChecklistRepository.class, JdbcPropertyChecklistItemRepository.class})
 class JdbcPropertyChecklistRepositoryTest {
 
     @Container
@@ -36,10 +35,8 @@ class JdbcPropertyChecklistRepositoryTest {
     private static final long OTHER_MEMBER_ID = 2L;
     private static final long PROPERTY_ID = 10L;
 
-    @Autowired
     private JdbcPropertyChecklistRepository repository;
 
-    @Autowired
     private JdbcPropertyChecklistItemRepository itemRepository;
 
     @Autowired
@@ -47,6 +44,8 @@ class JdbcPropertyChecklistRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        repository = new JdbcPropertyChecklistRepository(jdbcTemplate);
+        itemRepository = new JdbcPropertyChecklistItemRepository(jdbcTemplate);
         jdbcTemplate.update("DELETE FROM system_check_items");
         insertMember(MEMBER_ID);
         insertMember(OTHER_MEMBER_ID);

@@ -25,8 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JdbcPropertyProgressRepository.class, JdbcPropertyChecklistRepository.class,
-        JdbcPropertyChecklistItemRepository.class})
 class JdbcPropertyProgressRepositoryTest {
 
     @Container
@@ -35,13 +33,10 @@ class JdbcPropertyProgressRepositoryTest {
 
     private static final long PROPERTY_ID = 10L;
 
-    @Autowired
     private JdbcPropertyProgressRepository repository;
 
-    @Autowired
     private JdbcPropertyChecklistRepository checklistRepository;
 
-    @Autowired
     private JdbcPropertyChecklistItemRepository itemRepository;
 
     @Autowired
@@ -49,6 +44,9 @@ class JdbcPropertyProgressRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        repository = new JdbcPropertyProgressRepository(jdbcTemplate);
+        checklistRepository = new JdbcPropertyChecklistRepository(jdbcTemplate);
+        itemRepository = new JdbcPropertyChecklistItemRepository(jdbcTemplate);
         jdbcTemplate.update("INSERT INTO members (id, created_at, updated_at) VALUES (1, NOW(6), NOW(6))");
         jdbcTemplate.update("""
                 INSERT INTO properties (id, member_id, name, address, latitude, longitude, created_at)
