@@ -8,6 +8,8 @@ import com.jachwisunbae.map.provider.demo.DemoNearbyPlaceProvider;
 import com.jachwisunbae.map.provider.kakao.KakaoAgencyProvider;
 import com.jachwisunbae.map.provider.kakao.KakaoNearbyPlaceProvider;
 import com.jachwisunbae.map.provider.kakao.KakaoPlaceClient;
+import com.jachwisunbae.map.provider.naver.NaverAddressProvider;
+import com.jachwisunbae.map.provider.naver.NaverGeocodeClient;
 import com.jachwisunbae.map.provider.publicdata.PublicDataAddressProvider;
 import com.jachwisunbae.map.provider.publicdata.juso.JusoAddressClient;
 import com.jachwisunbae.map.provider.publicdata.sgis.SgisAddressClient;
@@ -29,7 +31,8 @@ class MapProviderSelectionTest {
             .withUserConfiguration(DemoAddressProvider.class, DemoNearbyPlaceProvider.class,
                     JusoAddressClient.class, SgisAuthClient.class, SgisTokenProvider.class, SgisAddressClient.class,
                     PublicDataAddressProvider.class, KakaoPlaceClient.class, KakaoNearbyPlaceProvider.class,
-                    DemoAgencyProvider.class, KakaoAgencyProvider.class);
+                    DemoAgencyProvider.class, KakaoAgencyProvider.class, NaverGeocodeClient.class,
+                    NaverAddressProvider.class);
 
     @Test
     @DisplayName("설정이 없으면 주소와 주변 시설 모두 demo 공급자를 사용한다")
@@ -80,6 +83,31 @@ class MapProviderSelectionTest {
         contextRunner
                 .withPropertyValues("map.provider.mode=public", "map.juso.confirm-key=",
                         "map.sgis.consumer-key=", "map.sgis.consumer-secret=")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("naver 모드는 네이버 주소 공급자를 쓰고 행안부 키 없이 시작한다")
+    void selectsNaverAddressProviderWithoutJusoKey() {
+        contextRunner
+                .withPropertyValues(
+                        "map.provider.mode=naver",
+                        "map.naver.client-id=naver-id",
+                        "map.naver.client-secret=naver-secret",
+                        "map.sgis.consumer-key=sgis-key",
+                        "map.sgis.consumer-secret=sgis-secret")
+                .run(context -> {
+                    assertThat(context).getBean(AddressProvider.class).isInstanceOf(NaverAddressProvider.class);
+                    assertThat(context).doesNotHaveBean(JusoAddressClient.class);
+                });
+    }
+
+    @Test
+    @DisplayName("naver 모드에 네이버 키가 없으면 애플리케이션이 시작되지 않는다")
+    void failsToStartWithoutNaverKeys() {
+        contextRunner
+                .withPropertyValues("map.provider.mode=naver", "map.naver.client-id=", "map.naver.client-secret=",
+                        "map.sgis.consumer-key=sgis-key", "map.sgis.consumer-secret=sgis-secret")
                 .run(context -> assertThat(context).hasFailed());
     }
 
