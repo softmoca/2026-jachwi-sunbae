@@ -1,4 +1,4 @@
-#import <JachwiAuthSpec/JachwiAuthSpec.h>
+#import <JachwiNativeSpec/JachwiNativeSpec.h>
 #import <React/RCTBridgeModule.h>
 
 #if __has_include(<JachwiNativeAuth/JachwiNativeAuth-Swift.h>)
@@ -8,7 +8,7 @@
 #endif
 
 /*
- * `src/auth/NativeJachwiAuth.ts` 스펙의 TurboModule. 실제 로그인은 JachwiNativeAuth.swift가 한다.
+ * `src/native/NativeJachwiAuth.ts` 스펙의 TurboModule. 실제 로그인은 JachwiNativeAuth.swift가 한다.
  * login은 reject하지 않고 결과 객체로만 답한다.
  */
 @interface JachwiAuthModule : NSObject <NativeJachwiAuthSpec>

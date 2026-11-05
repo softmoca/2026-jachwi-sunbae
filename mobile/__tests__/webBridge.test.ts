@@ -27,7 +27,7 @@ describe('webBridge', () => {
     expect(script).toContain('["tab-bar"]');
   });
 
-  it('version은 2로 두고 로그인 제공자 목록을 더한다', () => {
+  it('version은 2로 두고 로그인 제공자, 앱 버전, 빌드 번호를 더한다', () => {
     const read = (script: string) => {
       const window: Record<string, unknown> = { dispatchEvent: () => true };
       class FakeCustomEvent {}
@@ -35,16 +35,34 @@ describe('webBridge', () => {
       new Function('window', 'CustomEvent', script)(window, FakeCustomEvent);
       return window.__JACHWI_NATIVE_APP__;
     };
-    expect(read(createNativeContextScript('ios', ['push', 'auth'], ['apple', 'kakao']))).toEqual({
+    expect(
+      read(
+        createNativeContextScript('ios', ['push', 'auth'], {
+          authProviders: ['apple', 'kakao'],
+          appVersion: '2.2.0',
+          appBuild: '9',
+        }),
+      ),
+    ).toEqual({
       platform: 'ios',
       version: 2,
       features: ['push', 'auth'],
       authProviders: ['apple', 'kakao'],
+      appVersion: '2.2.0',
+      appBuild: '9',
     });
-    expect(read(createNativeContextScript('android', ['push']))).toMatchObject({
+    // 네이티브에서 읽지 못하면 null로 알린다. 브리지 버전(version)은 앱 버전과 섞지 않는다.
+    expect(read(createNativeContextScript('android', ['push']))).toEqual({
+      platform: 'android',
       version: 2,
+      features: ['push'],
       authProviders: [],
+      appVersion: null,
+      appBuild: null,
     });
+    expect(
+      read(createNativeContextScript('ios', [], { appVersion: '"});alert(1);//' })),
+    ).toMatchObject({ appVersion: '"});alert(1);//' });
   });
 
   it('탭 키와 높이를 안전하게 스크립트에 넣는다', () => {

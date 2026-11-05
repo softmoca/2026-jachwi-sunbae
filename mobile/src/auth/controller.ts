@@ -1,4 +1,4 @@
-import type { NativeAuthResult } from './NativeJachwiAuth';
+import type { NativeAuthResult } from '../native/NativeJachwiAuth';
 import type {
   AuthErrorCode,
   AuthLoginRequest,

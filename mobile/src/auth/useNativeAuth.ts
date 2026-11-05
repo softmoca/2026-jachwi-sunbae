@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { WEB_APP_URL } from '../config';
-import NativeJachwiAuth from './NativeJachwiAuth';
+import NativeJachwiAuth from '../native/NativeJachwiAuth';
 import { createAuthController, type AuthPort } from './controller';
 import {
   createAuthReplyScript,
