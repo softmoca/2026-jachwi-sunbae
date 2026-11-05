@@ -14,15 +14,12 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class StreetMemoService {
-
-    private static final Pattern ADMIN_DONG_CODE = Pattern.compile("\\d{8}");
 
     private final StreetMemoRepository streetMemoRepository;
     private final MemberService memberService;
@@ -53,15 +50,6 @@ public class StreetMemoService {
                                                final BigDecimal minLongitude, final BigDecimal maxLongitude) {
         validateBounds(minLatitude, maxLatitude, minLongitude, maxLongitude);
         return streetMemoRepository.findAllWithin(minLatitude, maxLatitude, minLongitude, maxLongitude)
-                .stream().map(streetMemo -> StreetMemoResult.from(streetMemo, memberId)).toList();
-    }
-
-    public List<StreetMemoResult> findAllInAdminDong(final Long memberId, final String adminDongCode) {
-        if (adminDongCode == null || !ADMIN_DONG_CODE.matcher(adminDongCode).matches()) {
-            throw new InvalidInputException(ErrorCode.STREET_MEMO_QUERY_INVALID,
-                    "행정동 코드는 8자리 숫자여야 합니다.");
-        }
-        return streetMemoRepository.findAllByAdminDongCode(adminDongCode)
                 .stream().map(streetMemo -> StreetMemoResult.from(streetMemo, memberId)).toList();
     }
 

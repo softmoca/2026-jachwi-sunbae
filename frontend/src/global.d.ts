@@ -17,6 +17,7 @@ interface Window {
 
 type NaverLatLng = { lat: () => number; lng: () => number };
 type NaverLatLngBounds = { getSW: () => NaverLatLng; getNE: () => NaverLatLng };
+type NaverPoint = { x: number; y: number };
 type NaverMap = {
   /** GL 모드의 내부 준비 상태. 공개 API가 아니므로 없을 수 있다. */
   _glReady?: boolean;
@@ -25,6 +26,9 @@ type NaverMap = {
   getZoom: () => number;
   setCenter: (center: NaverLatLng) => void;
   setZoom: (zoom: number) => void;
+  /** 확대 단계를 `deltaZoom`만큼(소수 가능) 바꾼다. `origin` 좌표가 화면에서 제자리에 남는다. `effect`가 false면 바로 옮긴다. */
+  zoomBy?: (deltaZoom: number, origin?: NaverLatLng, effect?: boolean) => void;
+  getProjection?: () => { fromOffsetToCoord: (offset: NaverPoint) => NaverLatLng };
   morph?: (center: NaverLatLng, zoom: number, options: { duration: number; easing: string }) => void;
   refresh: () => void;
   autoResize: () => void;
@@ -42,6 +46,7 @@ type NaverOverlay = {
 type NaverMapsNamespace = {
   LatLng: new (latitude: number, longitude: number) => NaverLatLng;
   LatLngBounds: new (sw: NaverLatLng, ne: NaverLatLng) => NaverLatLngBounds;
+  Point?: new (x: number, y: number) => NaverPoint;
   Map: new (
     container: HTMLElement,
     options: {

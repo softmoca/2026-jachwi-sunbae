@@ -4,8 +4,6 @@ import { Outlet, useMatch } from 'react-router-dom';
 import { SERVICE_MAP_STYLE_ID } from '@/features/map/lib/mapStyle';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
 import ExplorationRecordAction from '@/features/onboarding/ui/exploration-record-action/ExplorationRecordAction';
-import StreetMemoImpressionLog from '@/features/street-memo/ui/street-memo-impression-log/StreetMemoImpressionLog';
-import StreetMemoSheet from '@/features/street-memo/ui/street-memo-sheet/StreetMemoSheet';
 import { LogClick } from '@/shared/lib/analytics/logging';
 import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
@@ -17,13 +15,14 @@ import StateIllustration from '@/shared/ui/state-illustration/StateIllustration'
 
 import useNeighborhoodMapView from '../hooks/useNeighborhoodMapView';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
+import useResultMapViewport from '../hooks/useResultMapViewport';
 import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
 import { areaCardDescription, emptyAreaMessage, placesHint, rentLabel, transferLabel } from '../model/criteriaLabels';
-import { STATION_FOCUS_LEVEL } from '../model/resultMapView';
+import { mobileMapViewport } from '../model/resultMapView';
 import type { NeighborhoodFilterField } from '../NeighborhoodFilters';
 import NeighborhoodFilters, { NeighborhoodFilterPicker } from '../NeighborhoodFilters';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
-import AreaPlacesSheet, { type AreaPlacesTab } from '../ui/area-places-sheet/AreaPlacesSheet';
+import AreaPlacesSheet from '../ui/area-places-sheet/AreaPlacesSheet';
 import { areaStation } from '../ui/area-summary/AreaSummary';
 import LocationControls from '../ui/location-controls/LocationControls';
 import NeighborhoodMapSearch from '../ui/map-search/NeighborhoodMapSearch';
@@ -52,20 +51,32 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
   const submitSearch = preview.startAnalysis;
   // 지도 빈 곳을 찍으면 시트를 닫지 않고 제목만 보이게 내린다.
   const [peekSignal, setPeekSignal] = useState(0);
-  // 동네 시트의 탭은 동네마다 정류장 탭에서 시작한다. 지도 마커도 탭에 맞춰 거른다.
-  const [placeTab, setPlaceTab] = useState<{ areaId: string; tab: AreaPlacesTab } | null>(null);
-  const areaTab: AreaPlacesTab =
-    placeTab && placeTab.areaId === preview.selected?.adminDongCode ? placeTab.tab : 'stations';
   // 고른 동네의 정보는 지도 위 말풍선 대신 아래 시트(AreaPlacesSheet)에 둔다.
-  const { isResultMap, mapProps, places, memo, closeLayers } = useNeighborhoodMapView(preview, {
+  const { isResultMap, mapProps, places, closeLayers } = useNeighborhoodMapView(preview, {
     showAreaAction: false,
     onEmptyTap: () => setPeekSignal((value) => value + 1),
     // 시트가 열린 채 지도의 동네를 찍으면 시트를 닫고 랭킹을 다시 보여 준다.
     deselectOnRegionTap: true,
-    placeMarkers: isRoutePage && preview.selected ? areaTab : undefined,
+    stationMarkersOnly: !!isRoutePage && !!preview.selected,
   });
   const recordArea = preview.selected ?? preview.topAreas[0];
-  const hasAreaSheet = !!isRoutePage && !!preview.selected && memo.mode === null;
+  const hasAreaSheet = !!isRoutePage && !!preview.selected;
+  // 지도는 화면 전체를 쓰고, 위 조건 줄과 동네를 고르면 올라올 아래 시트가 가리는 만큼 비우고 시점을 맞춘다.
+  const mapSectionRef = useResultMapViewport<HTMLElement>(preview, (section) => {
+    const rect = section.getBoundingClientRect();
+    const header = section.querySelector('header');
+    return mobileMapViewport(rect, header ? header.getBoundingClientRect().bottom - rect.top : 0);
+  });
+  // 시트를 띄우면 확대 축소, 현재 위치 버튼을 시트 바로 위에 붙여 시트와 함께 오르내리게 한다. 지도 위 고정 자리에 두면 시트에 가린다.
+  const hasSheet = hasAreaSheet || places.selectedPlace !== null;
+  const resultControls = (
+    <LocationControls
+      preview={preview}
+      isResult
+      docked={hasSheet}
+      zoom={{ level: preview.resultLevel, onZoom: preview.zoomResultBy }}
+    />
+  );
   // 통근, 환승, 월세 조건 칸. 위치를 고르기 전후 모두 아래 시트에 둔다.
   // 칸마다 위에 항목, 아래에 값을 적고, 읽을 때는 `통근 40분 이내`처럼 한 문장으로 읽게 한다.
   const filterCells: { field: NeighborhoodFilterField; title: string; value: string; label: string }[] = [
@@ -119,7 +130,11 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
     );
   return (
     <main className={shared.page} data-public-explore={preview.isPublicExplore || undefined}>
-      <section className={shared.mapPage} aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}>
+      <section
+        ref={mapSectionRef}
+        className={shared.mapPage}
+        aria-label={isResultMap ? '행정동 프리셋 지도' : '지도에서 목적지 선택'}
+      >
         <MapCanvas
           animateView
           customStyleId={SERVICE_MAP_STYLE_ID}
@@ -128,7 +143,6 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
           onReady={preview.prefetchBoundaries}
           {...mapProps}
         />
-        <StreetMemoImpressionLog memos={memo.visibleMemos} />
         <AnalysisOverlay preview={preview} />
         {preview.isSelectingOnMap && (
           <>
@@ -159,7 +173,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
               )}
             </header>
             <LocationControls preview={preview} isResult={false} isFilterOpen={pickerField !== null} />
-            {showsTapHint && <MapTapHint centered />}
+            {showsTapHint && <MapTapHint />}
             {/* 조건 칸과 찾기 버튼은 위치를 고르기 전부터 아래 시트에 두어, 위치를 골라도 자리가 바뀌지 않게 한다.
                 위치를 고르기 전에는 찾기 버튼을 막아 두고 장소를 고르라고 적는다. 지도 위 버튼은 말풍선 핀과 겹쳐 두지 않는다. */}
             <section
@@ -188,9 +202,9 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
         {isResultMap && (
           <>
             <header className={shared.resultHeader}>
-              {/* 왼쪽은 들어온 곳(보통 홈)으로 한 번에 나가는 뒤로가기, 가운데는 조건과 색 기준, 오른쪽은 출퇴근 장소부터 다시 고르는 버튼이다. */}
+              {/* 왼쪽은 들어온 곳(보통 홈)으로 한 번에 나가는 집 모양 버튼, 가운데는 조건과 색 기준, 오른쪽은 출퇴근 장소부터 다시 고르는 버튼이다. */}
               <button type="button" className={shared.mapBack} aria-label="동네 찾기 나가기" onClick={preview.leave}>
-                <Icon name="chevron-left" size={24} />
+                <Icon name="home" size={22} />
               </button>
               <div className={shared.resultCriteria}>
                 <div className={shared.criteriaBadges} aria-label="선택한 탐색 조건">
@@ -216,7 +230,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                     </span>
                   )}
                   <small className={shared.placesHint}>
-                    {placesHint({ isClose: places.isClose, failed: places.failed || memo.isFailed })}
+                    {placesHint({ isClose: places.isClose, failed: places.failed })}
                   </small>
                 </div>
               </div>
@@ -232,7 +246,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 다시 선택하기
               </Button>
             </header>
-            <LocationControls preview={preview} isResult />
+            {!hasSheet && resultControls}
             {preview.isPublicExplore && recordArea && (
               <div className={shared.recordAction}>
                 <ExplorationRecordAction
@@ -272,25 +286,19 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 </HorizontalRail>
               </div>
             )}
-            {/* 동네를 고르면 정류장·공인중개사 탭 시트를 올리고, 항목을 고르면 시트 안에서 그 정보로 넘어간다. 뒤로가기로 목록에 돌아온다. */}
+            {/* 동네를 고르면 출발 정류장 시트를 올리고, 정류장을 고르면 시트 안에서 경로로 넘어간다. 뒤로가기로 목록에 돌아온다. */}
             {hasAreaSheet && preview.selected && (
               <AreaPlacesSheet
                 key={preview.selected.adminDongCode}
                 area={preview.selected}
-                agencies={places.agencies}
                 place={places.selectedPlace}
                 preview={preview}
                 peekSignal={peekSignal}
-                tab={areaTab}
-                onTabChange={(tab) => setPlaceTab({ areaId: preview.selected!.adminDongCode, tab })}
+                floating={resultControls}
                 onSelectStation={(station) => {
                   places.selectStation(areaStation(station));
                   preview.selectStation(station.stopId);
-                  preview.focusResultPoint(station, STATION_FOCUS_LEVEL);
-                }}
-                onSelectAgency={(agency) => {
-                  places.selectAgency(agency);
-                  preview.focusResultPoint(agency, STATION_FOCUS_LEVEL);
+                  preview.focusRoute(station);
                 }}
                 onBack={places.closePlace}
                 onClose={() => {
@@ -305,10 +313,10 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 place={places.selectedPlace}
                 preview={preview}
                 peekSignal={peekSignal}
+                floating={resultControls}
                 onClose={places.closePlace}
               />
             )}
-            <StreetMemoSheet layer={memo} />
             {filterField === 'rent' && (
               <BottomSheet
                 title="월세 시세"

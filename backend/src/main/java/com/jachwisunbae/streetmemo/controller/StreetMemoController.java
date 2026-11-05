@@ -50,7 +50,7 @@ public class StreetMemoController {
     @GetMapping
     @Operation(summary = "지도 영역의 거리 메모 조회",
             description = "사각형 영역의 경계를 포함해 모든 회원의 미삭제 메모를 조회합니다. "
-            + "isMine으로 현재 회원이 작성한 메모인지 확인할 수 있습니다. "
+            + "isMine으로 현재 회원이 작성한 메모인지, adminDongCode로 메모가 속한 행정동을 확인할 수 있습니다. "
             + "정렬 순서와 결과 상한은 보장하지 않으며 결과가 없으면 빈 배열을 반환합니다.")
     public ApiResponse<List<StreetMemoResponse>> findAllWithin(
             @AuthenticatedMemberId final Long memberId,
@@ -60,19 +60,6 @@ public class StreetMemoController {
             @RequestParam(required = false) final BigDecimal maxLongitude) {
         List<StreetMemoResponse> responses = streetMemoService
                 .findAllWithin(memberId, minLatitude, maxLatitude, minLongitude, maxLongitude)
-                .stream().map(StreetMemoResponse::from).toList();
-        return ApiResponse.of("거리 메모 목록을 조회했습니다.", responses);
-    }
-
-    @GetMapping(params = "adminDongCode")
-    @Operation(summary = "행정동의 거리 메모 조회",
-            description = "8자리 행정동 코드로 그 행정동에 작성된 모든 회원의 미삭제 메모를 조회합니다. "
-            + "행정동은 작성할 때 서버가 메모 위치로 정하며, 행정동을 찾지 못한 메모는 포함하지 않습니다. "
-            + "정렬 순서와 결과 상한은 보장하지 않으며 결과가 없으면 빈 배열을 반환합니다.")
-    public ApiResponse<List<StreetMemoResponse>> findAllInAdminDong(
-            @AuthenticatedMemberId final Long memberId,
-            @RequestParam final String adminDongCode) {
-        List<StreetMemoResponse> responses = streetMemoService.findAllInAdminDong(memberId, adminDongCode)
                 .stream().map(StreetMemoResponse::from).toList();
         return ApiResponse.of("거리 메모 목록을 조회했습니다.", responses);
     }

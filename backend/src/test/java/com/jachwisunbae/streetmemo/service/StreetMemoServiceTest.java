@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
-import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.member.service.MemberService;
 import com.jachwisunbae.streetmemo.domain.StreetMemo;
 import com.jachwisunbae.streetmemo.domain.StreetMemoPreference;
@@ -24,9 +23,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -97,20 +93,6 @@ class StreetMemoServiceTest {
                 StreetMemoPreference.LIKE)).isInstanceOf(InvalidInputException.class);
 
         verifyNoInteractions(adminDongFinder, repository);
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {"1168064", "116806400", "1168064a"})
-    @DisplayName("8자리 숫자가 아닌 행정동 코드는 저장소를 조회하지 않고 거부한다")
-    void rejectsInvalidAdminDongCode(final String adminDongCode) {
-        StreetMemoService service = new StreetMemoService(repository, memberService, adminDongFinder, clock);
-
-        assertThatThrownBy(() -> service.findAllInAdminDong(1L, adminDongCode))
-                .isInstanceOfSatisfying(InvalidInputException.class,
-                        exception -> assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STREET_MEMO_QUERY_INVALID));
-
-        verifyNoInteractions(repository);
     }
 
     private StreetMemo saved(final StreetMemo memo) {

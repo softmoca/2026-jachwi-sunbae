@@ -14,4 +14,5 @@ export {
   trackPostHogOutboundEvent,
   trackPostHogPageView,
 } from './posthog/runtime';
+export { startPostHogWebVitals } from './posthog/webVitals';
 export type { PostHogErrorCategory, PostHogErrorSeverity } from './posthog/types';

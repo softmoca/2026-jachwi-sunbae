@@ -31,7 +31,7 @@ const toPlaceName = (address: string | null): string | null => {
 };
 
 /**
- * 마이의 생활 날씨 카드 상태. 수신 동의는 서버에, 알림 위치는 기기 GPS로 구해 서버에 저장한다.
+ * 마이의 생활 날씨 카드 상태. 날씨·배달 할인 공통 수신 동의는 서버에, 날씨 알림 위치는 기기 GPS로 구해 서버에 저장한다.
  * 알림을 켜 둔 채 화면을 열 때마다 위치를 다시 저장한다. 서버는 마지막으로 저장한 위치로 알림을 보내기 때문이다.
  */
 export const useWeatherSubscription = () => {
@@ -91,7 +91,7 @@ export const useWeatherSubscription = () => {
       locating: Promise<MapCoordinate | null> | null;
       memberId: number;
     }) => {
-      // 알림은 저장된 위치가 있어야 발송되므로, 위치를 하나도 모르면 켜지 않는다.
+      // 위치를 몰라도 공통 알림은 켠다. 위치는 날씨 알림에만 쓰인다.
       const coordinate = locating === null ? null : await locating;
       return changeWeatherPush(config, memberId, enabled, coordinate);
     },
@@ -102,19 +102,15 @@ export const useWeatherSubscription = () => {
     ? platform === 'web'
       ? '알림은 앱에서 받을 수 있어요.'
       : '알림을 받으려면 앱을 최신 버전으로 업데이트해 주세요.'
-    : settings.data?.problem === 'location'
-      ? location.status === 'denied'
-        ? '위치 권한이 꺼져 있어 날씨 알림을 켤 수 없어요. 설정에서 위치 권한을 허용해 주세요.'
-        : '지금 위치를 확인하지 못했어요. 잠시 뒤 다시 시도해 주세요.'
-      : settings.data?.problem === 'permission'
-        ? '기기 설정에서 자취선배 알림을 허용한 뒤 다시 켜 주세요.'
-        : settings.data?.problem === 'cleanup'
-          ? '알림은 꺼졌지만 기기 연결 정리가 필요해요. 다시 시도해 주세요.'
-          : settings.isError
+    : settings.data?.problem === 'permission'
+      ? '기기 설정에서 자취선배 알림을 허용한 뒤 다시 켜 주세요.'
+      : settings.data?.problem === 'cleanup'
+        ? '알림은 꺼졌지만 기기 연결 정리가 필요해요. 다시 시도해 주세요.'
+        : settings.isError
+          ? '기기 알림 연결을 확인하지 못했어요. 다시 시도해 주세요.'
+          : toggle.error instanceof NativePushError
             ? '기기 알림 연결을 확인하지 못했어요. 다시 시도해 주세요.'
-            : toggle.error instanceof NativePushError
-              ? '기기 알림 연결을 확인하지 못했어요. 다시 시도해 주세요.'
-              : null;
+            : null;
 
   const forecast = useQuery({
     queryKey: location.coordinate === null ? ['weather', 'forecast'] : weatherQueryKeys.forecast(location.coordinate),
@@ -143,8 +139,9 @@ export const useWeatherSubscription = () => {
     hasUpdateFailed: toggle.isError || hasLocationFailed,
     pushMessage,
     canRetry: settings.isError || settings.data?.problem === 'cleanup',
-    // 앱 안에서 위치 권한을 거부했을 때만 시스템 설정으로 바로 보낸다. 브라우저는 문구로만 안내한다.
-    canOpenSettings: supportsNativePush() && settings.data?.problem === 'location' && location.status === 'denied',
+    // 알림은 켰지만 앱 안에서 위치 권한을 거부해 날씨를 보낼 위치가 없을 때만 시스템 설정으로 바로 보낸다.
+    // 브라우저는 문구로만 안내한다.
+    canOpenSettings: supportsNativePush() && isEnabled && location.status === 'denied' && location.coordinate === null,
     openSettings: () => {
       void openNativeSettings().catch(() => undefined);
     },

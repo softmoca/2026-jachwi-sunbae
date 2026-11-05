@@ -25,23 +25,23 @@ const mockServer = (enabled = false) => {
     failRevoke: false,
   };
   server.use(
-    http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
+    http.get('*/api/members/me/notification-settings', () => success({ enabled: state.enabled })),
     http.put('*/api/members/me/weather-location', () => {
       state.calls.push('location');
       return success({ available: true });
     }),
-    http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+    http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
       state.calls.push('register');
       if (state.failRegister) return failure();
       const body = (await request.json()) as (typeof state.registrations)[number];
       state.registrations.push(body);
       return success({ installationId: body.installationId });
     }),
-    http.delete('*/api/members/me/weather-devices/current', () => {
+    http.delete('*/api/members/me/notification-devices/current', () => {
       state.calls.push('revoke');
       return state.failRevoke ? failure() : new HttpResponse(null, { status: 204 });
     }),
-    http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+    http.put('*/api/members/me/notification-settings', async ({ request }) => {
       state.enabled = ((await request.json()) as { enabled: boolean }).enabled;
       state.calls.push(state.enabled ? 'on' : 'off');
       return success({ enabled: state.enabled });
@@ -156,11 +156,11 @@ describe('생활 날씨 기기 등록', () => {
     expect(localStorage.getItem('jachwi-weather-installation-v1')).toBe('{broken');
   });
 
-  it('위치를 하나도 모르면 권한을 묻거나 서버에 보내지 않고 위치 문제로 끝낸다', async () => {
+  it('위치를 하나도 몰라도 위치 저장 없이 기기를 등록하고 공통 알림 동의를 켠다', async () => {
     const state = mockServer();
-    expect(await changeWeatherPush(config, 1, true, null)).toEqual({ enabled: false, problem: 'location' });
-    expect(native.actions).toEqual([]);
-    expect(state.calls).toEqual([]);
+    expect(await changeWeatherPush(config, 1, true, null)).toEqual({ enabled: true, problem: null });
+    expect(native.actions).toContain('enable');
+    expect(state.calls).toEqual(['register', 'on']);
   });
 
   it('브리지가 없는 웹·이전 앱은 ON 요청을 서버에 보내지 않는다', async () => {
@@ -173,12 +173,12 @@ describe('생활 날씨 기기 등록', () => {
   it('설치 소유 충돌이면 이전 회원에게 남은 토큰을 네이티브에서 폐기한다', async () => {
     mockServer();
     server.use(
-      http.put('*/api/members/me/weather-devices/current', () =>
-        HttpResponse.json({ code: 'WEATHER_DEVICE_CONFLICT', message: '충돌', errors: [] }, { status: 400 }),
+      http.put('*/api/members/me/notification-devices/current', () =>
+        HttpResponse.json({ code: 'NOTIFICATION_DEVICE_CONFLICT', message: '충돌', errors: [] }, { status: 400 }),
       ),
     );
     await expect(changeWeatherPush(config, 1, true, coordinate)).rejects.toMatchObject({
-      code: 'WEATHER_DEVICE_CONFLICT',
+      code: 'NOTIFICATION_DEVICE_CONFLICT',
     });
     expect(native.actions.at(-1)).toBe('disable');
   });

@@ -3,7 +3,7 @@ package com.jachwisunbae.notification.controller;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.web.ApiResponse;
-import com.jachwisunbae.notification.service.WeatherNotificationSettingsService;
+import com.jachwisunbae.notification.service.NotificationSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,10 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class WeatherNotificationInternalTestController {
     static final String KEY_HEADER = "X-Test-Push-Key";
 
-    private final WeatherNotificationSettingsService service;
+    private final NotificationSettingsService service;
     private final byte[] key;
 
-    public WeatherNotificationInternalTestController(final WeatherNotificationSettingsService service,
+    public WeatherNotificationInternalTestController(final NotificationSettingsService service,
             @Value("${weather.notification.test-push-key:}") final String key) {
         this.service = service;
         this.key = key.getBytes(StandardCharsets.UTF_8);

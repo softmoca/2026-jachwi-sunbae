@@ -59,7 +59,7 @@ describe('PostHog 제품 분석', () => {
     const mask = options.session_recording.maskCapturedNetworkRequestFn;
     expect(
       mask({
-        name: 'https://api.example.com/api/members/me/weather-devices/current',
+        name: 'https://api.example.com/api/members/me/notification-devices/current',
         requestBody: 'fake-private-body',
       }),
     ).toBeNull();

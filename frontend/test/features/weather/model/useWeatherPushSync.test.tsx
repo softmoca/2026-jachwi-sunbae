@@ -29,13 +29,13 @@ describe('앱 전체 날씨 기기 동기화', () => {
     let enabled = true;
     let revocations = 0;
     server.use(
-      http.get('*/api/members/me/weather-notification-settings', () => success({ enabled })),
-      http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+      http.get('*/api/members/me/notification-settings', () => success({ enabled })),
+      http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
         const body = (await request.json()) as { installationId: string; token: string };
         calls.push({ token: body.token, authorization: request.headers.get('authorization') });
         return success({ installationId: body.installationId });
       }),
-      http.delete('*/api/members/me/weather-devices/current', () => {
+      http.delete('*/api/members/me/notification-devices/current', () => {
         revocations += 1;
         return new HttpResponse(null, { status: 204 });
       }),

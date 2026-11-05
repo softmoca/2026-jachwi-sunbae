@@ -82,12 +82,12 @@ public class JdbcMemberRepository implements MemberRepository {
                 WHERE member_id = ? AND deleted_at IS NULL
                 """, deletedAt, deletedAt, memberId);
         jdbcTemplate.update("""
-                UPDATE member_weather_notification_settings
+                UPDATE member_notification_settings
                 SET enabled = FALSE, updated_at = ?
                 WHERE member_id = ?
                 """, deletedAt, memberId);
         jdbcTemplate.update("""
-                UPDATE weather_notification_devices
+                UPDATE notification_devices
                 SET token = NULL, token_hash = NULL, updated_at = ?
                 WHERE member_id = ?
                 """, deletedAt, memberId);
