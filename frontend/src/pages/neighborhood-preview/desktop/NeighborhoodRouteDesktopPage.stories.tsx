@@ -136,11 +136,13 @@ const preview: NeighborhoodPreviewContext = {
   matchedAreaCount: 1,
   selected: area,
   selectRegion: noop,
-  focusResultPoint: noop,
+  focusRoute: noop,
+  zoomResultBy: noop,
   selectStation: noop,
   openAreaDetails: noop,
   closeAreaDetails: fn(),
   openListing: () => true,
+  setMapViewportReader: () => undefined,
 };
 
 /** 데스크탑 대중교통 상세. 앱에서는 동네 찾기 화면이 만든 상태(`preview`)와 고른 동네(`area`)를 받아 목록 옆 상세 칸을 채운다. */

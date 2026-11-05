@@ -13,6 +13,7 @@ import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import { ROUTE_PATTERNS } from '@/shared/lib/navigation/appPaths';
 
 import { server } from '../../server';
+import { expectSheetStages } from '../../shared/ui/bottom-sheet/sheetStages';
 
 const trackEvent = vi.hoisted(() => vi.fn());
 vi.mock('@/shared/lib/analytics/posthog', () => ({ trackPostHogEvent: trackEvent }));
@@ -766,4 +767,15 @@ it('식당 탭을 처음 열어 보여 줄 목록이 없으면 늦추지 않고 
   expect(
     await screen.findByRole('progressbar', { name: '주변 가게를 찾고 있어요.' }, { timeout: 200 }),
   ).toBeInTheDocument();
+});
+
+it('휴대폰 상품 상세 시트와 가게 목록 시트는 끝까지 끌어 올리면 페이지로 열리고 네 단계를 오간다', async () => {
+  const user = setup('/cheap-meals?tab=convenience');
+  await user.click(await screen.findByRole('button', { name: '행사상품 0 상세 보기' }));
+  const dialog = within(screen.getByRole('dialog', { name: '상품 상세' }));
+  await expectSheetStages(user, dialog.getByRole('region', { name: '상품 상세' }));
+  await user.click(screen.getByRole('button', { name: '브라우저 뒤로' }));
+
+  await user.click(tab('식당'));
+  await expectSheetStages(user, await screen.findByRole('region', { name: /착한가격 가게 \d+곳/ }));
 });

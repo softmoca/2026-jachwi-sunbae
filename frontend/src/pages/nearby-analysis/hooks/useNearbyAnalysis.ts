@@ -41,7 +41,6 @@ const useNearbyAnalysis = (
   const [radius, setRadius] = useState<NearbyRadius>(2000);
   const [mapLevel, setMapLevel] = useState(6);
   const [selectedCategories, setSelectedCategories] = useState<MapCategory[]>(options.initialCategories ?? []);
-  const [isListExpanded, setIsListExpanded] = useState(false);
   const [isAllMode, setIsAllMode] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
 
@@ -114,18 +113,12 @@ const useNearbyAnalysis = (
       setSelectedPlaceId(null);
     } else if (marker.placeId !== undefined) {
       setSelectedPlaceId(marker.placeId);
-      setIsListExpanded(false);
     }
   };
 
   const panTo = (nextLatitude: number, nextLongitude: number) => {
     const nextCenter = { latitude: nextLatitude, longitude: nextLongitude };
     setViewportCenter((current) => (coordinatesAreClose(current, nextCenter) ? current : nextCenter));
-  };
-
-  const toggleList = () => {
-    setIsListExpanded((current) => !current);
-    if (!isListExpanded) setSelectedPlaceId(null);
   };
 
   return {
@@ -139,14 +132,12 @@ const useNearbyAnalysis = (
     selectedCategories,
     places,
     selectedPlace,
-    isListExpanded,
     markers,
     circles,
     selectRadius,
     selectCategory,
     selectMarker,
     panTo,
-    toggleList,
     closePlace: () => setSelectedPlaceId(null),
   };
 };
