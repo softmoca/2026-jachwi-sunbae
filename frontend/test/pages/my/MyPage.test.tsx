@@ -29,13 +29,13 @@ const useWeatherServer = ({
 }: { enabled?: boolean; failUpdate?: boolean; forecast?: unknown } = {}) => {
   const state = { enabled, savedLocations: [] as unknown[], updates: [] as boolean[], testPushes: 0 };
   server.use(
-    http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
-    http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+    http.get('*/api/members/me/notification-settings', () => success({ enabled: state.enabled })),
+    http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
       const body = (await request.json()) as { installationId: string };
       return success({ installationId: body.installationId });
     }),
-    http.delete('*/api/members/me/weather-devices/current', () => new HttpResponse(null, { status: 204 })),
-    http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+    http.delete('*/api/members/me/notification-devices/current', () => new HttpResponse(null, { status: 204 })),
+    http.put('*/api/members/me/notification-settings', async ({ request }) => {
       const body = (await request.json()) as { enabled: boolean };
       state.updates.push(body.enabled);
       if (failUpdate)
@@ -130,7 +130,7 @@ describe('마이 화면', () => {
     const weather = useWeatherServer();
     mockGeolocation('allowed');
     renderMyPage();
-    expect(await screen.findByText('생활 날씨 알림이 꺼져 있어요')).toBeInTheDocument();
+    expect(await screen.findByText('알림이 꺼져 있어요')).toBeInTheDocument();
     // 홈의 빠른 메뉴와 겹치는 기록 메뉴나 날씨 상세·설정으로 가는 길은 두지 않는다.
     expect(screen.queryByRole('navigation', { name: '내 기록' })).not.toBeInTheDocument();
     expect(screen.queryByText(/프로토타입|샘플|시연/)).not.toBeInTheDocument();
@@ -155,7 +155,7 @@ describe('마이 화면', () => {
     await user.click(toggle);
     await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
     expect(weather.updates).toEqual([true, false]);
-    expect(screen.getByText('생활 날씨 알림이 꺼져 있어요')).toBeInTheDocument();
+    expect(screen.getByText('알림이 꺼져 있어요')).toBeInTheDocument();
   });
 });
 
@@ -252,7 +252,7 @@ describe('생활 날씨 카드의 알림 받기', () => {
     expect(weather.updates).toEqual([]);
   });
 
-  it('위치 권한을 거부하고 마지막 위치도 없으면 켜지 않고, 앱 설정을 열어 권한을 허용하게 한다', async () => {
+  it('위치 권한을 거부하고 마지막 위치도 없어도 공통 알림은 켜고, 날씨용 위치 권한은 앱 설정에서 허용하게 한다', async () => {
     const user = userEvent.setup();
     const native = installNativePush();
     const weather = useWeatherServer();
@@ -261,18 +261,19 @@ describe('생활 날씨 카드의 알림 받기', () => {
     const toggle = await screen.findByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
     await user.click(toggle);
-    expect(
-      await screen.findByText('위치 권한이 꺼져 있어 날씨 알림을 켤 수 없어요. 설정에서 위치 권한을 허용해 주세요.'),
-    ).toBeInTheDocument();
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    expect(weather.updates).toEqual([]);
-    expect(native.actions).not.toContain('enable');
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(weather.updates).toEqual([true]);
+    expect(weather.savedLocations).toEqual([]);
+    expect(native.actions).toContain('enable');
+    expect(screen.getByText('날씨는 위치를 확인한 뒤 알려 드려요')).toBeInTheDocument();
+    expect(screen.getByText('배달 할인 알림은 위치 없이도 받아요')).toBeInTheDocument();
+    expect(screen.getByText('위치 권한을 허용하면 날씨 알림도 받을 수 있어요.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '설정 열기' }));
     await waitFor(() => expect(native.actions).toContain('settings'));
   });
 
-  it('위치를 확인하지 못하고 마지막 위치도 없으면 켜지 않고 잠시 뒤 다시 시도하라고 알린다', async () => {
+  it('위치를 확인하지 못하고 마지막 위치도 없어도 공통 알림은 켜고, 다음에 다시 확인한다고 알린다', async () => {
     const user = userEvent.setup();
     const weather = useWeatherServer();
     mockGeolocation('unavailable');
@@ -280,17 +281,18 @@ describe('생활 날씨 카드의 알림 받기', () => {
     const toggle = await screen.findByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
     await user.click(toggle);
-    expect(await screen.findByText('지금 위치를 확인하지 못했어요. 잠시 뒤 다시 시도해 주세요.')).toBeInTheDocument();
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    expect(weather.updates).toEqual([]);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(weather.updates).toEqual([true]);
+    expect(weather.savedLocations).toEqual([]);
+    expect(await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
   });
 
-  it('위치가 계속 답하지 않으면 확인 중 표시를 두고, 기다림이 끝나면 꺼진 토글을 다시 누를 수 있게 하고 이유를 알린다', async () => {
+  it('위치가 계속 답하지 않으면 확인 중 표시를 두고, 기다림이 끝나면 위치 없이 공통 알림을 켜고 이유를 알린다', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-      const native = installNativePush();
+      installNativePush();
       const weather = useWeatherServer();
       mockGeolocation('silent');
       renderWeatherCard();
@@ -301,16 +303,25 @@ describe('생활 날씨 카드의 알림 받기', () => {
       expect(toggle).toBeDisabled();
 
       await vi.advanceTimersByTimeAsync(WEATHER_LOCATION_DEADLINE_MS);
-      expect(await screen.findByText('지금 위치를 확인하지 못했어요. 잠시 뒤 다시 시도해 주세요.')).toBeInTheDocument();
-      expect(toggle).toBeEnabled();
-      expect(toggle).toHaveAttribute('aria-checked', 'false');
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+      expect(
+        await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.'),
+      ).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
-      expect(weather.updates).toEqual([]);
-      expect(native.actions).not.toContain('enable');
+      expect(weather.updates).toEqual([true]);
+      expect(weather.savedLocations).toEqual([]);
       expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('알림 받기 토글은 생활 날씨와 배달 할인 알림을 함께 받는다고 안내한다', async () => {
+    useWeatherServer();
+    renderWeatherCard();
+    await screen.findByRole('switch', { name: '알림 받기' });
+    expect(screen.getByText('생활 날씨·배달 할인')).toBeInTheDocument();
+    expect(screen.queryByText('매일 오전 7시, 오후 10시')).not.toBeInTheDocument();
   });
 
   it('현재 위치를 못 잡으면 마지막 위치로 켜고 마지막 위치 기준임을 표시한다', async () => {

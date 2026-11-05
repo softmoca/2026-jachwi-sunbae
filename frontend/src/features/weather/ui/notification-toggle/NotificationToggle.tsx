@@ -32,7 +32,7 @@ const NotificationToggle = ({
       <div className={styles.row}>
         <p className={styles.label}>
           <strong id={labelId}>알림 받기</strong>
-          <span>매일 오전 7시, 오후 10시</span>
+          <span>생활 날씨·배달 할인</span>
         </p>
         <span className={styles.control}>
           {showsBusy && <ProgressCircle size={24} label={busyLabel} />}
@@ -67,7 +67,7 @@ const styles = {
     gap: 0.7rem;
   `,
 
-  /* 라벨과 발송 시각을 한 줄에 둔다. */
+  /* 라벨과 받는 알림 종류를 한 줄에 둔다. */
   label: css`
     label: NotificationToggle-label;
     display: flex;

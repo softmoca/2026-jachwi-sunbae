@@ -1,12 +1,12 @@
 package com.jachwisunbae.notification.service;
 
 import com.jachwisunbae.notification.domain.NotificationSlot;
-import com.jachwisunbae.notification.domain.WeatherDevice;
+import com.jachwisunbae.notification.domain.NotificationDevice;
 import com.jachwisunbae.notification.domain.WeatherNotification;
-import com.jachwisunbae.notification.provider.WeatherPushSender;
-import com.jachwisunbae.notification.provider.WeatherPushSender.Push;
+import com.jachwisunbae.notification.provider.PushSender;
+import com.jachwisunbae.notification.provider.PushSender.Push;
 import com.jachwisunbae.notification.repository.WeatherNotificationRepository;
-import com.jachwisunbae.notification.repository.WeatherNotificationSettingsRepository;
+import com.jachwisunbae.notification.repository.NotificationSettingsRepository;
 import com.jachwisunbae.weather.repository.MemberWeatherLocationRepository;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -18,16 +18,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class WeatherNotificationDispatchService {
     private static final Logger LOG = LoggerFactory.getLogger(WeatherNotificationDispatchService.class);
-    private final WeatherNotificationSettingsRepository settings;
+    private final NotificationSettingsRepository settings;
     private final WeatherNotificationRepository notifications;
     private final MemberWeatherLocationRepository locations;
     private final LifeWeatherAnalysisService analysis;
-    private final WeatherPushSender sender;
+    private final PushSender sender;
     private final Clock clock;
 
-    public WeatherNotificationDispatchService(final WeatherNotificationSettingsRepository settings,
+    public WeatherNotificationDispatchService(final NotificationSettingsRepository settings,
             final WeatherNotificationRepository notifications, final MemberWeatherLocationRepository locations,
-            final LifeWeatherAnalysisService analysis, final WeatherPushSender sender, final Clock clock) {
+            final LifeWeatherAnalysisService analysis, final PushSender sender, final Clock clock) {
         this.settings = settings;
         this.notifications = notifications;
         this.locations = locations;
@@ -38,7 +38,7 @@ public class WeatherNotificationDispatchService {
 
     public void dispatch(final NotificationSlot slot) {
         LocalDate date = LocalDate.ofInstant(clock.instant(), NotificationSlot.KST);
-        for (WeatherDevice device : settings.enabledDevices()) {
+        for (NotificationDevice device : settings.enabledDevices()) {
             try {
                 send(device, date, slot);
             } catch (RuntimeException exception) {
@@ -47,7 +47,7 @@ public class WeatherNotificationDispatchService {
         }
     }
 
-    private void send(final WeatherDevice device, final LocalDate date, final NotificationSlot slot) {
+    private void send(final NotificationDevice device, final LocalDate date, final NotificationSlot slot) {
         var location = locations.find(device.memberId()).orElse(null);
         if (location == null) {
             return;
@@ -63,7 +63,8 @@ public class WeatherNotificationDispatchService {
             return;
         }
         boolean success = settings.canSend(device)
-                && sender.send(new Push(notification.notificationId(), device.token(), report.title(), report.body()));
+                && sender.send(new Push(notification.notificationId(), PushSender.Type.WEATHER, device.token(),
+                        report.title(), report.body(), WeatherNotification.LINK));
         LOG.info("weather-notification notificationId={} success={}", notification.notificationId(), success);
     }
 }

@@ -11,15 +11,15 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
-import com.jachwisunbae.notification.provider.WeatherPushSender.Push;
-import com.jachwisunbae.notification.provider.fcm.FirebaseWeatherPushSender;
+import com.jachwisunbae.notification.provider.PushSender.Push;
+import com.jachwisunbae.notification.provider.fcm.FirebasePushSender;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-class FirebaseWeatherPushSenderTest {
+class FirebasePushSenderTest {
     private final FirebaseMessaging messaging = mock(FirebaseMessaging.class);
-    private final FirebaseWeatherPushSender sender = new FirebaseWeatherPushSender(messaging);
+    private final FirebasePushSender sender = new FirebasePushSender(messaging);
 
     @Test
     void sendsTitleBodyAndClickIdentity() throws Exception {
@@ -32,13 +32,29 @@ class FirebaseWeatherPushSenderTest {
         var json = new ObjectMapper().readTree(GsonFactory.getDefaultInstance().toString(captor.getValue()));
         assertThat(json.at("/token").asText()).isEqualTo(push.token());
         assertThat(json.at("/data/notificationId").asText()).isEqualTo(push.notificationId().toString());
+        assertThat(json.at("/data/type").asText()).isEqualTo("weather");
         assertThat(json.at("/notification/title").asText()).isEqualTo(push.title());
         assertThat(json.at("/notification/body").asText()).isEqualTo(push.body());
-        assertThat(json.get("data").size()).isOne();
+        assertThat(json.get("data").size()).isEqualTo(2);
         assertThat(json.has("android")).isFalse();
         assertThat(json.has("apns")).isFalse();
         assertThat(json.get("data").toString()).doesNotContain("token", "grid", "member", "latitude", "longitude");
         assertThat(push.toString()).doesNotContain(push.token());
+    }
+
+    @Test
+    void addsClickPathOnlyWhenGiven() throws Exception {
+        when(messaging.send(any(Message.class))).thenReturn("projects/test/messages/123");
+        var push = new Push(UUID.randomUUID(), PushSender.Type.DELIVERY_COUPON, "fake-fcm-test-token-1234567890",
+                "배달 할인", "확인해 보세요", "/cheap-meals?tab=delivery");
+        assertThat(sender.send(push)).isTrue();
+        var captor = ArgumentCaptor.forClass(Message.class);
+        verify(messaging).send(captor.capture());
+        var json = new ObjectMapper().readTree(GsonFactory.getDefaultInstance().toString(captor.getValue()));
+        assertThat(json.at("/data/url").asText()).isEqualTo("/cheap-meals?tab=delivery");
+        assertThat(json.at("/data/notificationId").asText()).isEqualTo(push.notificationId().toString());
+        assertThat(json.at("/data/type").asText()).isEqualTo("delivery_coupon");
+        assertThat(json.get("data").size()).isEqualTo(3);
     }
 
     @Test
@@ -57,6 +73,7 @@ class FirebaseWeatherPushSenderTest {
     }
 
     private Push push() {
-        return new Push(UUID.randomUUID(), "fake-fcm-test-token-1234567890", "오늘 15시 비 예보", "우산을 준비하세요");
+        return new Push(UUID.randomUUID(), PushSender.Type.WEATHER, "fake-fcm-test-token-1234567890",
+                "오늘 15시 비 예보", "우산을 준비하세요");
     }
 }
