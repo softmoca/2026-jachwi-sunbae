@@ -90,8 +90,7 @@ const NearbyStage = ({
           counts={nearby.data?.counts ?? EMPTY_COUNTS}
           selectedCategories={analysis.selectedCategories}
           places={analysis.places}
-          expanded={analysis.isListExpanded}
-          onToggleExpanded={analysis.toggleList}
+          peekSignal={analysis.selectedPlace?.providerPlaceId}
           onToggleCategory={analysis.selectCategory}
         />
       )}

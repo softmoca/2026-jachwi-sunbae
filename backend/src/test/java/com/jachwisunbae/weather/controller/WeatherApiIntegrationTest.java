@@ -108,7 +108,7 @@ class WeatherApiIntegrationTest {
         mvc.perform(put("/api/members/me/weather-location").header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON).content(locationBody(37.5665, 126.978)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.gridX").value(60));
-        mvc.perform(put("/api/members/me/weather-notification-settings").header("Authorization", authorization)
+        mvc.perform(put("/api/members/me/notification-settings").header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":true}"))
                 .andExpect(status().isOk());
         assertThat(locations.find(memberId).orElseThrow().grid()).isEqualTo(new GridPoint(60, 127));
@@ -127,13 +127,13 @@ class WeatherApiIntegrationTest {
             assertThat(refreshCookie).isNotNull();
             mvc.perform(get("/api/members/me/weather-location").header("Authorization", authorization))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.gridX").value(60));
-            mvc.perform(get("/api/members/me/weather-notification-settings").header("Authorization", authorization))
+            mvc.perform(get("/api/members/me/notification-settings").header("Authorization", authorization))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.enabled").value(true));
             mvc.perform(get("/api/weather/forecasts").header("Authorization", authorization)
                             .param("latitude", "37.5665").param("longitude", "126.978"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.data.hourly[23].tmp").value(12.0));
         }
-        mvc.perform(get("/api/members/me/weather-notification-settings").header("Authorization", bearer(1)))
+        mvc.perform(get("/api/members/me/notification-settings").header("Authorization", bearer(1)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.enabled").value(false));
     }
 

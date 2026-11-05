@@ -47,8 +47,8 @@ export const weatherHandlers = [
     const date = new URL(request.url).searchParams.get('date') ?? KST_DATE.format(new Date());
     return success(createMockWeatherForecast(date));
   }),
-  http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: notificationEnabled })),
-  http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+  http.get('*/api/members/me/notification-settings', () => success({ enabled: notificationEnabled })),
+  http.put('*/api/members/me/notification-settings', async ({ request }) => {
     const body = (await request.json()) as { enabled?: unknown };
     notificationEnabled = body.enabled === true;
     return success({ enabled: notificationEnabled });
@@ -57,9 +57,9 @@ export const weatherHandlers = [
     success({ available: true, gridX: 60, gridY: 127, updatedAt: new Date().toISOString() }),
   ),
   http.delete('*/api/members/me/weather-location', () => new HttpResponse(null, { status: 204 })),
-  http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+  http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
     const { installationId } = (await request.json()) as { installationId: string };
     return success({ installationId, updatedAt: new Date().toISOString() });
   }),
-  http.delete('*/api/members/me/weather-devices/current', () => new HttpResponse(null, { status: 204 })),
+  http.delete('*/api/members/me/notification-devices/current', () => new HttpResponse(null, { status: 204 })),
 ];

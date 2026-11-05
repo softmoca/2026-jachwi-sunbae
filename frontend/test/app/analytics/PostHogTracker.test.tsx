@@ -60,4 +60,24 @@ describe('PostHogTracker', () => {
     expect(initSpy).toHaveBeenCalledWith('phc_test_token', 'https://us.i.posthog.com');
     expect(trackSpy).toHaveBeenCalledWith('/map');
   });
+
+  it.each([
+    ['설정이 있으면', testConfig, 1],
+    ['토큰이 없으면', { ...testConfig, posthogProjectToken: '' }, 0],
+  ])('%s Web Vitals 측정 시작 여부를 정한다', (_, config, calls) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const startSpy = vi.spyOn(posthogModule, 'startPostHogWebVitals').mockImplementation(() => undefined);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/']}>
+          <PublicConfigProvider config={config}>
+            <PostHogTracker />
+          </PublicConfigProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(startSpy).toHaveBeenCalledTimes(calls);
+  });
 });

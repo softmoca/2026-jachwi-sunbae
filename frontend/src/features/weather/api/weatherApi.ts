@@ -5,7 +5,7 @@ import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import type { WeatherForecastResponse, WeatherHour, WeatherNotificationSettingsResponse } from '../model/weather';
 
-const SETTINGS_PATH = '/api/members/me/weather-notification-settings';
+const SETTINGS_PATH = '/api/members/me/notification-settings';
 
 const readNullableNumber = (record: Record<string, unknown>, key: string): number | null => {
   const value = record[key];
@@ -88,7 +88,7 @@ export const syncWeatherLocation = (config: PublicConfig, coordinate: MapCoordin
     parseData: (value) => ({ available: readBoolean(readRecord(value), 'available') }),
   });
 
-const DEVICE_PATH = '/api/members/me/weather-devices/current';
+const DEVICE_PATH = '/api/members/me/notification-devices/current';
 
 export const registerWeatherDevice = (
   config: PublicConfig,

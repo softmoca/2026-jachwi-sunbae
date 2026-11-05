@@ -92,16 +92,6 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
     }
 
     @Override
-    public List<StreetMemo> findAllByAdminDongCode(final String adminDongCode) {
-        return jdbcTemplate.query("""
-                        SELECT id, member_id, latitude, longitude, admin_dong_code, memo, preference, created_at,
-                               updated_at, deleted_at
-                        FROM street_memos
-                        WHERE admin_dong_code = ? AND deleted_at IS NULL
-                        """, ROW_MAPPER, adminDongCode);
-    }
-
-    @Override
     public Optional<StreetMemo> findByIdForUpdate(final long id) {
         return jdbcTemplate.query("""
                 SELECT id, member_id, latitude, longitude, admin_dong_code, memo, preference, created_at,

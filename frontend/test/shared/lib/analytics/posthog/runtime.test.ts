@@ -83,6 +83,7 @@ describe('PostHog SDK 수명주기', () => {
       environment: 'development',
       app_version: '1.1.0',
       platform: 'web',
+      screen_route: '/',
     });
   });
   it('외부 링크 클릭은 준비된 SDK에서 즉시 Beacon 전송을 요청한다', async () => {

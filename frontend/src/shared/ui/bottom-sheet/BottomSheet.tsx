@@ -12,7 +12,7 @@ type BottomSheetProps = {
   showCloseButton?: boolean;
   initialHeightPercent?: number;
   resizable?: boolean;
-  /** 끝까지 끌어 올리면 모서리와 위 여백 없이 화면 전체를 덮는 페이지로 연다. */
+  /** 끝까지 끌어 올리면 모서리와 위 여백 없이 화면 전체를 덮는 페이지로 연다. 기본으로 켜고, 페이지로 열면 안 되는 화면만 끈다. */
   fullPage?: boolean;
   /** 값이 바뀔 때마다 제목만 보이는 높이로 내린다. 지도 빈 곳을 찍으면 시트를 비키게 할 때 쓴다. */
   peekSignal?: number;
@@ -22,6 +22,11 @@ type BottomSheetProps = {
   headerEnd?: ReactNode;
   /** 제목 아래 작은 한 줄(주소 등). */
   subtitle?: string;
+  /**
+   * 시트 바로 위 오른쪽에 띄울 것(지도 확대 축소, 현재 위치 버튼 등). 시트와 함께 오르내려 시트에 가리지 않는다.
+   * 페이지로 열면 숨긴다.
+   */
+  floating?: ReactNode;
 };
 
 /** 시트 높이 단계. 낮은 것부터 제목만(peek), 처음 높이(default), 크게(expanded), 화면 전체(full). */
@@ -35,13 +40,13 @@ const BottomSheet = ({
   showCloseButton = true,
   initialHeightPercent = 58,
   resizable = true,
-  fullPage = false,
+  fullPage = true,
   peekSignal,
   onBack,
   headerEnd,
   subtitle,
+  floating,
 }: BottomSheetProps) => {
-  const [height, setHeight] = useState<number | null>(null);
   const [mode, setMode] = useState<SheetMode>('default');
   const modes: SheetMode[] = fullPage ? ['peek', 'default', 'expanded', 'full'] : ['peek', 'default', 'expanded'];
   const lastPeekSignal = useRef(peekSignal);
@@ -50,7 +55,8 @@ const BottomSheet = ({
     lastPeekSignal.current = peekSignal;
     setMode('peek');
   }, [peekSignal]);
-  const gesture = useRef<{ startY: number; height: number; limit: number } | null>(null);
+  // frame: 끌기 시작에 한 번 늘려 둔 시트 실제 높이. 끄는 동안은 이 높이를 그대로 두고 transform으로만 움직인다.
+  const gesture = useRef<{ startY: number; height: number; limit: number; frame: number | null } | null>(null);
   const dragged = useRef(false);
   const sheetRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -63,16 +69,24 @@ const BottomSheet = ({
   }, [showCloseButton, resizable]);
   // 페이지로 열리면 끌개가 사라지므로 헤더의 뒤로가기·닫기로 다룬다.
   const back = onBack ?? (isFullPage ? () => setMode('default') : undefined);
+  // 끄는 동안 직접 넣은 인라인 높이와 위치를 지운다. 놓은 뒤 높이는 mode가 정한다.
+  const clearDrag = () => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    sheet.style.removeProperty('--sheet-height');
+    sheet.style.removeProperty('transform');
+    delete sheet.dataset.dragging;
+  };
   const finish = (event: PointerEvent<HTMLButtonElement>) => {
     const start = gesture.current;
     gesture.current = null;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
+    clearDrag();
     if (!start || !dragged.current) return;
     const released = start.height + start.startY - event.clientY;
     if (released < start.limit * 0.25) onClose();
     else if (fullPage && released > start.limit * 0.85) setMode('full');
     else setMode(released > start.limit * 0.6 ? 'expanded' : 'default');
-    setHeight(null);
   };
   return (
     <section
@@ -86,7 +100,6 @@ const BottomSheet = ({
       style={
         {
           '--sheet-default-height': `${Math.max(25, Math.min(88, initialHeightPercent))}%`,
-          ...(height === null ? {} : { '--sheet-height': `${height}px` }),
         } as CSSProperties
       }
       onKeyDown={(event) => {
@@ -96,6 +109,7 @@ const BottomSheet = ({
         }
       }}
     >
+      {floating && !isFullPage && <div className={styles.floating}>{floating}</div>}
       {resizable && !isFullPage && (
         <button
           ref={handleRef}
@@ -112,21 +126,31 @@ const BottomSheet = ({
               startY: event.clientY,
               height: sheet.getBoundingClientRect().height,
               limit: sheet.parentElement?.getBoundingClientRect().height ?? window.innerHeight,
+              frame: null,
             };
             event.currentTarget.setPointerCapture?.(event.pointerId);
           }}
           onPointerMove={(event) => {
             const start = gesture.current;
-            if (!start || Math.abs(event.clientY - start.startY) < 6) return;
+            const sheet = sheetRef.current;
+            if (!start || !sheet || Math.abs(event.clientY - start.startY) < 6) return;
             dragged.current = true;
-            setHeight(
-              Math.max(80, Math.min(start.limit * (fullPage ? 1 : 0.9), start.height + start.startY - event.clientY)),
-            );
+            const max = start.limit * (fullPage ? 1 : 0.9);
+            const target = Math.max(80, Math.min(max, start.height + start.startY - event.clientY));
+            // 높이를 바꾸면 움직일 때마다 시트 안 전체를 다시 배치하고 그린다. 시작에 한 번만 최대 높이로 늘리고,
+            // 그 뒤로는 보이는 높이만큼만 올라오게 아래로 밀어(transform) 합성만 일어나게 한다.
+            if (start.frame === null) {
+              sheet.dataset.dragging = 'true';
+              sheet.style.setProperty('--sheet-height', `${max}px`);
+              // max-height에 걸리면 덜 늘어나므로 실제 높이를 기준으로 민다.
+              start.frame = sheet.getBoundingClientRect().height;
+            }
+            sheet.style.transform = `translateY(${Math.max(0, start.frame - Math.min(target, start.frame))}px)`;
           }}
           onPointerUp={finish}
           onPointerCancel={(event) => {
             gesture.current = null;
-            setHeight(null);
+            clearDrag();
             event.currentTarget.releasePointerCapture?.(event.pointerId);
           }}
           // 누르기만 해서는 높이를 바꾸지 않는다. 끌어서 바꾸고, 키보드는 위·아래 화살표로 한 단계씩 바꾼다.
@@ -183,7 +207,11 @@ const styles = {
       background: var(--color-surface);
       color: var(--color-ink);
       box-shadow: 0 -0.35rem 1.4rem rgb(0 0 0 / 12%);
-      overflow: hidden;
+      /* 아이폰 사파리는 GL 지도 캔버스 위에 겹친 시트를 겹침 때문에 뒤늦게 레이어로 올리면서, 첫 터치 전까지 배경을 칠하지 않아
+         양옆이 비어 보였다(#546). 처음부터 시트를 자기 레이어로 올려 만들 때 칠하게 한다. 끄는 동안은 인라인 translateY가 이 값을 덮는다. */
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      /* 시트 위로 띄운 버튼(floating)이 잘리지 않게 넘치는 것은 자르지 않는다. 내용은 content 안에서 스크롤한다. */
 
       &[data-mode='expanded'] {
         height: var(--sheet-height, 88%);
@@ -194,18 +222,25 @@ const styles = {
         height: var(--sheet-height, 5.5rem);
       }
 
-      /* 끝까지 올리면 지도를 덮는 페이지가 된다. */
+      /* 끄는 동안은 transform만 바꾸므로 미리 레이어로 올려 둔다. */
+      &[data-dragging='true'] {
+        will-change: transform;
+      }
+
+      /* 끝까지 올리면 화면 전체를 덮는 페이지가 된다. 시트가 지도 칸 안에 있어도(저렴한 한 끼처럼 위에 머리와 탭이 있는 화면)
+         그 칸이 아니라 화면 맨 위까지 덮는다. */
       &[data-mode='full'] {
-        bottom: 0;
+        position: fixed;
+        inset: 0;
         z-index: 50;
-        height: var(--sheet-height, 100%);
-        max-height: 100%;
+        height: auto;
+        max-height: none;
         border-radius: 0;
         box-shadow: none;
       }
 
-      /* 태블릿부터는 넓은 화면을 가로지르지 않게 30rem 폭으로 가운데에 띄운다. */
-      @media (min-width: 768px) {
+      /* 태블릿(768~1023px)은 휴대폰 화면 구성을 써서 시트도 화면 폭을 채운다. 데스크탑만 30rem 폭으로 가운데에 띄운다. */
+      @media (min-width: 1024px) {
         max-width: 30rem;
         margin-right: auto;
         margin-left: auto;
@@ -213,6 +248,14 @@ const styles = {
     `,
     'BottomSheet-sheet',
   ),
+
+  /* 시트 위 가장자리 바로 위 오른쪽. 시트와 같은 상자 안에 있어 끄는 동안 transform으로 함께 움직인다. */
+  floating: css`
+    label: BottomSheet-floating;
+    position: absolute;
+    right: 0.85rem;
+    bottom: calc(100% + 0.75rem);
+  `,
 
   grabber: css`
     label: BottomSheet-grabber;

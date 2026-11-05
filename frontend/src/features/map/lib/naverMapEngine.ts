@@ -102,6 +102,11 @@ export type LiveEngine = {
   setZoom: (map: LiveMap, level: number) => void;
   animateView: (map: LiveMap, center: LiveLatLng, level: number) => void;
   relayout: (map: LiveMap) => void;
+  /**
+   * 지도 칸 안 `offset`(px) 자리를 제자리에 두고 확대 단계를 `levelDelta`만큼(소수 가능, 음수면 가까이) 바로 바꾼다.
+   * 이 SDK가 지원하지 않으면 false를 돌려준다.
+   */
+  zoomAround: (map: LiveMap, levelDelta: number, offset: { x: number; y: number }) => boolean;
   /** 오버레이를 넣으면 바로 그려지는 상태인지. GL 지도는 준비 전에 넣은 도형을 로드 순간 한꺼번에 등록한다. */
   isRenderReady: (map: LiveMap) => boolean;
   destroy: (map: LiveMap) => void;
@@ -155,6 +160,14 @@ export const naverEngine = (clientId: string, customStyleId?: string): LiveEngin
     }
   },
   relayout: (map) => map.autoResize(),
+  zoomAround: (map, levelDelta, offset) => {
+    const Point = window.naver?.maps.Point;
+    const projection = map.getProjection?.();
+    if (!map.zoomBy || !Point || !projection) return false;
+    // 앱 확대 단계는 Naver zoom과 방향이 반대다.
+    map.zoomBy(-levelDelta, projection.fromOffsetToCoord(new Point(offset.x, offset.y)), false);
+    return true;
+  },
   // 공개 idle은 GL 준비보다 먼저 온다. 내부 플래그는 이름이 바뀔 수 있어 호출하는 쪽이 시간 제한을 둔다.
   isRenderReady: (map) => !customStyleId || map._glReady === true,
   destroy: (map) => map.destroy(),
