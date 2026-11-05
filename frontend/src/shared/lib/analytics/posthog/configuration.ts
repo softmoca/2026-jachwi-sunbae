@@ -1,6 +1,7 @@
 import type { PostHogConfig } from 'posthog-js';
 
 import { getAnalyticsDeviceContext } from '../deviceContext';
+import { getCurrentAnalyticsScreenRoute } from '../screenRoute';
 import { getAnalyticsTrafficContext } from '../trafficContext';
 import { classifyPostHogException } from './errorClassification';
 import type { PostHogAuthStatus, PostHogSessionContext } from './types';
@@ -31,6 +32,11 @@ export const getPostHogOptions = (
         ? event.properties.auth_status
         : getAuthStatus();
     const trafficType = event.properties.traffic_type;
+    // 성능 이벤트처럼 잰 화면을 직접 넘긴 값은 지킨다. 나머지는 지금 화면의 라우트 패턴을 붙인다.
+    const screenRoute =
+      typeof event.properties.screen_route === 'string'
+        ? event.properties.screen_route
+        : getCurrentAnalyticsScreenRoute();
     const properties = {
       ...event.properties,
       ...context,
@@ -38,6 +44,7 @@ export const getPostHogOptions = (
       ...getAnalyticsTrafficContext(context?.environment ?? event.properties.environment),
       ...(['test', 'development', 'external'].includes(trafficType) ? { traffic_type: trafficType } : {}),
       ...(authStatus ? { auth_status: authStatus } : {}),
+      ...(screenRoute === undefined ? {} : { screen_route: screenRoute }),
     };
     return {
       ...event,
