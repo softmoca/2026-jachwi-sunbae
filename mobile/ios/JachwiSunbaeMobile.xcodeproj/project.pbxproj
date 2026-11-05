@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1187D7477865F86E914CC5CF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		5CE4E0022EB0000000000002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE4E0012EB0000000000001 /* SceneDelegate.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		C8A545F170203FED912D8CF0 /* Pods_JachwiSunbaeMobile.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC9BC4F850357186DDF9F85F /* Pods_JachwiSunbaeMobile.framework */; };
@@ -22,6 +23,7 @@
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = JachwiSunbaeMobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-JachwiSunbaeMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JachwiSunbaeMobile.debug.xcconfig"; path = "Target Support Files/Pods-JachwiSunbaeMobile/Pods-JachwiSunbaeMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-JachwiSunbaeMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JachwiSunbaeMobile.release.xcconfig"; path = "Target Support Files/Pods-JachwiSunbaeMobile/Pods-JachwiSunbaeMobile.release.xcconfig"; sourceTree = "<group>"; };
+		5CE4E0012EB0000000000001 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = JachwiSunbaeMobile/SceneDelegate.swift; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = JachwiSunbaeMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = JachwiSunbaeMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A10000000000000000000030 /* Kakao.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Kakao.xcconfig; path = Config/Kakao.xcconfig; sourceTree = "<group>"; };
@@ -46,6 +48,7 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				5CE4E0012EB0000000000001 /* SceneDelegate.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -281,6 +284,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				5CE4E0022EB0000000000002 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

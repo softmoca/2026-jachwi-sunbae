@@ -45,6 +45,8 @@ npm start
 Staging은 Release 최적화로 번들을 앱에 넣는 dev 빌드라 Metro 없이 실기기와 TestFlight에서 dev 서버를 확인할 때 쓴다. iOS는 Xcode에서 Archive의 Build Configuration을 Staging으로 바꾸거나 `xcodebuild archive -workspace ios/JachwiSunbaeMobile.xcworkspace -scheme JachwiSunbaeMobile -configuration Staging -destination generic/platform=iOS`로 만든다. Android는 `./gradlew assembleStaging` 또는 `bundleStaging`이며 release와 같은 업로드 키가 필요하다. Staging과 Release는 Firebase 설정 파일이 없으면 빌드가 실패하고, Debug는 경고 후 푸시 없이 빌드한다.
 기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 앱 시작만으로 위치 권한을 요청하지 않는다.
 
+iOS는 UIScene 생명주기를 쓴다. 창과 `jachwisunbae://` URL은 `SceneDelegate`가 받아 `RCTLinkingManager`로 넘기고, 꺼진 상태에서 URL로 열리면 `Linking.getInitialURL`이 그 URL을 돌려준다. 무음 푸시로 화면 없이 깨어나면 `AppDelegate`가 RN을 먼저 시작한다.
+
 ## 푸시 알림
 
 앱 권한·토큰·토픽·알림 이동 모듈과 서버용 Firebase Admin 발송 예제를 포함한다. 서버 발송은 기본 dry-run이고, 실제 운영 발송에는 명시적인 플래그가 필요하다.
