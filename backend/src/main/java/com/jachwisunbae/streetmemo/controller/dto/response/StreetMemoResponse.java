@@ -11,6 +11,8 @@ public record StreetMemoResponse(
         BigDecimal latitude,
         BigDecimal longitude,
         String memo,
+        @Schema(description = "메모 위치가 속한 8자리 행정동 코드. 찾지 못한 메모는 null", example = "11680640")
+        String adminDongCode,
         @Schema(description = "작성자가 선택한 선호", allowableValues = {"LIKE", "DISLIKE"})
         StreetMemoPreference preference,
         @Schema(description = "현재 인증된 회원이 작성한 메모인지 여부", example = "true")
@@ -19,6 +21,6 @@ public record StreetMemoResponse(
 
     public static StreetMemoResponse from(final StreetMemoResult result) {
         return new StreetMemoResponse(result.id(), result.latitude(), result.longitude(),
-                result.memo(), result.preference(), result.isMine());
+                result.memo(), result.adminDongCode(), result.preference(), result.isMine());
     }
 }
