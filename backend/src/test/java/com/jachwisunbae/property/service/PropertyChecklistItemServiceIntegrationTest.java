@@ -64,8 +64,9 @@ class PropertyChecklistItemServiceIntegrationTest {
                 VALUES (?, ?, '판교 원룸', '경기도 성남시 분당구 판교역로 166', 37.3948, 127.1112, NOW(6))
                 """, PROPERTY_ID, MEMBER_ID);
         checklistId = checklistRepository.save(PROPERTY_ID, null, "시스템 기본 체크리스트", CheckStage.ON_SITE);
-        itemRepository.saveAll(checklistId, List.of(
-                new PropertyChecklistItemStateQuery(null, "수압을 확인했나요?", 1, CheckStatus.UNCONFIRMED, "")));
+        Long systemCheckItemId = jdbcTemplate.queryForObject("SELECT MIN(id) FROM system_check_items", Long.class);
+        itemRepository.saveAll(checklistId, List.of(new PropertyChecklistItemStateQuery(
+                systemCheckItemId, "수압을 확인했나요?", 1, CheckStatus.UNCONFIRMED, "")));
         itemId = jdbcTemplate.queryForObject("SELECT id FROM property_checklist_items WHERE property_checklist_id = ?",
                 Long.class, checklistId);
     }
