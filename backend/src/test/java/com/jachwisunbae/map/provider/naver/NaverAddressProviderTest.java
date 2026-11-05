@@ -20,17 +20,31 @@ class NaverAddressProviderTest {
     private static final BigDecimal LONGITUDE = new BigDecimal("127.1103669");
 
     private final FakeNaverGeocodeClient naverClient = new FakeNaverGeocodeClient();
+    private final FakeNaverLocalSearchClient localSearchClient = new FakeNaverLocalSearchClient();
     private final FakeSgisAddressClient sgisClient = new FakeSgisAddressClient();
-    private final NaverAddressProvider provider = new NaverAddressProvider(naverClient, sgisClient);
+    private final NaverAddressProvider provider = new NaverAddressProvider(naverClient, localSearchClient,
+            sgisClient);
 
     @Test
-    @DisplayName("주소 검색은 네이버 결과를 그대로 돌려준다")
-    void geocodesWithNaver() {
+    @DisplayName("주소로 찾으면 장소 검색을 하지 않고 주소 결과를 돌려준다")
+    void geocodesAddressWithoutPlaceSearch() {
         MapAddress address = new MapAddress("경기도 성남시 분당구 판교역로 166", "경기도 성남시 분당구 백현동 532",
                 LATITUDE, LONGITUDE);
         naverClient.respond(address);
+        localSearchClient.respond(new MapAddress("다른 주소", null, LATITUDE, LONGITUDE));
 
         assertThat(provider.geocode("판교역로 166")).containsExactly(address);
+        assertThat(localSearchClient.searched()).isFalse();
+    }
+
+    @Test
+    @DisplayName("주소로 찾지 못하면 장소 이름으로 다시 찾는다")
+    void fallsBackToPlaceSearch() {
+        MapAddress place = new MapAddress("서울특별시 송파구 위례성대로 2", "서울특별시 송파구 방이동 44-2",
+                new BigDecimal("37.5165"), new BigDecimal("127.1123"));
+        localSearchClient.respond(place);
+
+        assertThat(provider.geocode("우아한형제들")).containsExactly(place);
     }
 
     @Test
@@ -64,6 +78,30 @@ class NaverAddressProviderTest {
 
         @Override
         public List<MapAddress> geocode(String query) {
+            return addresses;
+        }
+    }
+
+    private static class FakeNaverLocalSearchClient extends NaverLocalSearchClient {
+
+        private List<MapAddress> addresses = List.of();
+        private boolean searched;
+
+        FakeNaverLocalSearchClient() {
+            super((RestClient) null);
+        }
+
+        void respond(MapAddress... addresses) {
+            this.addresses = List.of(addresses);
+        }
+
+        boolean searched() {
+            return searched;
+        }
+
+        @Override
+        public List<MapAddress> search(String query) {
+            searched = true;
             return addresses;
         }
     }

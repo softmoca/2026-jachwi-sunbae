@@ -35,7 +35,7 @@ Spring Boot 애플리케이션은 CORS 허용 Origin과 인증·저장소 설정
 | `JUSO_CONFIRM_KEY`           | 비움                    | `public` 모드의 행정안전부 도로명주소 검색 API 승인키                                    |
 | `SGIS_CONSUMER_KEY`          | 비움                    | `public`, `naver` 모드의 SGIS 서비스 ID                                                  |
 | `SGIS_CONSUMER_SECRET`       | 비움                    | `public`, `naver` 모드의 SGIS 보안키. 백엔드 전용으로 관리한다                           |
-| `NAVER_MAP_CLIENT_ID`        | 비움                    | `naver` 모드의 NCP Maps Application Client ID. 주소 검색 API 호출에 쓴다                 |
+| `NAVER_MAP_CLIENT_ID`        | 비움                    | `naver` 모드의 NCP Application Client ID. 주소 검색과 장소 검색에 쓴다                   |
 | `NAVER_MAP_CLIENT_SECRET`    | 비움                    | `naver` 모드의 NCP Maps Application Client Secret. 백엔드 전용으로 관리한다              |
 | `MAP_NEARBY_PROVIDER`        | `demo`                  | `demo` 또는 `kakao` 주변 시설 adapter 선택. 비우면 `demo`로 동작한다                     |
 | `KAKAO_REST_API_KEY`         | 비움                    | `kakao` 모드의 Kakao Developers REST API 키. 백엔드 전용으로 관리한다                    |
@@ -83,6 +83,7 @@ DB 접속값과 `JWT_SECRET`, `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CON
 `MAP_PROVIDER_MODE`는 `demo`, `public`, `naver`만 사용할 수 있다. `public` 모드에 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
 `naver` 모드는 주소 검색만 NCP Maps Geocoding으로 하고 역지오코딩은 SGIS를 그대로 쓴다. 네이버 키와 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
 NCP 콘솔의 Application 설정에서 Geocoding을 선택해 두어야 한다. 선택하지 않으면 429 응답을 받는다.
+장소 이름 검색은 같은 키로 NAVER API HUB 지역 검색을 호출하므로, 같은 Application에 검색 API 이용 신청도 해 두어야 한다.
 착한가격업소 적재 스크립트도 주소를 좌표로 바꿀 때 같은 `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 사용한다. 스크립트는 개발자 PC에서 실행하므로 서버 환경변수에는 추가하지 않는다.
 
 `MAP_NEARBY_PROVIDER`를 빠뜨리면 오류 없이 `demo` 주변 시설 (가짜 데이터)로 동작하므로 dev·prod에는 반드시 `kakao`를 넣는다.

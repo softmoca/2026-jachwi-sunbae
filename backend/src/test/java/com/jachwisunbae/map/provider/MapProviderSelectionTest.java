@@ -10,6 +10,7 @@ import com.jachwisunbae.map.provider.kakao.KakaoNearbyPlaceProvider;
 import com.jachwisunbae.map.provider.kakao.KakaoPlaceClient;
 import com.jachwisunbae.map.provider.naver.NaverAddressProvider;
 import com.jachwisunbae.map.provider.naver.NaverGeocodeClient;
+import com.jachwisunbae.map.provider.naver.NaverLocalSearchClient;
 import com.jachwisunbae.map.provider.publicdata.PublicDataAddressProvider;
 import com.jachwisunbae.map.provider.publicdata.juso.JusoAddressClient;
 import com.jachwisunbae.map.provider.publicdata.sgis.SgisAddressClient;
@@ -32,7 +33,7 @@ class MapProviderSelectionTest {
                     JusoAddressClient.class, SgisAuthClient.class, SgisTokenProvider.class, SgisAddressClient.class,
                     PublicDataAddressProvider.class, KakaoPlaceClient.class, KakaoNearbyPlaceProvider.class,
                     DemoAgencyProvider.class, KakaoAgencyProvider.class, NaverGeocodeClient.class,
-                    NaverAddressProvider.class);
+                    NaverLocalSearchClient.class, NaverAddressProvider.class);
 
     @Test
     @DisplayName("설정이 없으면 주소와 주변 시설 모두 demo 공급자를 사용한다")
