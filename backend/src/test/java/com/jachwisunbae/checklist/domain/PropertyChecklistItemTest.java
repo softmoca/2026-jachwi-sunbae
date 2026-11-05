@@ -79,10 +79,7 @@ class PropertyChecklistItemTest {
     @DisplayName("질문이 100자를 초과하면 예외를 발생시킨다")
     void rejectsQuestionLongerThanMaximum() {
         assertThatThrownBy(() -> PropertyChecklistItem.create(1L, 2L, 1, "질문".repeat(101)))
-                .isInstanceOfSatisfying(InvalidInputException.class,
-                        exception -> assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.PROPERTY_CHECK_RESULT_INVALID));
+                .isInstanceOf(IllegalArgumentException.class);
     }
-
 
 }

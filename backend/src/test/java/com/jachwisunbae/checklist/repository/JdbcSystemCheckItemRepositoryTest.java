@@ -23,14 +23,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(JdbcSystemCheckItemRepository.class)
 class JdbcSystemCheckItemRepositoryTest {
 
     @Container
     @ServiceConnection
     private static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0.33");
 
-    @Autowired
     private JdbcSystemCheckItemRepository repository;
 
     @Autowired
@@ -38,6 +36,7 @@ class JdbcSystemCheckItemRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        repository = new JdbcSystemCheckItemRepository(jdbcTemplate);
         jdbcTemplate.update("DELETE FROM system_check_items");
     }
 
