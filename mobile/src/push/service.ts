@@ -3,10 +3,10 @@ import { getApps } from '@react-native-firebase/app';
 import {
   AuthorizationStatus,
   deleteToken,
+  getAPNSToken,
   getMessaging,
   getToken,
   hasPermission,
-  isDeviceRegisteredForRemoteMessages,
   registerDeviceForRemoteMessages,
   requestPermission,
   setAutoInitEnabled,
@@ -16,6 +16,7 @@ import {
 import { PermissionsAndroid, Platform } from 'react-native';
 import { APP_ENV } from '../config';
 import { createPushController } from './controller';
+import { waitForApnsToken } from './errors';
 
 const CHOICE_KEY = '@jachwi/push/choice-v1';
 const REGISTERED_KEY = '@jachwi/push/registered-v1';
@@ -65,11 +66,16 @@ export const createNativePush = () => {
     },
     register: async () => {
       await setAutoInitEnabled(messaging, true);
-      if (
-        Platform.OS === 'ios' &&
-        !isDeviceRegisteredForRemoteMessages(messaging)
-      ) {
-        await registerDeviceForRemoteMessages(messaging);
+      if (Platform.OS === 'ios') {
+        // 이미 등록된 앱도 실행마다 다시 등록해야 이번 실행에서 APNs 토큰이 온다.
+        // 등록 호출이 실패하면 아래 대기가 apns_timeout으로 알려 준다.
+        if (!(await getAPNSToken(messaging).catch(() => null))) {
+          await registerDeviceForRemoteMessages(messaging).catch(
+            () => undefined,
+          );
+        }
+        // APNs 토큰은 등록 직후 비동기로 온다. 오기 전에 FCM 토큰을 요청하면 실패하므로 기다린다.
+        await waitForApnsToken(() => getAPNSToken(messaging));
       }
       const token = await getToken(messaging);
       await AsyncStorage.setItem(REGISTERED_KEY, 'yes');

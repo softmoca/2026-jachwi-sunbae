@@ -8,6 +8,11 @@ import {
   type RemoteMessage,
 } from '@react-native-firebase/messaging';
 import { WEB_APP_URL } from '../config';
+import {
+  classifyPushError,
+  PUSH_BRIDGE_ERROR,
+  PUSH_FAILURE_NOTICE,
+} from './errors';
 import { createForegroundNotifier, type PushOpen } from './foreground';
 import { createNativePush, getConfiguredMessaging } from './service';
 import {
@@ -36,11 +41,9 @@ export const usePushNotifications = (
           '알림이 꺼져 있어요',
           '기기 설정에서 자취선배 알림을 허용해 주세요.',
         );
-    } catch {
-      Alert.alert(
-        '알림 연결을 완료하지 못했어요',
-        '네트워크를 확인한 뒤 다시 시도해 주세요.',
-      );
+    } catch (error) {
+      const notice = PUSH_FAILURE_NOTICE[classifyPushError(error)];
+      Alert.alert(notice.title, notice.message);
     }
   }, [push]);
 
@@ -165,8 +168,11 @@ export const usePushNotifications = (
             return true;
         }
         reply({ ok: true, ...(await push.status()) });
-      } catch {
-        reply({ ok: false, error: 'push-unavailable' });
+      } catch (error) {
+        reply({
+          ok: false,
+          error: PUSH_BRIDGE_ERROR[classifyPushError(error)],
+        });
       }
       return true;
     },
