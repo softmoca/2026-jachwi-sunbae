@@ -57,4 +57,9 @@ export const weatherHandlers = [
     success({ available: true, gridX: 60, gridY: 127, updatedAt: new Date().toISOString() }),
   ),
   http.delete('*/api/members/me/weather-location', () => new HttpResponse(null, { status: 204 })),
+  http.put('*/api/members/me/weather-devices/current', async ({ request }) => {
+    const { installationId } = (await request.json()) as { installationId: string };
+    return success({ installationId, updatedAt: new Date().toISOString() });
+  }),
+  http.delete('*/api/members/me/weather-devices/current', () => new HttpResponse(null, { status: 204 })),
 ];

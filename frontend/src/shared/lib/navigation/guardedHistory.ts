@@ -4,7 +4,7 @@ type History = ReturnType<typeof UNSAFE_createBrowserHistory>;
 type Update = Parameters<Parameters<History['listen']>[0]>[0];
 
 const unsafeNavigationWarning =
-  '일부 체크 항목을 저장하지 못했어요. 이대로 이동하면 저장되지 않은 입력을 잃을 수 있습니다. 그래도 이동할까요?';
+  '일부 체크 항목을 저장하지 못했어요. 이대로 이동하면 저장되지 않은 입력을 잃을 수 있어요. 그래도 이동할까요?';
 
 type NavigationGuard = {
   shouldFlush: () => boolean;

@@ -113,7 +113,7 @@ class PublicDataAddressProviderTest {
         private String roadAddress;
 
         FakeSgisAddressClient() {
-            super((RestClient) null, null);
+            super((RestClient) null, null, null);
         }
 
         void coordinate(String address, BigDecimal latitude, BigDecimal longitude) {

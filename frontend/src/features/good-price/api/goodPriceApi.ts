@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { apiRequest } from '@/features/auth/api/apiClient';
 import { readArray, readInteger, readNullableString, readRecord, readString } from '@/shared/api/responseParsers';
@@ -75,5 +75,7 @@ export const useGoodPriceStores = (
       return fetchGoodPriceStores(config, center, radius, signal);
     },
     staleTime: 60_000,
+    // 기준 위치를 옮겨 다시 찾는 동안 지도 마커와 목록을 비우지 않고 이전 결과를 둔다.
+    placeholderData: keepPreviousData,
   });
 };

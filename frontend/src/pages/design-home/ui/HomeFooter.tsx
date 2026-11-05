@@ -1,10 +1,17 @@
 import { css, cx } from '@emotion/css';
 import { Link } from 'react-router-dom';
 
-import { GUIDE_PATH, PRIVACY_PATH } from '@/shared/lib/navigation/appPaths';
+import {
+  HOME_PATH,
+  LANDING_PATH,
+  type LandingEntryState,
+  landingEntryState,
+  PRIVACY_PATH,
+} from '@/shared/lib/navigation/appPaths';
 
-const FOOTER_LINKS = [
-  { label: '사용 방법', to: GUIDE_PATH },
+/** 서비스 소개(랜딩)는 돌아가기 버튼이 홈으로 오게 진입 위치를 함께 넘긴다. 사용 방법은 홈의 카드로 가므로 푸터에 두지 않는다. */
+const FOOTER_LINKS: { label: string; to: string; state?: LandingEntryState }[] = [
+  { label: '자취선배 소개', to: LANDING_PATH, state: landingEntryState('home_footer', HOME_PATH) },
   { label: '개인정보·광고 측정 안내', to: PRIVACY_PATH },
 ];
 
@@ -20,7 +27,7 @@ const HomeFooter = ({ className, alignStart = false }: HomeFooterProps) => (
     <p className={styles.slogan}>본 방의 기록이, 내 방을 고르는 기준이 되도록.</p>
     <nav className={styles.links} aria-label="서비스 안내">
       {FOOTER_LINKS.map((link) => (
-        <Link key={link.to} to={link.to}>
+        <Link key={link.to} to={link.to} state={link.state}>
           {link.label}
         </Link>
       ))}

@@ -6,7 +6,6 @@ import { formatKst, httpsUrl, won } from '@/features/meal-deals/lib/presentation
 import { type Brand, BRANDS, PROMOTIONS } from '@/features/meal-deals/model/MealDeal';
 import { LogClick } from '@/shared/lib/analytics/logging';
 import { Button } from '@/shared/ui/button/Button';
-import EmptyState from '@/shared/ui/empty-state/EmptyState';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import SearchField from '@/shared/ui/search-field/SearchField';
@@ -16,6 +15,7 @@ import type { MealLayout } from '../hooks/useMealTabs';
 import { CHEAP_MEAL_EVENTS, outboundClickedParams } from '../lib/cheapMealAnalytics';
 import { type ProductSort, type PromotionFilter, selectProducts } from '../lib/convenienceProducts';
 import type { MealDetail } from '../model/MealNavigation';
+import EmptyState from './MealEmptyState';
 import ProductImage from './ProductImage';
 
 import * as shared from './MealContent.styles';
@@ -279,12 +279,13 @@ const styles = {
     padding: 0;
     margin: 0 0 1.5rem;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* 폭에 따라 열 수를 늘린다. 휴대폰은 두 칸, 태블릿은 서너 칸이 되고 칸 크기는 비슷하게 둔다. */
+    grid-template-columns: repeat(auto-fill, minmax(min(9.5rem, calc(50% - 0.4rem)), 1fr));
     gap: 1.4rem 0.8rem;
   `,
   gridDesktop: css`
     label: ConveniencePanel-gridDesktop;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
     gap: 2rem 1.25rem;
   `,
   card: css`

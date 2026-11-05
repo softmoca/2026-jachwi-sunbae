@@ -247,6 +247,10 @@ describe('내 체크리스트 편집', () => {
         requestBody = await request.json();
         return HttpResponse.json(successEnvelope(finalChecklistDetail()));
       }),
+      // 저장한 뒤 이 체크리스트를 쓰는 매물을 찾아 다시 적용한다. 여기서는 그런 매물이 없다.
+      http.get(`${config.apiBaseUrl}/api/properties`, () =>
+        HttpResponse.json(successEnvelope({ totalCount: 0, items: [] })),
+      ),
     );
     const user = userEvent.setup();
     renderAuthenticated('/checklists');

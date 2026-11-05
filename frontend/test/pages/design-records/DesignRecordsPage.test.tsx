@@ -127,7 +127,32 @@ it('리스트 메뉴의 삭제는 실제 매물 삭제 API를 호출한다', asy
   expect(removed).toHaveBeenCalledTimes(1);
 });
 
-it('출퇴근 장소를 정하지 않았으면 통근 시간을 부르지 않고, 리스트에 장소를 정하는 줄도 두지 않는다', async () => {
+it('리스트 카드의 더보기 메뉴는 메뉴 밖을 누르거나 Esc를 누르면 닫힌다', async () => {
+  const user = userEvent.setup();
+  renderRecords();
+  await screen.findByText('신림역 원룸');
+  await user.click(screen.getByRole('button', { name: /리스트/ }));
+  const toggle = screen.getByRole('button', { name: '망원동 투룸 메뉴' });
+
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByRole('button', { name: /삭제/ })).toBeInTheDocument();
+  await user.click(screen.getByRole('heading', { name: '모든 기록' }));
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('button', { name: /삭제/ })).not.toBeInTheDocument();
+
+  // 다른 카드의 메뉴를 열면 앞 메뉴는 닫힌다.
+  await user.click(toggle);
+  await user.click(screen.getByRole('button', { name: '신림역 원룸 메뉴' }));
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getAllByRole('button', { name: /삭제/ })).toHaveLength(1);
+
+  await user.keyboard('{Escape}');
+  expect(screen.queryByRole('button', { name: /삭제/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '신림역 원룸 메뉴' })).toHaveFocus();
+});
+
+it('리스트 위에는 통근 시간 버튼을 두지 않고, 동네 찾기에서 출퇴근 장소를 골라 두어도 통근 시간을 부르지 않는다', async () => {
   const user = userEvent.setup();
   const requested = vi.fn();
   server.use(
@@ -136,22 +161,6 @@ it('출퇴근 장소를 정하지 않았으면 통근 시간을 부르지 않고
       return new HttpResponse(null, { status: 500 });
     }),
   );
-  renderRecords();
-  await screen.findByText('신림역 원룸');
-  await user.click(screen.getByRole('button', { name: /리스트/ }));
-  expect(screen.queryByText(/출퇴근 장소를 정하면/)).not.toBeInTheDocument();
-  expect(screen.queryByRole('link', { name: '장소 정하기' })).not.toBeInTheDocument();
-  expect(requested).not.toHaveBeenCalled();
-});
-
-it('동네 찾기에서 고른 출퇴근 장소까지 매물마다 통근 시간을 보여 준다', async () => {
-  const user = userEvent.setup();
-  const requests: URL[] = [];
-  const track = ({ request }: { request: Request }) => {
-    const url = new URL(request.url);
-    if (url.pathname === '/api/properties/commute-times') requests.push(url);
-  };
-  server.events.on('request:start', track);
   localStorage.setItem(
     'jachwi-sunbae:commute-destination',
     JSON.stringify({ latitude: 37.4842, longitude: 126.9297, name: '신림역' }),
@@ -160,23 +169,13 @@ it('동네 찾기에서 고른 출퇴근 장소까지 매물마다 통근 시간
     renderRecords();
     await screen.findByText('신림역 원룸');
     await user.click(screen.getByRole('button', { name: /리스트/ }));
+    expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '바꾸기' })).not.toBeInTheDocument();
-    // 들어오자마자 계산하지 않고 `통근 시간` 버튼을 눌러야 부른다.
-    expect(requests).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: '통근 시간' }));
-    const near = within(screen.getByRole('link', { name: /신림역 원룸/ }));
-    expect(await near.findByText(/^신림역까지 대중교통 \d+분$/)).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('link', { name: /망원동 투룸/ })).getByText(/^신림역까지 대중교통 \d+분$/),
-    ).toBeInTheDocument();
-    // 보기를 바꾸며 화면이 다시 붙으면 한 번 더 부를 수 있어, 보낸 요청이 모두 고른 장소 좌표인지만 본다.
-    expect(requests.length).toBeGreaterThan(0);
-    for (const url of requests) {
-      expect(url.searchParams.get('latitude')).toBe('37.4842');
-      expect(url.searchParams.get('longitude')).toBe('126.9297');
-    }
+    expect(screen.queryByText(/까지 대중교통/)).not.toBeInTheDocument();
+    // 리스트 위 필터 줄은 그대로 둔다.
+    expect(screen.getByRole('group', { name: '기록 필터 (준비 중)' })).toBeInTheDocument();
+    expect(requested).not.toHaveBeenCalled();
   } finally {
-    server.events.removeListener('request:start', track);
     localStorage.removeItem('jachwi-sunbae:commute-destination');
   }
 });
@@ -222,16 +221,28 @@ it('데스크탑에서는 보기 전환 없이 지도와 리스트를 함께 보
   expect(screen.getByRole('region', { name: '본 방 기록 지도' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 1, name: '본 방 기록' })).toBeInTheDocument();
   expect(screen.queryByRole('navigation', { name: '기록 보기 방식' })).not.toBeInTheDocument();
-  // 통근은 리스트가 아니라 지도 레일 맨 아래에 두고, 통근 시간은 아직 두지 않는다.
-  expect(
-    within(screen.getByRole('complementary', { name: '지도 시설 카테고리' })).getByRole('button', {
-      name: /통근 장소 정하기|까지 통근거리/,
-    }),
-  ).toBeInTheDocument();
+  // 리스트에 통근 시간 버튼이 없다. 통근은 동네 찾기에서 다룬다.
   expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
   // 주소 검색창은 공용 레이아웃 밖에서도 헤더 가운데 자리에 들어간다.
   await waitFor(() => expect(within(screen.getByRole('banner')).getByLabelText('주소 검색')).toBeInTheDocument());
   matchMedia.mockRestore();
+});
+
+it('데스크탑 리스트에도 출퇴근 장소와 상관없이 통근 시간 버튼을 두지 않는다', async () => {
+  const matchMedia = useDesktopViewport();
+  localStorage.setItem(
+    'jachwi-sunbae:commute-destination',
+    JSON.stringify({ latitude: 37.4842, longitude: 126.9297, name: '신림역' }),
+  );
+  try {
+    renderRecords();
+    await screen.findByRole('heading', { name: '모든 기록' });
+    expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '기록 필터 (준비 중)' })).toBeInTheDocument();
+  } finally {
+    localStorage.removeItem('jachwi-sunbae:commute-destination');
+    matchMedia.mockRestore();
+  }
 });
 
 it('데스크탑은 기록하기 버튼 없이 지도를 찍으면 등록 화면 없이 바로 매물을 만들고 옆 칸에 상세를 연다', async () => {
@@ -251,6 +262,23 @@ it('데스크탑은 기록하기 버튼 없이 지도를 찍으면 등록 화면
     expect(screen.getByRole('heading', { name: '모든 기록' })).toBeInTheDocument();
   } finally {
     created.stop();
+    matchMedia.mockRestore();
+  }
+});
+
+it('체크리스트 탭을 보다가 지도에서 매물을 새로 만들어도 옆 칸 상세는 정보 탭부터 연다', async () => {
+  const matchMedia = useDesktopViewport();
+  const user = userEvent.setup();
+  sessionStorage.setItem('jachwi:property-detail-tab', 'checklist');
+  try {
+    renderRecords();
+    await screen.findByRole('heading', { name: '모든 기록' });
+    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
+    await user.click(screen.getByRole('button', { name: '말풍선 🏠 여기에 매물 등록' }));
+    const detail = within(await screen.findByRole('complementary', { name: '선택한 매물 상세' }));
+    expect(await detail.findByRole('tab', { name: '정보' })).toHaveAttribute('aria-selected', 'true');
+    expect(detail.getByRole('tabpanel', { name: '정보' })).toBeInTheDocument();
+  } finally {
     matchMedia.mockRestore();
   }
 });
@@ -286,6 +314,30 @@ it('데스크탑에서 지도나 리스트의 방을 누르면 리스트 옆 칸
     }),
   ).toBeInTheDocument();
   matchMedia.mockRestore();
+});
+
+it('데스크탑 리스트에서 방을 누르면 옆 칸에 상세를 열고 지도를 그 방 핀 자리로 옮긴다', async () => {
+  const matchMedia = useDesktopViewport();
+  const user = userEvent.setup();
+  try {
+    renderRecords();
+    await screen.findByRole('heading', { name: '모든 기록' });
+    const target = getMockProperties().find((property) => property.name === '신림역 원룸');
+    expect(screen.getByLabelText('지도 중심')).not.toHaveTextContent(`${target?.latitude},${target?.longitude}`);
+    const level = screen.getByLabelText('지도 배율').textContent;
+
+    await user.click(screen.getByRole('link', { name: /신림역 원룸/ }));
+    expect(screen.getByLabelText('지도 중심')).toHaveTextContent(`${target?.latitude},${target?.longitude}`);
+    expect(screen.getByLabelText('지도 배율')).toHaveTextContent(level ?? '');
+    expect(
+      await within(screen.getByRole('complementary', { name: '선택한 매물 상세' })).findByRole('heading', {
+        level: 1,
+        name: '신림역 원룸',
+      }),
+    ).toBeInTheDocument();
+  } finally {
+    matchMedia.mockRestore();
+  }
 });
 
 const viewSwitch = () => within(screen.getByRole('navigation', { name: '기록 보기 방식' }));
@@ -552,7 +604,7 @@ it('현재 위치 버튼은 받은 위치로 지도를 옮기고, 권한이 없�
   }
 });
 
-it('처음 들어오면 지도를 확대하고 직접 눌러 보게 안내하며, 지도를 눌러 말풍선이 뜨면 마치고 다시 띄우지 않는다', async () => {
+it('처음 들어오면 지도를 확대해 누르는 법을 안내하고, 안내를 누르면 밑의 지도나 마커 대신 안내만 닫고 다시 띄우지 않는다', async () => {
   localStorage.removeItem('jachwi:records-map-intro-seen');
   const user = userEvent.setup();
   try {
@@ -562,10 +614,14 @@ it('처음 들어오면 지도를 확대하고 직접 눌러 보게 안내하며
     expect(intro.getByText('지도를 눌러 보세요')).toBeInTheDocument();
     // 처음 배율(8)보다 가까이 다가가 누를 자리가 보이게 한다.
     await waitFor(() => expect(screen.getByLabelText('지도 배율')).toHaveTextContent('5'));
-    // 안내를 띄운 채로 지도를 누르면 그 자리 말풍선이 뜨고 안내를 마친다.
-    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
-    expect(screen.getByRole('button', { name: '말풍선 🏠 여기에 매물 등록' })).toBeInTheDocument();
+    // 안내는 화면 전체를 덮는 닫기 면을 두어, 그 밑의 마커나 지도가 눌리지 않고 안내만 닫힌다.
+    const note = screen.getByRole('note', { name: '지도 사용 안내' });
+    const dismissArea = note.querySelector<HTMLButtonElement>('button[aria-hidden="true"]');
+    expect(dismissArea).not.toBeNull();
+    expect(getComputedStyle(note).pointerEvents).not.toBe('none');
+    await user.click(dismissArea!);
     expect(screen.queryByRole('note', { name: '지도 사용 안내' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '말풍선 🏠 여기에 매물 등록' })).not.toBeInTheDocument();
     unmount();
 
     renderRecords();
@@ -616,36 +672,45 @@ it('데스크탑은 리스트에 매물이 모두 보여, 겹친 매물 묶음�
   }
 });
 
-it('통근 장소가 없으면 지도 레일의 통근으로 통근 장소를 고르는 모드에 들어가 지도를 누른 자리를 정하고, 다시 누르면 숨긴다', async () => {
-  localStorage.removeItem('jachwi-sunbae:commute-destination');
+const RECORDS_RAIL = ['메모', '병원', '교통', '학교', '편의'];
+
+it('본 방 기록 지도 레일에는 중개와 통근 없이 메모와 시설 카테고리만 둔다', async () => {
+  localStorage.setItem(
+    'jachwi-sunbae:commute-destination',
+    JSON.stringify({ latitude: 37.5665, longitude: 126.978, name: '서울시청' }),
+  );
   const user = userEvent.setup();
   try {
     renderRecords();
-    const rail = within(await screen.findByRole('complementary', { name: '지도 시설 카테고리' }));
-    await user.click(rail.getByRole('button', { name: '통근 장소 정하기' }));
-    // 검색창 없이 지도를 눌러 정하라고 알리고, 목적지 고르기만 남도록 레일과 지도 위 마커를 거둔다.
-    expect(screen.getByText('지도에서 통근 장소를 눌러 주세요')).toBeInTheDocument();
-    expect(screen.queryByLabelText('통근 장소 검색')).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: '지도 시설 카테고리' })).not.toBeInTheDocument();
+    const rail = await screen.findByRole('complementary', { name: '지도 시설 카테고리' });
     expect(
-      within(screen.getByLabelText('예시 지도')).queryByRole('button', { name: '신림역 원룸' }),
-    ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
-    // 찍은 자리에서 할 일을 고르는 말풍선 대신 바로 목적지로 정한다.
-    expect(screen.queryByRole('button', { name: /메모 남기기/ })).not.toBeInTheDocument();
-    const chip = await screen.findByText(/까지 통근거리$/);
-    const name = chip.textContent?.replace(/까지 통근거리$/, '') ?? '';
-    expect(within(screen.getByLabelText('예시 지도')).getByRole('button', { name })).toBeInTheDocument();
-    expect(localStorage.getItem('jachwi-sunbae:commute-destination')).not.toBeNull();
-    // 목적지를 정하면 레일과 매물 핀이 돌아오고, 레일에서 목적지만 켜 둔다. 다시 누르면 목적지 핀과 안내를 거둔다.
-    const railAgain = within(screen.getByRole('complementary', { name: '지도 시설 카테고리' }));
-    expect(railAgain.getAllByRole('button', { pressed: true })).toHaveLength(1);
-    expect(within(screen.getByLabelText('예시 지도')).getByRole('button', { name: '신림역 원룸' })).toBeInTheDocument();
-    await user.click(railAgain.getByRole('button', { name: /까지 통근거리 숨기기$/ }));
-    expect(screen.queryByText(/까지 통근거리$/)).not.toBeInTheDocument();
-    expect(within(screen.getByLabelText('예시 지도')).queryByRole('button', { name })).not.toBeInTheDocument();
+      within(rail)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(RECORDS_RAIL);
+    // 리스트에는 통근 시간 버튼도, 통근거리 줄과 바꾸기도 두지 않는다.
+    await user.click(screen.getByRole('button', { name: /리스트/ }));
+    expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/기준 통근거리/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '바꾸기' })).not.toBeInTheDocument();
   } finally {
     localStorage.removeItem('jachwi-sunbae:commute-destination');
+  }
+});
+
+it('데스크탑 본 방 기록 지도 레일에도 중개와 통근이 없다', async () => {
+  const matchMedia = useDesktopViewport();
+  try {
+    renderRecords();
+    const rail = await screen.findByRole('complementary', { name: '지도 시설 카테고리' });
+    expect(
+      within(rail)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(RECORDS_RAIL);
+    expect(screen.queryByText(/까지 통근거리/)).not.toBeInTheDocument();
+  } finally {
+    matchMedia.mockRestore();
   }
 });
 

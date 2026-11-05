@@ -9,9 +9,7 @@ import Icon from '@/shared/ui/icon/Icon';
 
 import type { RecordsState } from '../hooks/useRecords';
 import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
-import { recordsMapHint } from '../model/recordPresentation';
-import { destinationRailButton } from '../model/recordPresentation';
-import RecordDestinationControl from '../ui/record-destination/RecordDestinationControl';
+import { RECORDS_HIDDEN_CATEGORIES, recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
 import RecordsSelectedSheet from './RecordsSelectedSheet';
 
@@ -29,23 +27,19 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
   const { selected } = records;
   const sheetRecords = layers.groupRecords.length > 0 ? layers.groupRecords : selected ? [selected] : [];
   const hasBottomLayer = sheetRecords.length > 0 || layers.memo.mode !== null;
-  // 목적지 모드에서는 카테고리 레일, 안내, 매물 시트, 메모 시트를 거두고 목적지 고르기만 남긴다.
-  const isPickingDestination = layers.destination.isPicking;
   return (
     <section className={styles.map} aria-label="본 방 기록 지도">
       <MapCanvas {...layers.canvasProps} coordinateMenu={layers.coordinateMenu} />
       <StreetMemoImpressionLog memos={layers.memo.visibleMemos} />
-      {!isPickingDestination && (
-        <MapCategoryRail
-          showMemo
-          showIcons={false}
-          className={styles.rail}
-          selectedCategories={layers.category === null ? [] : [layers.category]}
-          counts={layers.counts}
-          onToggle={layers.toggleCategory}
-          extraButton={destinationRailButton(layers.destination)}
-        />
-      )}
+      <MapCategoryRail
+        showMemo
+        showIcons={false}
+        hiddenCategories={RECORDS_HIDDEN_CATEGORIES}
+        className={styles.rail}
+        selectedCategories={layers.category === null ? [] : [layers.category]}
+        counts={layers.counts}
+        onToggle={layers.toggleCategory}
+      />
       <button
         className={styles.recenter}
         type="button"
@@ -55,18 +49,10 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
         <Icon name="target" size={22} />
       </button>
       <MapZoomControl className={styles.zoom} level={records.level} onChange={records.setLevel} />
-      <RecordDestinationControl destination={layers.destination} className={styles.destination} />
-      {!isPickingDestination && (
-        <>
-          {!hasBottomLayer && <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>}
-          <RecordsSelectedSheet records={sheetRecords} onClose={layers.closeAll} onNotice={records.setNotice} />
-          <StreetMemoSheet layer={layers.memo} onCreated={layers.showMemos} />
-          <RecordMapTapIntro
-            setLevel={records.setLevel}
-            hasTapped={layers.tapPoint !== null || layers.destination.isShown}
-          />
-        </>
-      )}
+      {!hasBottomLayer && <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>}
+      <RecordsSelectedSheet records={sheetRecords} onClose={layers.closeAll} onNotice={records.setNotice} />
+      <StreetMemoSheet layer={layers.memo} onCreated={layers.showMemos} />
+      <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
     </section>
   );
 };
@@ -87,11 +73,11 @@ const styles = {
     z-index: 12;
   `,
 
-  /* 메모부터 목적지까지 일곱 칸(한 칸 2.5rem)인 레일 아래에 둔다. */
+  /* 메모부터 편의점까지 다섯 칸(한 칸 2.5rem)인 레일 아래에 둔다. */
   recenter: css`
     label: RecordsMobileMap-recenter;
     position: absolute;
-    top: calc(max(0.85rem, env(safe-area-inset-top)) + 29.5rem);
+    top: calc(max(0.85rem, env(safe-area-inset-top)) + 24.5rem);
     right: 0.95rem;
     z-index: 12;
     display: grid;
@@ -109,14 +95,6 @@ const styles = {
       outline: 2px solid #25282d;
       outline-offset: 3px;
     }
-  `,
-
-  /* 통근 장소 고르기 안내와 통근거리 안내는 확대·축소 버튼 왼쪽, 같은 높이에 둔다. */
-  destination: css`
-    label: RecordsMobileMap-destination;
-    top: calc(max(0.85rem, env(safe-area-inset-top)) + 8.15rem);
-    left: 0.75rem;
-    max-width: calc(100% - 7.5rem);
   `,
 
   /* 헤더·동네 뱃지 아래 오른쪽 위에 두고, 카테고리 레일은 그 아래로 내린다. */

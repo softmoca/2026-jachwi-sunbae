@@ -58,8 +58,7 @@ const meta = {
       description: '켜 둔 분류. 목록에는 이 분류의 장소만 나온다.',
     },
     places: { control: 'object', description: '목록에 보여줄 장소' },
-    expanded: { description: '시트를 펼쳐 장소 목록까지 보여줄지' },
-    onToggleExpanded: { description: '시트 펼치기·접기' },
+    peekSignal: { description: '값이 바뀌면 시트를 제목만 보이게 내린다' },
     onToggleCategory: { description: '분류 칩 켜기·끄기' },
   },
   args: {
@@ -68,8 +67,6 @@ const meta = {
     counts: { HOSPITAL: 12, TRANSPORT: 8, SCHOOL: 3, CONVENIENCE: 21, AGENCY: 6 },
     selectedCategories: ['HOSPITAL', 'CONVENIENCE', 'SCHOOL'],
     places,
-    expanded: false,
-    onToggleExpanded: fn(),
     onToggleCategory: fn(),
   },
 } satisfies Meta<typeof MapNearbySheet>;
@@ -80,15 +77,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const Expanded: Story = {
-  args: {
-    expanded: true,
-  },
-};
-
 export const NoCategorySelected: Story = {
   args: {
-    expanded: true,
     selectedCategories: [],
     places: [],
   },
@@ -96,7 +86,6 @@ export const NoCategorySelected: Story = {
 
 export const NoPlaces: Story = {
   args: {
-    expanded: true,
     counts: { HOSPITAL: 0, TRANSPORT: 0, SCHOOL: 0, CONVENIENCE: 0, AGENCY: 0 },
     selectedCategories: ['HOSPITAL'],
     places: [],

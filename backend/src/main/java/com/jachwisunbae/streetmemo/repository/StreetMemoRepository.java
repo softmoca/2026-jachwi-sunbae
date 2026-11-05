@@ -12,6 +12,8 @@ public interface StreetMemoRepository {
     List<StreetMemo> findAllWithin(BigDecimal minLatitude, BigDecimal maxLatitude,
                                   BigDecimal minLongitude, BigDecimal maxLongitude);
 
+    List<StreetMemo> findAllByAdminDongCode(String adminDongCode);
+
     Optional<StreetMemo> findByIdForUpdate(long id);
 
     int delete(StreetMemo streetMemo);

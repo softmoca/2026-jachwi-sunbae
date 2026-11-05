@@ -64,6 +64,19 @@ public class StreetMemoController {
         return ApiResponse.of("거리 메모 목록을 조회했습니다.", responses);
     }
 
+    @GetMapping(params = "adminDongCode")
+    @Operation(summary = "행정동의 거리 메모 조회",
+            description = "8자리 행정동 코드로 그 행정동에 작성된 모든 회원의 미삭제 메모를 조회합니다. "
+            + "행정동은 작성할 때 서버가 메모 위치로 정하며, 행정동을 찾지 못한 메모는 포함하지 않습니다. "
+            + "정렬 순서와 결과 상한은 보장하지 않으며 결과가 없으면 빈 배열을 반환합니다.")
+    public ApiResponse<List<StreetMemoResponse>> findAllInAdminDong(
+            @AuthenticatedMemberId final Long memberId,
+            @RequestParam final String adminDongCode) {
+        List<StreetMemoResponse> responses = streetMemoService.findAllInAdminDong(memberId, adminDongCode)
+                .stream().map(StreetMemoResponse::from).toList();
+        return ApiResponse.of("거리 메모 목록을 조회했습니다.", responses);
+    }
+
     @DeleteMapping("/{streetMemoId}")
     @Operation(summary = "본인 거리 메모 삭제",
             description = "본인이 작성한 미삭제 메모를 논리 삭제합니다. "

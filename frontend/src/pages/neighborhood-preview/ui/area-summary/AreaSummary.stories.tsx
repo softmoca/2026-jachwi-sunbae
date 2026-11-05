@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { fn } from 'storybook/test';
 
-import type { NearbyAgency } from '@/features/map/model/Map';
-
 import type { NeighborhoodPreviewContext } from '../../hooks/useNeighborhoodPreview';
 import AreaSummary from './AreaSummary';
 
@@ -37,19 +35,6 @@ const area: Area = {
   rent: { monthlyRentKrw: 620000, depositKrw: 10000000, transactionCount: 27, legalDongNames: ['망원동'] },
 };
 
-const agencies: NearbyAgency[] = [
-  {
-    providerPlaceId: 'kakao:1',
-    name: '망원역 공인중개사',
-    address: '서울 마포구 망원로 12',
-    latitude: 37.5558,
-    longitude: 126.9095,
-    distanceMeters: 80,
-    phone: '02-333-1201',
-    placeUrl: null,
-  },
-];
-
 const meta = {
   title: '페이지/동네 찾기/공통/AreaSummary',
   component: AreaSummary,
@@ -69,20 +54,12 @@ const meta = {
       description: '경로를 보고 있는 출발 정류장',
     },
     onSelectStation: { description: '출발 정류장 고르기' },
-    agencies: { control: 'object', description: '지금 지도 화면 안의 공인중개사' },
-    onSelectAgency: { description: '공인중개사 고르기' },
-    tab: { control: 'inline-radio', options: ['stations', 'agencies'], description: '지금 탭' },
-    onTabChange: { description: '탭 바꾸기' },
     onOpenListing: { description: '매물 보기 열기' },
   },
   args: {
     area,
     selectedStopId: 'BS_TAGO_11440001',
     onSelectStation: fn(),
-    agencies,
-    onSelectAgency: fn(),
-    tab: 'stations',
-    onTabChange: fn(),
     onOpenListing: fn(),
   },
 } satisfies Meta<typeof AreaSummary>;
@@ -92,10 +69,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-export const Agencies: Story = {
-  args: { tab: 'agencies' },
-};
 
 export const WithoutRent: Story = {
   args: {
