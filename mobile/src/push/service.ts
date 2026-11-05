@@ -67,9 +67,16 @@ export const createNativePush = () => {
     register: async () => {
       await setAutoInitEnabled(messaging, true);
       if (Platform.OS === 'ios') {
-        // 이미 등록된 앱도 실행마다 다시 등록해야 이번 실행에서 APNs 토큰이 온다.
-        // 등록 호출이 실패하면 아래 대기가 apns_timeout으로 알려 준다.
+        // 이미 등록된 앱도 실행마다 UIKit 등록을 다시 해야 이번 실행에서 APNs 토큰이 온다.
+        // registerDeviceForRemoteMessages는 이미 등록된 기기면 UIKit 등록을 건너뛴다.
+        // requestPermission은 권한이 정해진 뒤에는 창을 띄우지 않고 UIKit 등록만 다시 한다.
+        // register는 권한이 허용된 뒤에만 불린다. 호출이 실패하면 아래 대기가 apns_timeout으로 알려 준다.
         if (!(await getAPNSToken(messaging).catch(() => null))) {
+          await requestPermission(messaging, {
+            alert: true,
+            badge: true,
+            sound: true,
+          }).catch(() => undefined);
           await registerDeviceForRemoteMessages(messaging).catch(
             () => undefined,
           );
