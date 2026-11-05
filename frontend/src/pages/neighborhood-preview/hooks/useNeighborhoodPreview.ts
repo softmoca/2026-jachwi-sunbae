@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '@/features/auth/api/apiClient';
-import { commuteAreaToRegion } from '@/features/map/api/commuteApi';
+import { type CommuteArea, commuteAreaToRegion } from '@/features/map/api/commuteApi';
 import { fetchCommuteRoute } from '@/features/map/api/commuteRouteApi';
 import { reverseGeocode, searchAddress } from '@/features/map/api/mapApi';
 import { useCommuteAreas } from '@/features/map/api/useCommuteAreas';
@@ -12,6 +12,7 @@ import { writeCommuteDestination } from '@/features/map/lib/commuteDestinationSt
 import { readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import { MapLocationError } from '@/features/map/lib/mapLocation';
 import type { MapAddress } from '@/features/map/model/Map';
+import { MAX_MAP_LEVEL, MIN_MAP_LEVEL } from '@/features/map/ui/map-zoom-control/MapZoomControl';
 import { completeExploration, startExploration } from '@/features/onboarding/lib/explorationJourney';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import {
@@ -26,7 +27,7 @@ import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import { commuteBand, commuteColor, OUT_OF_RENT_COLOR, OUT_OF_RENT_DRAW_STAGE } from '../model/commuteColors';
 import { readNeighborhoodSearch, writeNeighborhoodSearch } from '../model/neighborhoodSearchSession';
 import { PREVIEW_DESTINATION } from '../model/preview';
-import { areaFocusLevel, RESULT_OVERVIEW_LEVEL, resultMapCenter } from '../model/resultMapView';
+import { type MapViewport, RESULT_OVERVIEW_LEVEL, resultMapCenter, routeFocusView } from '../model/resultMapView';
 import useNeighborhoodAnalytics from './useNeighborhoodAnalytics';
 
 const describeError = (error: unknown) => {
@@ -48,6 +49,13 @@ export const describeRouteError = (error: unknown) => {
   }
   return '경로를 불러오지 못했어요. 다른 정류장을 선택해 보세요.';
 };
+
+/** 동네를 고를 때의 결과 지도 시점. 동네 경계, 첫 출발 정류장, 출퇴근 장소가 모두 들어온다. */
+const areaRouteView = (
+  area: Pick<CommuteArea, 'polygons' | 'stations'>,
+  destination: { latitude: number; longitude: number },
+  viewport?: MapViewport,
+) => routeFocusView([destination, ...area.stations.slice(0, 1)], area.polygons, viewport);
 
 const useNeighborhoodPreview = () => {
   const config = usePublicConfig();
@@ -72,6 +80,9 @@ const useNeighborhoodPreview = () => {
   const [selectionCenter, setSelectionCenter] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [selectionLevel, setSelectionLevel] = useState(6);
   const resultView = useRef<{ latitude: number; longitude: number; level: number } | null>(null);
+  // 화면(휴대폰, 데스크탑)이 알려 주는 결과 지도 칸 크기와 가리는 여백. 동네나 출발 정류장을 고를 때 시점을 그 칸에 맞춘다.
+  const mapViewportReader = useRef<(() => MapViewport | null) | null>(null);
+  const readMapViewport = () => mapViewportReader.current?.() ?? undefined;
   // 결과 지도 시점은 ref에 두므로, 목록에서 정류장을 고를 때처럼 시점만 바꾸면 다시 그리도록 이 값을 올린다.
   const [, setResultViewVersion] = useState(0);
   const [hasChosenMapPoint, setHasChosenMapPoint] = useState(false);
@@ -188,6 +199,27 @@ const useNeighborhoodPreview = () => {
           },
     );
   }, [allAreas, areas]);
+  // 새로고침·뒤로가기로 고른 동네가 복원되면 전체 보기 대신 그 동네와 출퇴근 장소까지 경로가 함께 보이게 연다.
+  const selectedView = selected ? areaRouteView(selected, destination) : null;
+  const resultLevel = resultView.current?.level ?? selectedView?.level ?? RESULT_OVERVIEW_LEVEL;
+  const resultCenter =
+    resultView.current ??
+    selectedView ??
+    resultMapCenter(
+      areas?.length
+        ? {
+            latitude:
+              (Math.min(...areas.map((area) => area.center.latitude)) +
+                Math.max(...areas.map((area) => area.center.latitude))) /
+              2,
+            longitude:
+              (Math.min(...areas.map((area) => area.center.longitude)) +
+                Math.max(...areas.map((area) => area.center.longitude))) /
+              2,
+          }
+        : destination,
+      10,
+    );
   return {
     isPublicExplore,
     mapPath,
@@ -266,6 +298,13 @@ const useNeighborhoodPreview = () => {
     selectionLevel,
     rememberResultCenter: (latitude: number, longitude: number) => {
       resultView.current = { latitude, longitude, level: resultView.current?.level ?? RESULT_OVERVIEW_LEVEL };
+    },
+    /** 결과 지도 확대(-1)·축소(+1) 버튼. 휠이나 손가락으로 바꾼 단계는 다시 그리지 않고 기억만 하므로 기억한 값에서 옮긴다. */
+    zoomResultBy: (delta: -1 | 1) => {
+      const current = resultView.current ?? { ...resultCenter, level: resultLevel };
+      const level = Math.max(MIN_MAP_LEVEL, Math.min(MAX_MAP_LEVEL, current.level + delta));
+      resultView.current = { latitude: current.latitude, longitude: current.longitude, level };
+      setResultViewVersion((version) => version + 1);
     },
     rememberResultLevel: (level: number) => {
       if (resultView.current) resultView.current.level = level;
@@ -390,26 +429,8 @@ const useNeighborhoodPreview = () => {
     changeMaxMinutes: setMaxMinutes,
     maxTransfers,
     changeMaxTransfers: setMaxTransfers,
-    // 새로고침·뒤로가기로 고른 동네가 복원되면 전체 보기 대신 그 동네로 연다. 고른 동네 화면의 정류장·부동산을 바로 보여주기 위해서다.
-    resultLevel: resultView.current?.level ?? (selected ? areaFocusLevel(selected.polygons) : RESULT_OVERVIEW_LEVEL),
-    center:
-      resultView.current ??
-      (selected ? resultMapCenter(selected.center, areaFocusLevel(selected.polygons)) : undefined) ??
-      resultMapCenter(
-        areas?.length
-          ? {
-              latitude:
-                (Math.min(...areas.map((area) => area.center.latitude)) +
-                  Math.max(...areas.map((area) => area.center.latitude))) /
-                2,
-              longitude:
-                (Math.min(...areas.map((area) => area.center.longitude)) +
-                  Math.max(...areas.map((area) => area.center.longitude))) /
-                2,
-            }
-          : destination,
-        10,
-      ),
+    resultLevel,
+    center: resultCenter,
     reset: () => {
       analytics.cancelSearch();
       if (location.pathname.includes('/areas/')) navigate(mapPath, { replace: true });
@@ -432,11 +453,8 @@ const useNeighborhoodPreview = () => {
       // 회색(월세 조건 밖) 동네도 지도에서 고를 수 있어 받은 동네 전체에서 찾는다.
       const area = allAreas?.find((area) => area.adminDongCode === id);
       if (area) analytics.selectArea();
-      if (area) {
-        // 동네 크기에 맞춰 경계 전체가 보이게 다가간다.
-        const level = areaFocusLevel(area.polygons);
-        resultView.current = { ...resultMapCenter(area.center, level), level };
-      }
+      // 동네 경계와 첫 출발 정류장, 출퇴근 장소까지 통근 경로 전체가 한 화면에 들어오게 옮긴다.
+      if (area) resultView.current = areaRouteView(area, destination, readMapViewport());
       setSelectedId(id);
       setSelectedStopId(area?.stations[0]?.stopId ?? null);
       // 데스크탑은 상세를 목록 옆에 붙여 지도를 가리지 않으므로, 동네를 고르면 바로 상세를 연다.
@@ -445,9 +463,9 @@ const useNeighborhoodPreview = () => {
       // 선택을 풀면 동네 주소에서 지도 주소로 돌아가야 주소의 동네가 다시 골라지지 않는다.
       else if (routeAreaId) navigate(mapPath, { replace: true });
     },
-    /** 결과 지도를 한 지점으로 옮겨 확대한다. 데스크탑에서 출발 정류장을 고르거나 넘길 때 쓴다. */
-    focusResultPoint: (point: { latitude: number; longitude: number }, level: number) => {
-      resultView.current = { ...resultMapCenter(point, level), level };
+    /** 출발 정류장(경로)을 고르면 그 정류장부터 출퇴근 장소까지 경로 전체가 한 화면에 들어오게 옮긴다. */
+    focusRoute: (station: { latitude: number; longitude: number }) => {
+      resultView.current = routeFocusView([station, destination], [], readMapViewport());
       setResultViewVersion((version) => version + 1);
     },
     selectStation: (id: string) => {
@@ -462,6 +480,10 @@ const useNeighborhoodPreview = () => {
       if (selected) navigate(neighborhoodAreaPath(mapPath, selected.adminDongCode), { replace: true });
     },
     openListing: analytics.openListing,
+    /** 결과 지도 칸 크기와 가리는 여백을 읽는 함수를 둔다. 화면이 지도 칸을 그린 뒤 한 번 넣는다. */
+    setMapViewportReader: (reader: (() => MapViewport | null) | null) => {
+      mapViewportReader.current = reader;
+    },
   };
 };
 export default useNeighborhoodPreview;

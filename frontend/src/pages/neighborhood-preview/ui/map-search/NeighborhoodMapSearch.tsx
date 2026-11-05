@@ -14,7 +14,7 @@ type NeighborhoodMapSearchProps = {
 };
 
 /**
- * 출퇴근 장소 검색창. 휴대폰은 인프라 지도처럼 지도 위 검색창 왼쪽에 흰 원형 뒤로가기를 두고,
+ * 출퇴근 장소 검색창. 휴대폰은 인프라 지도처럼 지도 위 검색창 왼쪽에 흰 원형 나가기(집 모양)를 두고,
  * 데스크탑은 검색창만 공용 헤더 가운데로 옮긴다. 헤더 메뉴로 화면을 오가므로 뒤로가기는 두지 않는다.
  * 헤더가 없는 공개 탐색은 휴대폰처럼 제자리에 뒤로가기와 함께 그린다.
  */
@@ -25,7 +25,8 @@ const NeighborhoodMapSearch = ({ preview }: NeighborhoodMapSearchProps) => {
       <div className={searchInHeader ? shared.headerMapSearch : shared.mapSearch}>
         {!searchInHeader && (
           <button type="button" className={shared.mapBack} aria-label="뒤로 가기" onClick={preview.leave}>
-            <Icon name="chevron-left" size={24} />
+            {/* 들어온 곳(보통 홈)으로 나가므로 집 모양으로 둔다. */}
+            <Icon name="home" size={22} />
           </button>
         )}
         <SearchField

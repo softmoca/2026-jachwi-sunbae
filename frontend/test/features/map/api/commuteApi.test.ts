@@ -5,7 +5,12 @@ import { beforeEach, expect, it } from 'vitest';
 import { commuteAreaFixtures } from '@/app/mocks/fixtures/commuteAreaFixtures';
 import { createCommuteAreaHandlers } from '@/app/mocks/handlers/commuteAreaHandlers';
 import { setAuthentication } from '@/features/auth/model/authStore';
-import { commuteAreaToRegion, fetchCommuteAreas, parseAdminBoundary } from '@/features/map/api/commuteApi';
+import {
+  commuteAreaToRegion,
+  fetchCommuteAreas,
+  formatManwon,
+  parseAdminBoundary,
+} from '@/features/map/api/commuteApi';
 
 import { server } from '../../../server';
 const config = { apiBaseUrl: 'http://localhost:8080' };
@@ -142,4 +147,12 @@ it('기관 코드만 다른 같은 버스정류장은 통근 시간이 짧은 �
     'BS_TAGO_GGB206000539',
     'RS_ACC1_S-2-0222',
   ]);
+});
+
+it('원 단위 금액을 반올림한 만원 단위 문구로 바꾸고 천 단위에 쉼표를 넣는다', () => {
+  expect(formatManwon(940_000)).toBe('94만원');
+  expect(formatManwon(655_000)).toBe('66만원');
+  expect(formatManwon(10_000_000)).toBe('1,000만원');
+  expect(formatManwon(123_456_789)).toBe('12,346만원');
+  expect(formatManwon(0)).toBe('0만원');
 });
