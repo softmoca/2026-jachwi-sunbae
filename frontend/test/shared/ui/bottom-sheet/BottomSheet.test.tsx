@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
+
+import { expectSheetStages } from './sheetStages';
 
 const renderSheet = (props: Partial<Parameters<typeof BottomSheet>[0]> = {}) => {
   const onClose = vi.fn();
@@ -86,4 +88,107 @@ it('subtitle은 제목 아래 작은 한 줄로 둔다', () => {
   renderSheet({ subtitle: '서울특별시 강남구 역삼1동' });
   const titles = screen.getByRole('heading', { name: '역삼1동' }).parentElement!;
   expect(titles).toHaveTextContent('서울특별시 강남구 역삼1동');
+});
+
+/** jsdom은 레이아웃이 없어 시트와 부모 높이를 정해 둔다. 부모 800px, 시트는 인라인 높이가 있으면 그 값, 없으면 400px. */
+const mockSheetLayout = (sheet: HTMLElement) => {
+  const rect = (height: number) => ({
+    height,
+    width: 390,
+    top: 0,
+    left: 0,
+    right: 390,
+    bottom: height,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+  sheet.parentElement!.getBoundingClientRect = () => rect(800) as DOMRect;
+  sheet.getBoundingClientRect = () => {
+    const inline = sheet.style.getPropertyValue('--sheet-height');
+    return rect(inline ? Number.parseFloat(inline) : 400) as DOMRect;
+  };
+};
+const dragHandle = (by: number, { release = true } = {}) => {
+  const handle = screen.getByRole('button', { name: '상세 패널 높이 조절' });
+  fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientY: 600 });
+  fireEvent.pointerMove(handle, { pointerId: 1, clientY: 600 - by / 2 });
+  fireEvent.pointerMove(handle, { pointerId: 1, clientY: 600 - by });
+  if (release) fireEvent.pointerUp(handle, { pointerId: 1, clientY: 600 - by });
+  return handle;
+};
+
+it.each([
+  { by: 300, mode: 'full', label: '끝까지(85% 넘게) 올리면 페이지로' },
+  { by: 150, mode: 'expanded', label: '60%를 넘게 올리면 크게' },
+  { by: 50, mode: 'default', label: '조금 올리면 처음 높이로' },
+])('손잡이를 끌어 놓으면 놓은 높이에 따라 단계를 정한다: $label', ({ by, mode }) => {
+  const { sheet } = renderSheet();
+  mockSheetLayout(sheet());
+  dragHandle(by);
+  expect(sheet()).toHaveAttribute('data-mode', mode);
+});
+
+it('손잡이를 25% 아래까지 끌어 내리면 닫는다', () => {
+  const { sheet, onClose } = renderSheet();
+  mockSheetLayout(sheet());
+  dragHandle(-250);
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('끄는 동안은 높이 대신 transform으로 움직이고, 놓으면 인라인 위치를 지운다', () => {
+  const { sheet } = renderSheet();
+  mockSheetLayout(sheet());
+  const handle = dragHandle(100, { release: false });
+  // 끌기 시작에 최대 높이(부모의 100%, fullPage)로 한 번 맞추고, 보이는 높이 500px만큼만 올라오게 아래로 민다.
+  expect(sheet().style.getPropertyValue('--sheet-height')).toBe('800px');
+  expect(sheet().style.transform).toBe('translateY(300px)');
+  expect(sheet()).toHaveAttribute('data-dragging', 'true');
+  fireEvent.pointerUp(handle, { pointerId: 1, clientY: 500 });
+  expect(sheet().style.getPropertyValue('--sheet-height')).toBe('');
+  expect(sheet().style.transform).toBe('');
+  expect(sheet()).not.toHaveAttribute('data-dragging');
+});
+
+it('끌다가 취소되면 원래 높이로 돌아간다', () => {
+  const { sheet } = renderSheet();
+  mockSheetLayout(sheet());
+  const handle = dragHandle(100, { release: false });
+  fireEvent.pointerCancel(handle, { pointerId: 1 });
+  expect(sheet().style.transform).toBe('');
+  expect(sheet().style.getPropertyValue('--sheet-height')).toBe('');
+  expect(sheet()).toHaveAttribute('data-mode', 'default');
+});
+
+it('fullPage를 따로 주지 않아도 끝까지 올리면 페이지로 연다', async () => {
+  const user = userEvent.setup();
+  render(
+    <BottomSheet title="기본 시트" onClose={() => undefined}>
+      <p>내용</p>
+    </BottomSheet>,
+  );
+  await expectSheetStages(user, screen.getByRole('region', { name: '기본 시트' }));
+});
+
+it('fullPage={false}를 주면 끝까지 올려도 크게에서 멈춘다', async () => {
+  const user = userEvent.setup();
+  render(
+    <BottomSheet title="페이지 없는 시트" onClose={() => undefined} fullPage={false}>
+      <p>내용</p>
+    </BottomSheet>,
+  );
+  const sheet = screen.getByRole('region', { name: '페이지 없는 시트' });
+  screen.getByRole('button', { name: '상세 패널 높이 조절' }).focus();
+  await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+  expect(sheet).toHaveAttribute('data-mode', 'expanded');
+});
+
+it('floating은 시트 상자 안(시트 바로 위)에 두어 시트와 함께 움직이고, 페이지로 열면 숨긴다', async () => {
+  const user = userEvent.setup();
+  const { sheet } = renderSheet({ floating: <button type="button">지도 확대</button> });
+  expect(sheet()).toContainElement(screen.getByRole('button', { name: '지도 확대' }));
+  screen.getByRole('button', { name: '상세 패널 높이 조절' }).focus();
+  await user.keyboard('{ArrowUp}{ArrowUp}');
+  expect(sheet()).toHaveAttribute('data-mode', 'full');
+  expect(screen.queryByRole('button', { name: '지도 확대' })).not.toBeInTheDocument();
 });

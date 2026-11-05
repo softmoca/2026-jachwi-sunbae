@@ -85,7 +85,6 @@ it('토큰이 없으면 자동 로그인한 뒤 동네 좌표로 정류장과 �
     '/explore/nearby?latitude=37.5006&longitude=127.0364&name=%EC%97%AD%EC%82%BC1%EB%8F%99&backTo=%2Fexplore%2Fcommute',
   );
   expect(await screen.findByRole('region', { name: '역삼1동 주변 2km' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /시설 목록 보기/ }));
   const list = screen.getByRole('list', { name: '주변 시설 목록' });
   expect(list).toHaveTextContent('역삼역');
   expect(list).toHaveTextContent('역삼공인중개사');

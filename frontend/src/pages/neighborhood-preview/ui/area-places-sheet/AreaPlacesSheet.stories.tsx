@@ -73,34 +73,20 @@ const meta = {
     ),
   ],
   argTypes: {
-    area: { control: 'object', description: '고른 동네. 정류장 탭에 이 동네의 출발 정류장을 보여 준다.' },
-    agencies: {
-      control: 'object',
-      description:
-        '지금 화면 범위의 공인중개사. 동네 단위로 받을 수 없어 화면 기준이며, 비면 지도를 옮기라고 안내한다.',
-    },
+    area: { control: 'object', description: '고른 동네. 이 동네의 출발 정류장을 보여 준다.' },
     onSelectStation: { description: '출발 정류장 고르기' },
-    onSelectAgency: { description: '공인중개사 고르기' },
     place: {
       control: 'object',
-      description: '고른 정류장·공인중개사. 있으면 시트 안에서 그 정보로 넘어가고 뒤로가기를 둔다.',
+      description: '고른 정류장이나 지도에서 누른 공인중개사. 있으면 시트 안에서 그 정보로 넘어가고 뒤로가기를 둔다.',
     },
     preview: { control: 'object', description: '목적지·통근 조건(정류장 경로), 시세 기간, 다방 열기 기록' },
     onBack: { description: '정보에서 목록으로 돌아가기' },
-    tab: {
-      control: 'inline-radio',
-      options: ['stations', 'agencies'],
-      description: '지금 탭(지도 마커도 이 탭에 맞춰 거른다)',
-    },
-    onTabChange: { description: '탭 바꾸기' },
     peekSignal: { control: 'number', description: '값을 바꾸면 시트를 제목만 보이게 내린다' },
     onClose: { description: '끌어 내려 닫고 동네 선택 풀기' },
   },
   args: {
     area,
-    agencies,
     onSelectStation: fn(),
-    onSelectAgency: fn(),
     place: null,
     preview: {
       destination: { latitude: 37.5559, longitude: 126.9101, name: '망원역', address: '서울 마포구' },
@@ -112,8 +98,6 @@ const meta = {
     },
     onBack: fn(),
     peekSignal: 0,
-    tab: 'stations',
-    onTabChange: fn(),
     onClose: fn(),
   },
 } satisfies Meta<typeof AreaPlacesSheet>;
@@ -124,17 +108,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Stations: Story = {};
 
-/** 화면 안에 공인중개사가 없을 때. 공인중개사 탭으로 바꾸면 지도를 옮기라고 안내한다. */
-export const NoAgenciesOnScreen: Story = {
-  args: { agencies: [], tab: 'agencies' },
-};
-
 /** 월세 조건 밖(지도의 회색) 동네를 고르면 시세 아래에 조건보다 비싸다고 알린다. */
 export const OverRent: Story = {
   args: { preview: { ...meta.args.preview, maxRent: 50 } },
 };
 
-/** 공인중개사를 고르면 시트 안에서 정보로 넘어가고, 제목 왼쪽 뒤로가기로 목록에 돌아온다. */
+/** 지도에서 공인중개사 마커를 누르면 시트 안에서 정보로 넘어가고, 제목 왼쪽 뒤로가기로 목록에 돌아온다. */
 export const AgencySelected: Story = {
   args: { place: { kind: 'agency', agency: agencies[0] } },
 };
