@@ -33,8 +33,9 @@ public class NaverLocalSearchClient {
     private final RestClient client;
 
     @Autowired
-    public NaverLocalSearchClient(@Value("${map.naver.client-id}") String clientId,
-                                  @Value("${map.naver.client-secret}") String clientSecret,
+    public NaverLocalSearchClient(@Value("${map.naver.search.client-id:${map.naver.client-id}}") String clientId,
+                                  @Value("${map.naver.search.client-secret:${map.naver.client-secret}}")
+                                  String clientSecret,
                                   @Value("${map.connect-timeout-millis:2000}") long connectTimeoutMillis,
                                   @Value("${map.read-timeout-millis:5000}") long readTimeoutMillis) {
         this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis));
