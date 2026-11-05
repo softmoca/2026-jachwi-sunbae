@@ -2,7 +2,7 @@ package com.jachwisunbae.map.provider.publicdata.sgis;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 // 유효한 SGIS access token을 제공한다. 발급한 토큰을 재사용하고 만료가 가까우면 새로 발급한다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnExpression("'${map.provider.mode:demo}' == 'public' or '${map.provider.mode:demo}' == 'naver'")
 public class SgisTokenProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(SgisTokenProvider.class);

@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClientException;
 
 // SGIS 인증 API를 호출해 consumer key와 secret으로 access token을 발급받는다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnExpression("'${map.provider.mode:demo}' == 'public' or '${map.provider.mode:demo}' == 'naver'")
 public class SgisAuthClient {
 
     private static final String BASE_URL = "https://sgisapi.mods.go.kr";
@@ -40,7 +40,7 @@ public class SgisAuthClient {
 
     SgisAuthClient(RestClient client, String consumerKey, String consumerSecret) {
         if (consumerKey == null || consumerKey.isBlank() || consumerSecret == null || consumerSecret.isBlank()) {
-            throw new IllegalStateException("public 주소 모드에는 SGIS_CONSUMER_KEY와 SGIS_CONSUMER_SECRET이 필요합니다.");
+            throw new IllegalStateException("public, naver 주소 모드에는 SGIS_CONSUMER_KEY와 SGIS_CONSUMER_SECRET이 필요합니다.");
         }
         this.client = client;
         this.consumerKey = consumerKey;

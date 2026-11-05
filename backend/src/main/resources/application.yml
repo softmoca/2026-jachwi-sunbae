@@ -47,6 +47,9 @@ map:
   sgis:
     consumer-key: ${SGIS_CONSUMER_KEY:}
     consumer-secret: ${SGIS_CONSUMER_SECRET:}
+  naver:
+    client-id: ${NAVER_MAP_CLIENT_ID:}
+    client-secret: ${NAVER_MAP_CLIENT_SECRET:}
   kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:}
   connect-timeout-millis: ${MAP_CONNECT_TIMEOUT_MILLIS:2000}
