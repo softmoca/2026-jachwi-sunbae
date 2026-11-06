@@ -11,6 +11,7 @@ import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
 import Icon from '@/shared/ui/icon/Icon';
 import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import RailCard from '@/shared/ui/rail-card/RailCard';
+import StateIllustration from '@/shared/ui/state-illustration/StateIllustration';
 
 const RECENT_ROOM_LIMIT = 5;
 
@@ -39,8 +40,7 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
           {() =>
             properties.isError ? (
               <div className={styles.loadError} role="alert">
-                {/* 불러오기 실패 이미지는 준비되면 이 자리에 넣는다. */}
-                <span className={styles.loadErrorImage} aria-hidden="true" />
+                <StateIllustration name="error" size={7} />
                 <p>기록을 불러오지 못했어요.</p>
                 <Button variant="secondary" isLoading={properties.isFetching} onClick={() => void properties.refetch()}>
                   다시 시도
@@ -142,15 +142,6 @@ const styles = {
       color: var(--color-muted);
       font-size: 0.85rem;
     }
-  `,
-
-  /* 이미지가 들어올 자리. 크기만 잡아 둔다. */
-  loadErrorImage: css`
-    label: RecentRooms-loadErrorImage;
-    width: 6rem;
-    height: 6rem;
-    border-radius: var(--radius-tile);
-    background: var(--color-card-surface);
   `,
 
   rooms: css`

@@ -29,7 +29,7 @@ const ContentState = ({
       className={`content-state ${tone === 'error' ? 'content-state--error' : ''}`.trim()}
       role={tone === 'error' ? 'alert' : undefined}
     >
-      {tone === 'error' && <StateIllustration name="error" size={5.5} />}
+      {tone === 'error' && <StateIllustration name="error" size={8} />}
       {title !== undefined && <strong>{title}</strong>}
       {description !== undefined && <span>{description}</span>}
       {onRetry !== undefined && (
