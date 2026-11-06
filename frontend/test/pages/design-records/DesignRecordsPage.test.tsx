@@ -8,10 +8,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { mapHandlers } from '@/app/mocks/handlers/mapHandlers';
 import { propertyHandlers } from '@/app/mocks/handlers/propertyHandlers';
 import { createStreetMemoHandlers } from '@/app/mocks/handlers/streetMemoHandlers';
-import { getMockProperties, propertyListItemResponse, success } from '@/app/mocks/mockStore';
+import { failure, getMockProperties, propertyListItemResponse, success } from '@/app/mocks/mockStore';
 import DesignRecordsPage from '@/pages/design-records/DesignRecordsPage';
 import { resetAuthenticationForTests, setAuthentication } from '@/features/auth/model/authStore';
 import type { MapCanvasProps } from '@/features/map/model/MapCanvas';
+import { rememberMovedProperty, resetMovedPropertyForTests } from '@/features/property/model/movedProperty';
 import { queryClient } from '@/shared/api/queryClient';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
@@ -63,6 +64,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   resetAuthenticationForTests();
+  resetMovedPropertyForTests();
   queryClient.clear();
   sessionStorage.clear();
 });
@@ -109,7 +111,7 @@ it('휴대폰은 지도와 리스트 보기 모두 기록하기 버튼 없이 �
   expect(screen.queryByRole('button', { name: /기록하기/ })).not.toBeInTheDocument();
 });
 
-it('리스트 메뉴의 삭제는 실제 매물 삭제 API를 호출한다', async () => {
+it('리스트 헤더의 삭제 버튼으로 삭제 모드를 켜고, 카드의 삭제는 실제 매물 삭제 API를 호출한다', async () => {
   const user = userEvent.setup();
   const removed = vi.fn();
   server.use(
@@ -121,35 +123,42 @@ it('리스트 메뉴의 삭제는 실제 매물 삭제 API를 호출한다', asy
   renderRecords();
   await screen.findByText('신림역 원룸');
   await user.click(screen.getByRole('button', { name: /리스트/ }));
-  await user.click(screen.getByRole('button', { name: '망원동 투룸 메뉴' }));
-  await user.click(screen.getByRole('button', { name: /삭제/ }));
+  // 카드에는 더보기 메뉴가 없고, 삭제 모드를 켜기 전에는 카드 삭제 버튼도 없다.
+  expect(screen.queryByRole('button', { name: '망원동 투룸 메뉴' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '망원동 투룸 삭제' })).not.toBeInTheDocument();
+
+  const toggle = screen.getByRole('button', { name: '기록 삭제' });
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await user.click(screen.getByRole('button', { name: '망원동 투룸 삭제' }));
   expect(await screen.findByText('기록을 삭제했어요.')).toBeInTheDocument();
-  expect(removed).toHaveBeenCalledTimes(1);
+  expect(removed.mock.calls).toEqual([[expect.any(String)]]);
+  // 하나를 지워도 삭제 모드는 이어져 다른 기록을 바로 지울 수 있다.
+  expect(toggle).toHaveAttribute('aria-pressed', 'true');
 });
 
-it('리스트 카드의 더보기 메뉴는 메뉴 밖을 누르거나 Esc를 누르면 닫힌다', async () => {
+it('삭제 모드는 헤더 버튼을 다시 누르거나 바깥을 누르거나 Esc를 누르면 풀린다', async () => {
   const user = userEvent.setup();
   renderRecords();
   await screen.findByText('신림역 원룸');
   await user.click(screen.getByRole('button', { name: /리스트/ }));
-  const toggle = screen.getByRole('button', { name: '망원동 투룸 메뉴' });
+  const toggle = screen.getByRole('button', { name: '기록 삭제' });
 
   await user.click(toggle);
-  expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  expect(screen.getByRole('button', { name: /삭제/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '신림역 원룸 삭제' })).toBeInTheDocument();
+  await user.click(toggle);
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.queryByRole('button', { name: '신림역 원룸 삭제' })).not.toBeInTheDocument();
+
+  await user.click(toggle);
   await user.click(screen.getByRole('heading', { name: '모든 기록' }));
-  expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.queryByRole('button', { name: /삭제/ })).not.toBeInTheDocument();
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.queryByRole('button', { name: '신림역 원룸 삭제' })).not.toBeInTheDocument();
 
-  // 다른 카드의 메뉴를 열면 앞 메뉴는 닫힌다.
   await user.click(toggle);
-  await user.click(screen.getByRole('button', { name: '신림역 원룸 메뉴' }));
-  expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getAllByRole('button', { name: /삭제/ })).toHaveLength(1);
-
   await user.keyboard('{Escape}');
-  expect(screen.queryByRole('button', { name: /삭제/ })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '신림역 원룸 메뉴' })).toHaveFocus();
+  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle).toHaveFocus();
 });
 
 it('리스트 위에는 통근 시간 버튼을 두지 않고, 동네 찾기에서 출퇴근 장소를 골라 두어도 통근 시간을 부르지 않는다', async () => {
@@ -399,10 +408,87 @@ it('휴대폰도 데스크탑처럼 빈 곳을 찍은 말풍선에서 매물을 
     expect(Number(screen.getByLabelText('지도 배율').textContent)).toBeLessThanOrEqual(4);
     const sheet = within(await screen.findByRole('region', { name: '선택한 매물' }));
     expect(sheet.getByRole('link', { name: '새 매물' })).toBeInTheDocument();
+    // 보증금과 월세가 둘 다 0인 새 매물은 금액 대신 가격 입력 전으로 보인다. 월세만 다루므로 전세로 쓰지 않는다.
+    expect(sheet.getByText('가격 입력 전')).toBeInTheDocument();
+    expect(screen.queryByText(/전세/)).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: '본 방 기록 지도' })).toBeInTheDocument();
   } finally {
     created.stop();
   }
+});
+
+it('주소 응답이 늦으면 등록 핀과 확인 중 안내를 먼저 띄우고, 기다리는 동안 다시 찍어도 매물을 하나만 만든다', async () => {
+  let respond: () => void = () => undefined;
+  server.use(
+    http.get(
+      '*/api/maps/reverse-geocode',
+      () =>
+        new Promise<Response>((resolve) => {
+          respond = () =>
+            resolve(
+              success({
+                roadAddress: '서울특별시 중구 세종대로 110',
+                jibunAddress: null,
+                latitude: 37.5662,
+                longitude: 126.9785,
+              }),
+            );
+        }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderRecords();
+  await screen.findByText('신림역 원룸');
+  const created = captureCreatedProperties();
+  try {
+    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
+    await user.click(screen.getByRole('button', { name: '말풍선 🏠 여기에 매물 등록' }));
+    expect(await screen.findByText('주소를 확인하는 중이에요.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '매물 등록 위치' })).toBeInTheDocument();
+    // 주소를 기다리는 동안 다시 찍어도 말풍선을 띄우지 않아 두 번 등록하지 못한다.
+    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
+    expect(screen.queryByRole('button', { name: '말풍선 🏠 여기에 매물 등록' })).not.toBeInTheDocument();
+    respond();
+    expect(await screen.findByText(/매물을 기록했어요/)).toBeInTheDocument();
+    expect(created.bodies).toEqual([expect.objectContaining({ address: '서울특별시 중구 세종대로 110' })]);
+  } finally {
+    created.stop();
+  }
+});
+
+it.each([
+  ['주소를 찾지 못한 자리', () => failure('MAP_ADDRESS_NOT_FOUND', 404)],
+  ['주소 조회가 실패한 자리', () => failure('INTERNAL_SERVER_ERROR', 500)],
+])('%s도 주소 없이 매물을 만들고, 주소 칸에 지원하지 않는 주소라고 보인다', async (_, respond) => {
+  server.use(http.get('*/api/maps/reverse-geocode', respond));
+  const user = userEvent.setup();
+  renderRecords();
+  await screen.findByText('신림역 원룸');
+  const created = captureCreatedProperties();
+  try {
+    await user.click(screen.getByRole('button', { name: '빈 곳 찍기' }));
+    await user.click(screen.getByRole('button', { name: '말풍선 🏠 여기에 매물 등록' }));
+    await waitFor(() =>
+      expect(created.bodies).toEqual([
+        expect.objectContaining({ address: null, latitude: 37.5662, longitude: 126.9785 }),
+      ]),
+    );
+    expect(await screen.findByText(/매물을 기록했어요/)).toBeInTheDocument();
+    const sheet = within(await screen.findByRole('region', { name: '선택한 매물' }));
+    expect(sheet.getByText('지원하지 않는 주소입니다')).toBeInTheDocument();
+  } finally {
+    created.stop();
+  }
+});
+
+it('상세에서 위치를 바꿔 저장한 매물이 있으면 첫 기록 대신 그 매물의 새 자리로 지도를 옮겨 고른다', async () => {
+  const moved = getMockProperties().find((property) => property.name === '신림역 원룸');
+  if (moved?.latitude == null || moved.longitude == null) throw new Error('목 매물 좌표가 없다');
+  rememberMovedProperty({ propertyId: moved.id, latitude: moved.latitude, longitude: moved.longitude });
+  renderRecords();
+  const sheet = within(await screen.findByRole('region', { name: '선택한 매물' }));
+  expect(sheet.getByRole('link', { name: '신림역 원룸' })).toBeInTheDocument();
+  expect(screen.getByLabelText('지도 중심')).toHaveTextContent(`${moved.latitude},${moved.longitude}`);
 });
 
 it('휴대폰 지도 아래 매물 시트에서도 더보기 메뉴로 매물을 삭제한다', async () => {

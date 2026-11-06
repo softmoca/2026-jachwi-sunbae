@@ -59,6 +59,7 @@ const RecordsDesktopPage = () => {
   const layers = useRecordsMapLayers(records, {
     initialCategory: 'MEMO',
     registeringAt: creatingAt,
+    onRegisterNotice: setNotice,
     groupAction: 'zoom',
     onRegister: (location) => {
       if (quickCreate.isCreating) return;

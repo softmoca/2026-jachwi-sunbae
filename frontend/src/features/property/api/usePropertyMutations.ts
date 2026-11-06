@@ -6,6 +6,7 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import type { PropertyCreationEntrypoint } from '../lib/propertyAnalytics';
 import { trackPropertyEvent } from '../lib/propertyAnalytics';
+import { rememberMovedProperty } from '../model/movedProperty';
 import type { PropertyBasicInfo, PropertyDetail, PropertyPage } from '../model/Property';
 import type {
   PropertyInputDto,
@@ -76,7 +77,15 @@ export const useUpdateProperty = (propertyId: number) => {
   return useMutation({
     mutationFn: ({ current, changes }: { current: PropertyDetail; changes: PropertyChanges }) =>
       updateProperty(config, propertyId, toUpdatePropertyRequest(current, changes)),
-    onSuccess: async (updated: PropertyBasicInfo) => {
+    onSuccess: async (updated: PropertyBasicInfo, { current: before }) => {
+      const { latitude, longitude } = updated.location;
+      // 위치를 옮겼으면 본 방 기록 지도가 새 자리로 가서 핀을 보이게 알린다.
+      if (
+        latitude !== null &&
+        longitude !== null &&
+        (latitude !== before.location.latitude || longitude !== before.location.longitude)
+      )
+        rememberMovedProperty({ propertyId, latitude, longitude });
       queryClient.setQueryData<PropertyDetail>(propertyQueryKeys.detail(propertyId), (current) =>
         current === undefined
           ? current

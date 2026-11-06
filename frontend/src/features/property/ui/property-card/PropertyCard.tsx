@@ -7,10 +7,11 @@ import placeholderImage from '@/shared/assets/property-placeholder-goose.webp';
 import placeholderImage2x from '@/shared/assets/property-placeholder-goose@2x.webp';
 import { propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
-import { formatManwon } from '../../lib/propertyFormat';
 import type { PropertyReturnPath } from '../../lib/propertyNavigation';
 import type { PropertySummary } from '../../model/Property';
 import AuthenticatedPhoto from '../authenticated-photo/AuthenticatedPhoto';
+import PropertyAddress from '../property-address/PropertyAddress';
+import PropertyPrice from '../property-price/PropertyPrice';
 
 type PropertyPhotoThumbnailProps = {
   property: PropertySummary;
@@ -106,11 +107,16 @@ const PropertyCard = ({
         <div className={styles.details}>
           {eyebrow !== undefined && <span className={styles.eyebrow}>{eyebrow}</span>}
           <strong className={styles.title}>{property.name}</strong>
-          <span className={styles.price}>
-            보증금 {formatManwon(property.depositAmount)} / 월세 {formatManwon(property.monthlyRentAmount)}
-          </span>
+          <PropertyPrice
+            className={styles.price}
+            depositAmount={property.depositAmount}
+            monthlyRentAmount={property.monthlyRentAmount}
+            variant="labeled"
+          />
           {meta !== undefined && <span className={styles.meta}>{meta}</span>}
-          {property.location.address !== null && <small className={styles.address}>{property.location.address}</small>}
+          <small className={styles.address}>
+            <PropertyAddress address={property.location.address} />
+          </small>
         </div>
         {onSiteStage !== undefined && (
           <div className={styles.stageProgress} aria-label="현장 체크리스트 진행 현황">

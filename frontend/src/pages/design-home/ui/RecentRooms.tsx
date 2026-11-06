@@ -1,8 +1,9 @@
 import { css, cx } from '@emotion/css';
 
 import { usePropertyList } from '@/features/property/api/useProperties';
-import { formatRentSummary } from '@/features/property/lib/propertyFormat';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyAddress from '@/features/property/ui/property-address/PropertyAddress';
+import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
 import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
@@ -73,11 +74,15 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
                     )}
                     <div className={styles.roomInfo}>
                       <strong>{property.name}</strong>
-                      <span className={styles.rent}>
-                        {property.monthlyRentAmount > 0 ? '월세 ' : ''}
-                        {formatRentSummary(property.depositAmount, property.monthlyRentAmount)}
-                      </span>
-                      <p>{property.location.address ?? '주소 미등록'}</p>
+                      <PropertyPrice
+                        className={styles.rent}
+                        depositAmount={property.depositAmount}
+                        monthlyRentAmount={property.monthlyRentAmount}
+                        variant="summary"
+                      />
+                      <p>
+                        <PropertyAddress address={property.location.address} />
+                      </p>
                     </div>
                   </RailCard>
                 ))}

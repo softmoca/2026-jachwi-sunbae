@@ -27,10 +27,12 @@ type MapPoint = { latitude: number; longitude: number };
 
 type Options = {
   /**
-   * 찍은 위치에서 매물 등록을 고르면 주소를 찾아 넘긴다. 주소를 못 찾으면 좌표만 넘긴다. 등록 화면을 여는 방식은 화면이 정한다.
-   * 넘기지 않으면 찍은 위치에서는 메모만 남긴다.
+   * 찍은 위치에서 매물 등록을 고르면 주소 응답을 기다린 뒤에 넘긴다. 등록 화면을 여는 방식은 화면이 정한다.
+   * 주소를 찾지 못했거나 조회가 실패하면 주소 없이 좌표만 넘긴다. 넘기지 않으면 찍은 위치에서는 메모만 남긴다.
    */
   onRegister?: (location: MapAddress) => void;
+  /** 매물 등록에서 주소를 찾는 동안 화면 아래에 띄울 안내. */
+  onRegisterNotice?: (message: string) => void;
   /** 처음 켜 둘 카테고리. 휴대폰은 거리 메모를 켠 채로 연다. */
   initialCategory?: MapCategory | null;
   /** 매물 등록 칸을 연 위치. 등록하는 동안 그 자리에 집과 더하기 그림 핀을 둔다. */
@@ -85,7 +87,7 @@ const recordGroupMarker = (group: MapMarker[]): MapMarker =>
  */
 const useRecordsMapLayers = (
   records: RecordsState,
-  { onRegister, initialCategory = null, registeringAt = null, groupAction = 'list' }: Options,
+  { onRegister, onRegisterNotice, initialCategory = null, registeringAt = null, groupAction = 'list' }: Options,
 ) => {
   const config = usePublicConfig();
   const { log } = useLogger();
@@ -100,7 +102,11 @@ const useRecordsMapLayers = (
   const [bounds, setBounds] = useState<MapBounds | null>(null);
   const [category, setCategory] = useState<MapCategory | null>(initialCategory);
   const [tapPoint, setTapPoint] = useState<MapPoint | null>(null);
-  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  // 매물 등록을 누른 뒤 주소를 찾는 중인 위치. 응답이 늦어도 그 자리에 등록 핀을 먼저 두고, 그동안 다시 등록하지 못하게 한다.
+  const [resolvingAt, setResolvingAt] = useState<MapPoint | null>(null);
+  // 주소를 찾는 동안과 매물을 만드는 동안 그 자리에 등록 핀을 둔다.
+  const pinAt = registeringAt ?? resolvingAt;
+  const isRegistering = pinAt !== null;
   // 겹치는 메모는 개수 말풍선으로 묶이므로 웬만큼 축소해도 띄우고, 아주 멀리 축소했을 때만 숨긴다.
   const memo = useStreetMemoLayer(category === 'MEMO' && level <= MEMO_MAX_LEVEL, bounds);
 
@@ -149,31 +155,37 @@ const useRecordsMapLayers = (
     () => [
       ...facilityMarkers,
       ...memo.markers,
-      ...(registeringAt === null
+      ...(pinAt === null
         ? []
         : [
             {
-              latitude: registeringAt.latitude,
-              longitude: registeringAt.longitude,
+              latitude: pinAt.latitude,
+              longitude: pinAt.longitude,
               id: REGISTER_MARKER_ID,
               label: '매물 등록 위치',
               image: { src: addProperty, src2x: addProperty2x },
             },
           ]),
     ],
-    [facilityMarkers, memo.markers, registeringAt],
+    [facilityMarkers, memo.markers, pinAt],
   );
 
+  /**
+   * 주소 응답을 기다린 뒤 매물을 만든다. 예전에는 기다리는 동안 아무 표시가 없어 다시 누르면 매물이 둘 생겼다.
+   * 주소를 찾지 못했거나 조회가 실패해도 등록은 막지 않고 주소 없이 좌표만으로 만든다.
+   */
   const registerAt = (point: MapPoint) => {
     setTapPoint(null);
-    setIsResolvingAddress(true);
-    const fallback: MapAddress = { address: null, roadAddress: null, jibunAddress: null, ...point };
+    if (isRegistering) return;
+    setResolvingAt(point);
+    onRegisterNotice?.('주소를 확인하는 중이에요.');
+    const withoutAddress: MapAddress = { address: null, roadAddress: null, jibunAddress: null, ...point };
     reverseGeocode(config, point.latitude, point.longitude)
       .then(
         (address) => onRegister?.({ ...address, ...point }),
-        () => onRegister?.(fallback),
+        () => onRegister?.(withoutAddress),
       )
-      .finally(() => setIsResolvingAddress(false));
+      .finally(() => setResolvingAt(null));
   };
   const tapActions: MapTapAction[] =
     tapPoint === null
@@ -250,6 +262,8 @@ const useRecordsMapLayers = (
    * 무언가를 닫으려고 찍었는데 바로 새 동작이 뜨면 다시 닫아야 해서 두 단계로 나눈다.
    */
   const tapLocation = (latitude: number, longitude: number) => {
+    // 매물을 등록하는 동안은 새 동작을 띄우지 않는다.
+    if (isRegistering) return;
     if (hasSelection || memo.mode !== null || tapPoint !== null) {
       closeSelection();
       memo.close();
@@ -296,7 +310,8 @@ const useRecordsMapLayers = (
     closeGroup: () => setGroupIds([]),
     tapPoint,
     tapActions,
-    isResolvingAddress,
+    /** 매물 등록을 눌러 주소를 찾거나 매물을 만드는 중인지. */
+    isRegistering,
     facilitiesFailed: showsTransport ? busStops.isError : facilities.isError,
     coordinateMenu: (tapPoint === null ? undefined : { ...tapPoint, actions: tapActions }) satisfies
       MapCoordinateMenu | undefined,

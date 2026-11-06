@@ -7,6 +7,8 @@ import ActionCard, { ActionCardIllustration } from '@/shared/ui/action-card/Acti
 import guideGoose from '../assets/guide-goose.webp';
 import guideGoose2x from '../assets/guide-goose@2x.webp';
 
+import { homeCardText } from '../HomePage.styles';
+
 /**
  * 홈 맨 위의 사용방법 카드. 기능 카드 묶음 위에 한 줄로 두고, 옅은 파랑 바탕의 오른쪽 끝에서 오리가 고개를 내민다.
  * `자취선배가 처음이라면?`을 작은 글씨로 제목 위에 두어 `사용방법 알아보기`로 이어 읽게 한다.
@@ -20,7 +22,7 @@ const GuideCard = ({ className }: { className?: string }) => (
         description="자취선배가 처음이라면?"
         aria-label="사용방법 알아보기"
         to={GUIDE_PATH}
-        className={`${styles.guide} ${className ?? ''}`.trim()}
+        className={`${styles.guide} ${homeCardText} ${className ?? ''}`.trim()}
         illustration={
           <ActionCardIllustration src={guideGoose} src2x={guideGoose2x} width={68} height={100} placement="peek" />
         }
@@ -39,18 +41,14 @@ const guidePeekKeyframes = keyframes`
 `;
 
 const styles = {
-  /* 기능 카드 묶음 밖에 있으므로 카드 글자 크기·여백을 묶음과 같게 직접 정한다. */
   /*
    * 회색 바탕에 검은 제목이면 아래 노랑·파랑 카드 사이에서 홀로 튀어, 옅은 파랑 바탕에 진한 파랑 제목과 회색 보조 문구를 둔다.
-   * 기능 카드 묶음 밖에 있으므로 카드 글자 크기·여백을 묶음과 같게 직접 정한다.
+   * 글자 크기와 여백은 기능 카드 묶음과 같은 홈 카드 토큰(`homeCardText`)을 쓴다.
    */
   guide: css`
     label: GuideCard-guide;
     --action-card-surface: color-mix(in srgb, var(--color-brand-blue) 16%, #fff);
     --action-card-ink: var(--color-brand-blue-ink);
-    --action-card-title-size: 1.2rem;
-    --action-card-description-size: 0.78rem;
-    --action-card-text-inset: 1.25rem;
     height: 5.2rem;
     /* 흰 오리 윤곽이 바탕에 묻히지 않게, 오리가 고개를 내미는 오른쪽 끝에 조금 더 진한 파란빛을 깐다. */
     background:
@@ -61,10 +59,6 @@ const styles = {
         transparent 100%
       ),
       var(--action-card-surface);
-
-    & .ActionCard-text {
-      gap: 0.25rem;
-    }
 
     /* 보조 문구를 제목 위로 올려 질문 다음에 행동이 오게 한다. */
     & .ActionCard-description {
@@ -85,9 +79,6 @@ const styles = {
     }
 
     @media (min-width: 768px) {
-      --action-card-title-size: 1.5rem;
-      --action-card-description-size: 0.9rem;
-      --action-card-text-inset: 1.4rem;
       height: 6.2rem;
     }
 

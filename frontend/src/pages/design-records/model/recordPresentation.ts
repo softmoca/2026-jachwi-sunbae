@@ -1,5 +1,5 @@
 import type { MapCategory } from '@/features/map/model/Map';
-import { formatRentSummary } from '@/features/property/lib/propertyFormat';
+import { formatPropertyPrice } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
 
 /** 본 방 기록 지도 레일에서 빼는 카테고리. 중개업소는 동네 찾기 주변 분석에서 따로 본다. */
@@ -22,10 +22,8 @@ export const recordPresentation = (property: PropertySummary) => ({
   district: propertyArea(property.location.address),
   name: property.name,
   note: property.location.address ?? '주소 미등록',
-  price:
-    property.monthlyRentAmount > 0
-      ? `월세 ${formatRentSummary(property.depositAmount, property.monthlyRentAmount)}`
-      : formatRentSummary(property.depositAmount, property.monthlyRentAmount),
+  /** 지도 마커에 붙는 짧은 가격. 가격을 넣기 전이면 `가격 입력 전`이다. */
+  price: formatPropertyPrice(property.depositAmount, property.monthlyRentAmount, 'summary'),
   latitude: property.location.latitude,
   longitude: property.location.longitude,
   checklist: property.stages.find((stage) => stage.stage === 'ON_SITE') ?? null,

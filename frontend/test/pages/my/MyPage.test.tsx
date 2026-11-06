@@ -136,10 +136,10 @@ describe('마이 화면', () => {
     expect(screen.queryByText(/프로토타입|샘플|시연/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /개인정보 처리방침/ })).toHaveAttribute('href', '/privacy');
 
-    // 계정과 데이터를 완전히 지우는 것은 초기화 아래 링크로, 회원 번호가 채워진 메일을 연다.
+    // 마이에는 초기화만 두고, 계정과 데이터 삭제 요청은 개인정보 처리방침의 삭제 요청 안내에서 받는다.
     expect(screen.getByRole('button', { name: /^초기화/ })).toBeInTheDocument();
-    const mailLink = screen.getByRole('link', { name: '계정과 데이터를 완전히 지우려면 메일로 요청해 주세요' });
-    expect(mailLink.getAttribute('href')).toMatch(/^mailto:.+%ED%9A%8C%EC%9B%90%20%EB%B2%88%ED%98%B8%3A%201/);
+    expect(screen.queryByText(/삭제|지우려면/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /메일/ })).not.toBeInTheDocument();
 
     const toggle = screen.getByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
