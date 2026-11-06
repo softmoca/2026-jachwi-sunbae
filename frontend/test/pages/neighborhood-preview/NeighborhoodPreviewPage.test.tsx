@@ -558,7 +558,7 @@ it('지도에서 찍으면 시점을 옮기지 않아 누른 자리에 핀이 �
 });
 it.each([false, true])('로그인 여부와 관계없이 주소 검색 결과로 위치를 선택한다 (공개 탐색: %s)', async (isPublic) => {
   server.use(
-    http.get('http://localhost:8080/api/maps/geocode', ({ request }) => {
+    http.get('http://localhost:8080/api/maps/search', ({ request }) => {
       expect(new URL(request.url).searchParams.get('query')).toBe('신논현역');
       return HttpResponse.json(
         successEnvelope([{ roadAddress: '서울 강남구 봉은사로 102', latitude: 37.5045, longitude: 127.0249 }]),

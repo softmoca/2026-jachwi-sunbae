@@ -1,5 +1,6 @@
 import { css, cx } from '@emotion/css';
 
+import { searchAddressWithNaver } from '@/features/map/api/mapApi';
 import useAddressSearch from '@/features/map/api/useAddressSearch';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
@@ -30,7 +31,7 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
   // 지도를 옮겨 다시 찾을 때는 이전 목록을 둔 채 기다리고, 응답이 늦을 때만 찾는 중 문구로 바꾼다.
   const isDelayedLoadingVisible = useDelayedLoading(map.query.isPlaceholderData);
   const isLoadingVisible = map.query.isPending || isDelayedLoadingVisible;
-  const search = useAddressSearch();
+  const search = useAddressSearch(searchAddressWithNaver);
   const data = map.query.isError ? undefined : map.query.data;
   const locate = () => void map.locate();
   const searchButton = (
@@ -139,7 +140,7 @@ const RestaurantPanel = ({ isActive, layout }: RestaurantPanelProps) => {
       <div className={styles.addressSearch}>
         <SearchField
           label="동네 주소 검색"
-          placeholder="도로명이나 지번 주소 검색"
+          placeholder="주소나 건물명 검색"
           value={search.query}
           onValueChange={search.changeQuery}
           onSubmit={() => void search.submit()}
