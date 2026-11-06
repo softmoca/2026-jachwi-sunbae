@@ -1,9 +1,5 @@
-import type { MapCategory } from '@/features/map/model/Map';
 import { formatPropertyPrice } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
-
-/** 본 방 기록 지도 레일에서 빼는 카테고리. 중개업소는 동네 찾기 주변 분석에서 따로 본다. */
-export const RECORDS_HIDDEN_CATEGORIES: MapCategory[] = ['AGENCY'];
 
 export const propertyArea = (address: string | null) => {
   const parts = address?.split(/\s+/) ?? [];
@@ -33,11 +29,8 @@ export const recordPresentation = (property: PropertySummary) => ({
 type RecordPoint = { latitude: number | null; longitude: number | null };
 
 /** 본 방 기록 지도 아래쪽 안내. 메모·매물을 남기는 방법과 위치 없는 기록·조회 실패를 알린다. */
-export const recordsMapHint = (
-  records: RecordPoint[],
-  { facilitiesFailed, memo }: { facilitiesFailed: boolean; memo: { isFailed: boolean } },
-) => {
-  if (facilitiesFailed || memo.isFailed) return '지도 정보를 일부 불러오지 못했어요';
+export const recordsMapHint = (records: RecordPoint[], { memo }: { memo: { isFailed: boolean } }) => {
+  if (memo.isFailed) return '지도 정보를 일부 불러오지 못했어요';
   const action = '빈 곳을 눌러 메모를 남기거나 매물을 기록해요';
   const base = records.length ? action : `아직 기록한 방이 없어요 · ${action}`;
   return records.some((record) => record.latitude === null || record.longitude === null)

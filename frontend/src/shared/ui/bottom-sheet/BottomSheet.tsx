@@ -27,6 +27,8 @@ type BottomSheetProps = {
    * 페이지로 열면 숨긴다.
    */
   floating?: ReactNode;
+  /** 시트 상자에 덧붙일 클래스. 내용이 바뀔 때 다시 올라오는 전환처럼 화면마다 다른 움직임만 덧붙인다. */
+  className?: string;
 };
 
 /** 시트 높이 단계. 낮은 것부터 제목만(peek), 처음 높이(default), 크게(expanded), 화면 전체(full). */
@@ -46,6 +48,7 @@ const BottomSheet = ({
   headerEnd,
   subtitle,
   floating,
+  className,
 }: BottomSheetProps) => {
   const [mode, setMode] = useState<SheetMode>('default');
   const modes: SheetMode[] = fullPage ? ['peek', 'default', 'expanded', 'full'] : ['peek', 'default', 'expanded'];
@@ -91,7 +94,7 @@ const BottomSheet = ({
   return (
     <section
       ref={sheetRef}
-      className={styles.sheet}
+      className={className ? cx(styles.sheet, className) : styles.sheet}
       aria-label={title}
       tabIndex={-1}
       data-resizable={resizable}

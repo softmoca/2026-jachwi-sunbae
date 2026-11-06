@@ -398,6 +398,8 @@ export const parsePropertyCommuteTimes = (value: unknown): PropertyCommuteTimes 
         throw new Error('매물 통근 시간이 상태와 맞지 않습니다.');
       return {
         propertyId: readInteger(property, 'propertyId', 1),
+        // 예전 응답에는 이름이 없을 수 있어 빈 이름으로 받는다. 화면은 이름이 없는 매물을 목록에 넣지 않는다.
+        propertyName: typeof property.propertyName === 'string' ? property.propertyName : '',
         status: status as PropertyCommuteStatus,
         commuteMinutes,
       };

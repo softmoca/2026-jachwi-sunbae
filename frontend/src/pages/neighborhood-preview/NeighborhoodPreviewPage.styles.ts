@@ -884,34 +884,13 @@ export const criteriaBadges = css`
   label: NeighborhoodPreviewPage-criteriaBadges;
   display: flex;
   gap: 0.3rem;
-  /* 좁은 화면에서도 월세 버튼이 아래 줄로 내려가지 않게 한 줄로 두고, 넘치면 옆으로 민다. */
+  /* 좁은 화면에서도 칩이 아래 줄로 내려가지 않게 한 줄로 두고, 넘치면 옆으로 민다. 칩 모양은 공용 Chip이 정한다. */
   overflow-x: auto;
+  padding-bottom: 0.3rem;
   scrollbar-width: none;
 
-  & > * {
-    flex: none;
-  }
-
-  & > span {
-    padding: 0.45rem 0.5rem;
-    white-space: nowrap;
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    background: white;
-    font-size: 0.72rem;
-
-    @media (max-width: 370px) {
-      padding: 0.45rem 0.4rem;
-      font-size: 0.66rem;
-    }
-    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
-  }
-
-  /* 결과에서 바꿀 수 없는 조건은 회색으로 흐리게 둔다. */
-  & > span[aria-disabled='true'] {
-    border-color: #e6e8eb;
-    background: #f1f2f4;
-    color: #9a9ea6;
+  &::-webkit-scrollbar {
+    display: none;
   }
 `;
 
@@ -1015,29 +994,6 @@ export const filterCellValue = css`
   white-space: nowrap;
 `;
 
-export const filterBadge = css`
-  label: NeighborhoodPreviewPage-filterBadge;
-  flex: none;
-  padding: 0.5rem 0.6rem;
-  border-radius: 2rem;
-  border-color: var(--color-border-strong);
-  font-size: 0.75rem;
-  font-weight: 600;
-  min-height: 2.25rem;
-  white-space: nowrap;
-
-  & > span {
-    width: 100%;
-    justify-content: space-between;
-    gap: 0.25rem;
-  }
-
-  @media (max-width: 370px) {
-    padding: 0.5rem 0.45rem;
-    font-size: 0.66rem;
-  }
-`;
-
 export const emptyResult = css`
   label: NeighborhoodPreviewPage-emptyResult;
   position: absolute;
@@ -1061,12 +1017,6 @@ export const mapOverlay = css`
 `;
 
 /* 지도 색상 기준 아래 정류장·부동산 안내. */
-export const placesHint = css`
-  label: NeighborhoodPreviewPage-placesHint;
-  flex-basis: 100%;
-  color: var(--color-muted);
-  font-size: 0.65rem;
-`;
 
 /* 휴대폰에서 위치를 고르면 아래에 올리는 찾기 버튼. 버튼 글자에 고른 장소 이름을 넣는다.
    공용 바텀시트처럼 태블릿(1023px까지)도 화면 폭을 채운다. 1024px부터는 데스크탑 화면이라 이 시트를 쓰지 않는다. */

@@ -63,6 +63,7 @@ export type PropertySummary = {
 export type PropertyCommuteStatus = 'REACHABLE' | 'UNREACHABLE' | 'NO_LOCATION';
 export type PropertyCommuteTime = {
   propertyId: number;
+  propertyName: string;
   status: PropertyCommuteStatus;
   commuteMinutes: number | null;
 };

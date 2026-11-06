@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { useNearbyFacilities } from '@/features/map/api/useNearbyFacilities';
-import { clusterNearbyPlaces } from '@/features/map/lib/mapClustering';
+import { placeMarkers } from '@/features/map/lib/mapClustering';
 import type { MapCoordinate } from '@/features/map/lib/mapLocation';
 import { coordinatesAreClose, SEOUL_MAP_CENTER } from '@/features/map/lib/mapLocation';
 import { ALL_MAP_CATEGORIES } from '@/features/map/lib/mapPresentation';
@@ -73,9 +73,10 @@ const useNearbyAnalysis = (
         label: options.markerLabel ?? '선택한 매물',
         tone: 'selected',
       },
-      ...clusterNearbyPlaces(places, mapLevel),
+      // 시설은 확대 단계와 상관없이 묶지 않고 낱개로 둔다.
+      ...placeMarkers(places),
     ],
-    [center, mapLevel, places, propertyId, options.markerLabel],
+    [center, places, propertyId, options.markerLabel],
   );
   const circles = useMemo<MapRadiusCircle[]>(
     () =>
@@ -107,13 +108,7 @@ const useNearbyAnalysis = (
   };
 
   const selectMarker = (marker: MapMarker) => {
-    if (marker.tone === 'cluster') {
-      setViewportCenter({ latitude: marker.latitude, longitude: marker.longitude });
-      setMapLevel((current) => Math.max(3, current - 1));
-      setSelectedPlaceId(null);
-    } else if (marker.placeId !== undefined) {
-      setSelectedPlaceId(marker.placeId);
-    }
+    if (marker.placeId !== undefined) setSelectedPlaceId(marker.placeId);
   };
 
   const panTo = (nextLatitude: number, nextLongitude: number) => {

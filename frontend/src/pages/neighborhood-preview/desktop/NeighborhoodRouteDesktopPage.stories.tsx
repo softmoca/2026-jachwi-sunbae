@@ -90,6 +90,7 @@ const preview: NeighborhoodPreviewContext = {
   moveToCurrentLocation: noopAsync,
   missingBoundaryCount: 0,
   topAreas: [area],
+  resultAreas: [area],
   selectedStation: area.stations[0],
   route,
   isRouteLoading: false,
@@ -142,6 +143,12 @@ const preview: NeighborhoodPreviewContext = {
   openAreaDetails: noop,
   closeAreaDetails: fn(),
   openListing: () => true,
+  toggleMapCategory: () => true,
+  focusPoint: noop,
+  fitPoints: noop,
+  rememberSelectionCenter: noop,
+  rememberSelectionLevel: noop,
+  zoomSelectionBy: noop,
   setMapViewportReader: () => undefined,
 };
 

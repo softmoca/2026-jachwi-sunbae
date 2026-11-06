@@ -139,9 +139,9 @@ describe('FE-2 API 경계', () => {
       maxMinutes: 60,
       maxTransfers: 2,
       properties: [
-        { propertyId: 10, status: 'REACHABLE', commuteMinutes: 27 },
-        { propertyId: 11, status: 'UNREACHABLE', commuteMinutes: null },
-        { propertyId: 12, status: 'NO_LOCATION', commuteMinutes: null },
+        { propertyId: 10, propertyName: '신림역 원룸', status: 'REACHABLE', commuteMinutes: 27 },
+        { propertyId: 11, propertyName: '망원동 투룸', status: 'UNREACHABLE', commuteMinutes: null },
+        { propertyId: 12, propertyName: '주소 없는 방', status: 'NO_LOCATION', commuteMinutes: null },
       ],
     });
   });

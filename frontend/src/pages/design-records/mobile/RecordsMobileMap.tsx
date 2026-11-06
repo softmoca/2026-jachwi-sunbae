@@ -1,7 +1,6 @@
 import { css } from '@emotion/css';
 
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
-import MapCategoryRail from '@/features/map/ui/map-category-rail/MapCategoryRail';
 import MapZoomControl from '@/features/map/ui/map-zoom-control/MapZoomControl';
 import StreetMemoImpressionLog from '@/features/street-memo/ui/street-memo-impression-log/StreetMemoImpressionLog';
 import StreetMemoSheet from '@/features/street-memo/ui/street-memo-sheet/StreetMemoSheet';
@@ -10,7 +9,7 @@ import Icon from '@/shared/ui/icon/Icon';
 import type { RecordsState } from '../hooks/useRecords';
 import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
 import { recordNeighbors } from '../model/recordNavigation';
-import { RECORDS_HIDDEN_CATEGORIES, recordsMapHint } from '../model/recordPresentation';
+import { recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
 import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsSelectedSheet from './RecordsSelectedSheet';
@@ -21,7 +20,7 @@ type Props = {
 };
 
 /**
- * 휴대폰·태블릿 본 방 기록 지도. 위에 뜬 헤더 아래로 시설·거리 메모 카테고리 레일을 둔다.
+ * 휴대폰, 태블릿 본 방 기록 지도. 위에 뜬 헤더 아래로 확대 축소와 현재 위치 버튼을 두고 거리 메모는 늘 띄운다. 시설 분류는 동네 찾기로 옮겼다.
  * 데스크탑처럼 빈 곳을 찍으면 그 자리 말풍선에서 메모를 남기거나 매물을 등록한다. 열린 것이 있으면 먼저 닫기만 한다.
  * 고른 매물은 아래 바텀시트에서 보고, 겹쳐 묶인 매물은 시트에 함께 늘어놓는다.
  * 매물 하나를 볼 때는 시트 머리의 이전, 다음으로 목록 순서대로 넘기고, 지도와 마커 선택도 그 매물로 따라간다.
@@ -36,15 +35,6 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
     <section className={styles.map} aria-label="본 방 기록 지도">
       <MapCanvas {...layers.canvasProps} coordinateMenu={layers.coordinateMenu} />
       <StreetMemoImpressionLog memos={layers.memo.visibleMemos} />
-      <MapCategoryRail
-        showMemo
-        showIcons={false}
-        hiddenCategories={RECORDS_HIDDEN_CATEGORIES}
-        className={styles.rail}
-        selectedCategories={layers.category === null ? [] : [layers.category]}
-        counts={layers.counts}
-        onToggle={layers.toggleCategory}
-      />
       <button
         className={styles.recenter}
         type="button"
@@ -61,14 +51,14 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
         stepper={neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />}
         onNotice={records.setNotice}
       />
-      <StreetMemoSheet layer={layers.memo} onCreated={layers.showMemos} />
+      <StreetMemoSheet layer={layers.memo} />
       <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
     </section>
   );
 };
 
 const styles = {
-  /* 휴대폰·태블릿 본 방 기록 지도. 위에 뜬 헤더·동네 뱃지 아래로 카테고리 레일·현재 위치 버튼을 두고, 아래쪽에 지도 안내를 띄운다. */
+  /* 휴대폰, 태블릿 본 방 기록 지도. 위에 뜬 헤더와 동네 뱃지 아래로 확대 축소와 현재 위치 버튼을 두고, 아래쪽에 지도 안내를 띄운다. */
   map: css`
     label: RecordsMobileMap-map;
     position: relative;
@@ -76,18 +66,11 @@ const styles = {
     min-height: 0;
   `,
 
-  rail: css`
-    label: RecordsMobileMap-rail;
-    top: calc(max(0.85rem, env(safe-area-inset-top)) + 11.4rem);
-    right: 0.75rem;
-    z-index: 12;
-  `,
-
-  /* 메모부터 편의점까지 다섯 칸(한 칸 2.5rem)인 레일 아래에 둔다. */
+  /* 세로 확대 축소 버튼 바로 아래에 둔다. */
   recenter: css`
     label: RecordsMobileMap-recenter;
     position: absolute;
-    top: calc(max(0.85rem, env(safe-area-inset-top)) + 24.5rem);
+    top: calc(max(0.85rem, env(safe-area-inset-top)) + 14.05rem);
     right: 0.95rem;
     z-index: 12;
     display: grid;
@@ -107,11 +90,11 @@ const styles = {
     }
   `,
 
-  /* 헤더·동네 뱃지 아래 오른쪽 위에 두고, 카테고리 레일은 그 아래로 내린다. */
+  /* 헤더와 동네 뱃지 아래 오른쪽 위에 두고, 현재 위치 버튼은 그 아래에 둔다. */
   zoom: css`
     label: RecordsMobileMap-zoom;
     top: calc(max(0.85rem, env(safe-area-inset-top)) + 8.15rem);
-    right: 0.75rem;
+    right: 0.95rem;
   `,
 
   /* 아무것도 열리지 않았을 때 가운데 아래에 띄우는 지도 안내. 지도 조작을 막지 않는다. */

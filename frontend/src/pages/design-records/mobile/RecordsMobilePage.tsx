@@ -43,7 +43,6 @@ const RecordsMobilePage = () => {
     },
   });
   const layers = useRecordsMapLayers(records, {
-    initialCategory: 'MEMO',
     registeringAt: creatingAt,
     onRegisterNotice: setNotice,
     onRegister: (location) => {

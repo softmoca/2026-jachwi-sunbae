@@ -42,6 +42,7 @@ type LiveMapProps = Pick<
   | 'onLevelChange'
   | 'onSelectMarker'
   | 'onBoundsChange'
+  | 'onDragStart'
   | 'regions'
   | 'selectedRegionId'
   | 'onSelectRegion'
@@ -64,6 +65,7 @@ const useNaverMap = ({
   onLevelChange,
   onSelectMarker,
   onBoundsChange,
+  onDragStart,
   regions = EMPTY_REGIONS,
   selectedRegionId = null,
   onSelectRegion,
@@ -75,7 +77,14 @@ const useNaverMap = ({
   const circlesRef = useRef<LiveOverlay[]>([]);
   const regionLayerRef = useRef<ReturnType<typeof createMapRegionLayer> | null>(null);
   const circleSignatureRef = useRef('');
-  const callbackRef = useRef({ onSelectLocation, onCenterChange, onLevelChange, onSelectMarker, onBoundsChange });
+  const callbackRef = useRef({
+    onSelectLocation,
+    onCenterChange,
+    onLevelChange,
+    onSelectMarker,
+    onBoundsChange,
+    onDragStart,
+  });
   const [mapReady, setMapReady] = useState(false);
   // SDK 로드와 GL 준비 사이에는 지도를 눌러도 반응이 없으므로 화면에 준비 중임을 알린다.
   const [renderReady, setRenderReady] = useState(false);
@@ -125,7 +134,14 @@ const useNaverMap = ({
   initialViewRef.current = { center: boundedCenter, level };
   const circleRadii = circles.map((circle) => circle.radiusMeters).join(',');
 
-  callbackRef.current = { onSelectLocation, onCenterChange, onLevelChange, onSelectMarker, onBoundsChange };
+  callbackRef.current = {
+    onSelectLocation,
+    onCenterChange,
+    onLevelChange,
+    onSelectMarker,
+    onBoundsChange,
+    onDragStart,
+  };
 
   useEffect(() => {
     if (!liveMode || containerRef.current === null) return;
@@ -200,6 +216,7 @@ const useNaverMap = ({
             // 옮기는 도중에 손으로 끌면 그 자리를 따른다.
             viewTargetRef.current = null;
             setGestureActive(true);
+            callbackRef.current.onDragStart?.();
           }),
           engine.addListener(map, 'zoomstart', () => setGestureActive(true)),
         );

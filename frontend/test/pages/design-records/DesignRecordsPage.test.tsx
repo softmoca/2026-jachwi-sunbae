@@ -368,14 +368,12 @@ it('마지막으로 고른 보기를 기억해 주소에 보기가 없어도 그
   expect(await screen.findByRole('heading', { name: '모든 기록' })).toBeInTheDocument();
 });
 
-it('휴대폰은 메모 탭을 켠 채로 열어 화면 안 거리 메모를 지도에 올리고 눌러 본다', async () => {
+it('휴대폰은 버튼 없이 늘 화면 안 거리 메모를 지도에 올리고 눌러 본다', async () => {
   const user = userEvent.setup();
   renderRecords();
   await screen.findByText('신림역 원룸');
-  // 메모 탭은 카테고리 맨 위에 두고 처음부터 켜 둔다.
-  const rail = within(screen.getByRole('complementary', { name: '지도 시설 카테고리' }));
-  expect(rail.getAllByRole('button')[0]).toHaveAccessibleName(/^거리 메모 숨기기/);
-  expect(rail.getAllByRole('button')[0]).toHaveAttribute('aria-pressed', 'true');
+  // 분류 레일과 메모 버튼은 두지 않고 거리 메모는 늘 켜 둔다.
+  expect(screen.queryByRole('complementary', { name: '지도 시설 카테고리' })).not.toBeInTheDocument();
   // 전체 보기처럼 멀리 축소하면 메모를 숨기므로, 동네를 골라 확대한 뒤 화면 범위를 알린다.
   await user.click(screen.getByRole('button', { name: '마포구' }));
   await user.click(screen.getByRole('button', { name: '화면 범위 알림' }));
@@ -556,10 +554,9 @@ it('휴대폰은 빈 곳을 찍은 말풍선에서 메모를 고르면 그 위�
   await user.click(form.getByRole('button', { name: '👍 좋아요' }));
   await user.type(form.getByRole('textbox', { name: '메모' }), '밤에도 밝아요');
   await user.click(form.getByRole('button', { name: '메모 남기기' }));
-  // 남긴 뒤에는 상세를 열지 않고, 메모 탭을 켜 그 자리에 메모 말풍선으로 남긴다.
+  // 남긴 뒤에는 상세를 열지 않고, 그 자리에 메모 말풍선으로 남긴다.
   await waitFor(() => expect(screen.queryByRole('region', { name: '메모 남기기' })).not.toBeInTheDocument());
   expect(screen.queryByRole('region', { name: '거리 메모' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^거리 메모 숨기기/ })).toHaveAttribute('aria-pressed', 'true');
   // 따로 떠오르는 말풍선 없이, 남은 메모 말풍선 하나가 그 자리에서 떠오른다.
   expect(await screen.findAllByRole('button', { name: '밤에도 밝아요' })).toHaveLength(1);
 });
@@ -586,15 +583,6 @@ it('데스크탑은 찍은 자리 말풍선에서 매물 등록을 고르면 찍
     server.events.removeListener('request:start', track);
     matchMedia.mockRestore();
   }
-});
-
-it('시설 카테고리를 켜면 반경 원 없이 지도 화면 안의 시설만 올린다', async () => {
-  const user = userEvent.setup();
-  renderRecords();
-  await screen.findByText('신림역 원룸');
-  await user.click(screen.getByRole('button', { name: '화면 범위 알림' }));
-  await user.click(screen.getByRole('button', { name: /^병원 표시하기/ }));
-  expect(await screen.findByRole('button', { name: /^병원 숨기기, \d+개$/ })).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('기록을 받는 동안에는 기다리지 않고 바로 지금 보기 방식의 영역 하나만 뼈대로 채운다', () => {
@@ -758,9 +746,7 @@ it('데스크탑은 리스트에 매물이 모두 보여, 겹친 매물 묶음�
   }
 });
 
-const RECORDS_RAIL = ['메모', '병원', '교통', '학교', '편의'];
-
-it('본 방 기록 지도 레일에는 중개와 통근 없이 메모와 시설 카테고리만 둔다', async () => {
+it('본 방 기록 지도에는 분류 레일 없이 확대 축소와 현재 위치만 두고, 통근 시간 버튼도 두지 않는다', async () => {
   localStorage.setItem(
     'jachwi-sunbae:commute-destination',
     JSON.stringify({ latitude: 37.5665, longitude: 126.978, name: '서울시청' }),
@@ -768,12 +754,11 @@ it('본 방 기록 지도 레일에는 중개와 통근 없이 메모와 시설 
   const user = userEvent.setup();
   try {
     renderRecords();
-    const rail = await screen.findByRole('complementary', { name: '지도 시설 카테고리' });
-    expect(
-      within(rail)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
-    ).toEqual(RECORDS_RAIL);
+    await screen.findByText('신림역 원룸');
+    // 시설 분류(병원, 교통, 학교, 편의)는 동네 찾기 결과 지도로 옮겼다.
+    expect(screen.queryByRole('complementary', { name: '지도 시설 카테고리' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '지도 확대·축소' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '현재 위치로 이동' })).toBeInTheDocument();
     // 리스트에는 통근 시간 버튼도, 통근거리 줄과 바꾸기도 두지 않는다.
     await user.click(screen.getByRole('button', { name: /리스트/ }));
     expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
@@ -784,16 +769,12 @@ it('본 방 기록 지도 레일에는 중개와 통근 없이 메모와 시설 
   }
 });
 
-it('데스크탑 본 방 기록 지도 레일에도 중개와 통근이 없다', async () => {
+it('데스크탑 본 방 기록 지도에도 분류 레일과 통근거리가 없다', async () => {
   const matchMedia = useDesktopViewport();
   try {
     renderRecords();
-    const rail = await screen.findByRole('complementary', { name: '지도 시설 카테고리' });
-    expect(
-      within(rail)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
-    ).toEqual(RECORDS_RAIL);
+    await screen.findByRole('heading', { name: '모든 기록' });
+    expect(screen.queryByRole('complementary', { name: '지도 시설 카테고리' })).not.toBeInTheDocument();
     expect(screen.queryByText(/까지 통근거리/)).not.toBeInTheDocument();
   } finally {
     matchMedia.mockRestore();
