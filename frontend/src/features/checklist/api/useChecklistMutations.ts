@@ -8,6 +8,7 @@ import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import { toProvidedChecklistItemInputs } from '../lib/checklistEditor';
 import type { ChecklistDetail, ChecklistStage } from '../model/checklistTypes';
+import { clearLastSelectedChecklist, readLastSelectedChecklist } from '../model/lastChecklistStore';
 import type { ChecklistDraftInput } from '../model/useChecklistDraft';
 import { assignActiveChecklist, createChecklistV11, removeChecklist, updateChecklistV11 } from './checklistApi';
 import { ChecklistReapplyError } from './checklistErrorMessages';
@@ -91,9 +92,10 @@ export const useRemoveChecklist = (checklistId: number) => {
       await queryClient.cancelQueries({ queryKey: checklistQueryKeys.detail(checklistId), exact: true });
     },
     onSuccess: async () => {
+      if (readLastSelectedChecklist() === checklistId) clearLastSelectedChecklist();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: checklistQueryKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: propertyQueryKeys.details() }),
+        queryClient.invalidateQueries({ queryKey: propertyQueryKeys.all }),
       ]);
       queryClient.removeQueries({ queryKey: checklistQueryKeys.detail(checklistId), exact: true });
     },
