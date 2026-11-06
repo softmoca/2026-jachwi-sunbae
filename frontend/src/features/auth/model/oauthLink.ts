@@ -1,14 +1,26 @@
 /**
- * OAuth 계정 연결의 화면 상태. 서버 응답만으로는 연결 여부와 결과(연결, 통합, 전환)를 알 수 없어서
- * 인증을 시작할 때의 회원과 끝난 뒤의 회원을 비교해 결과를 정하고, 이 기기에서 확인한 연결 상태를 기억해 둔다.
- * 회원 조회 응답에 연결 상태가 생기면 `readLinkedProvider`는 그 값으로 바꾼다.
+ * OAuth 계정 연결의 화면 상태. #570 콜백은 완료 주소(`OAUTH_SUCCESS_REDIRECT_URI`)로 303만 보내고
+ * 결과(연결, 통합, 전환)나 연결 상태를 알려 주지 않는다. 그래서 인증을 시작할 때의 회원과 끝난 뒤의 회원을 비교해
+ * 결과를 정하고, 이 기기에서 확인한 연결 상태를 기억해 둔다. 서버가 알려 주게 되면 그 값으로 바꾼다.
+ *
+ * #570 `AuthService.completeOAuth`의 규칙:
+ * - 익명 회원 + 처음 쓰는 계정: 지금 회원에 연결만 한다. 회원 번호와 기록이 그대로다.
+ * - 익명 회원 + 이미 연결된 계정: 그 회원으로 기록을 합친다(`mergeOwnedData`). 매물(사진, 메모, 체크 기록 포함),
+ *   내가 만든 체크리스트, 거리 메모를 옮기고, 날씨 위치와 알림 설정, 체크리스트 단계 설정은 계정에 이미 있으면 그 값을 쓴다.
+ * - 계정을 연결한 회원 + 다른 계정: 합치지 않고 그 계정의 회원으로 바꾼다. 처음 쓰는 계정이면 빈 새 회원이다.
  */
 export type OAuthProvider = 'KAKAO' | 'APPLE';
 export const OAUTH_PROVIDERS: readonly OAuthProvider[] = ['KAKAO', 'APPLE'];
 export const OAUTH_PROVIDER_LABELS: Record<OAuthProvider, string> = { KAKAO: '카카오', APPLE: 'Apple' };
 
 export type OAuthOutcome = 'linked' | 'merged' | 'switched' | 'completed';
-export type OAuthFailure = 'cancelled' | 'failed' | 'unavailable';
+/**
+ * - `unfinished`: 제공자 화면으로 갔다가 완료 없이 돌아왔다. #570은 취소와 콜백 실패를 API 도메인의 JSON 오류로 끝내
+ *   웹이 둘을 구분할 수 없다.
+ * - `session`: 시작 API가 이 브라우저의 Refresh 쿠키를 확인하지 못했다(`401 OAUTH_AUTHENTICATION_FAILED`).
+ * - `unavailable`: 제공자 설정 누락이나 장애, 네트워크(`503 OAUTH_PROVIDER_UNAVAILABLE`).
+ */
+export type OAuthFailure = 'unfinished' | 'session' | 'failed' | 'unavailable';
 
 export type OAuthNotice = { title: string; description: string; tone: 'success' | 'error' };
 
@@ -96,27 +108,16 @@ export const saveLinkedProvider = (memberId: number, provider: OAuthProvider) =>
   writeJson(local, LINK_KEY, { memberId, provider });
 
 /**
- * 인증 전후 회원으로 결과를 정한다. 서버가 결과를 알려 주면 그 값을 쓴다.
- * - 같은 회원: 처음 연결해 지금 기록을 그대로 쓴다.
- * - 다른 회원, 이전에 연결된 계정이 있었음: 다른 계정으로 전환했다. 기록은 합치지 않는다.
- * - 다른 회원, 익명이었음: 이미 연결된 회원으로 돌아가며 이 기기의 기록을 합쳤다.
+ * 인증 전후 회원으로 결과를 정한다(#570 `completeOAuth` 규칙을 따른다).
+ * - 같은 회원: 익명 회원에 처음 연결했다(또는 이미 연결한 같은 계정). 기록은 그대로다.
+ * - 다른 회원, 시작할 때 이 기기에서 연결 계정을 알고 있었음: 다른 계정으로 바꿨다. 기록은 합치지 않는다.
+ * - 다른 회원, 시작할 때 익명이었음: 이미 연결된 회원으로 기록을 합쳤다.
+ * 연결 상태는 이 기기의 기억이라, 다른 경로로 잃었으면 전환을 통합으로 잘못 볼 수 있다. 서버가 결과를 주면 그 값으로 바꾼다.
  */
-export const resolveOAuthOutcome = (
-  pending: PendingOAuth | null,
-  memberId: number,
-  serverOutcome?: string | null,
-): OAuthOutcome => {
-  if (serverOutcome === 'linked' || serverOutcome === 'merged' || serverOutcome === 'switched') return serverOutcome;
+export const resolveOAuthOutcome = (pending: PendingOAuth | null, memberId: number): OAuthOutcome => {
   if (pending === null) return 'completed';
   if (pending.previousMemberId === memberId) return 'linked';
   return pending.previousProvider === null ? 'merged' : 'switched';
-};
-
-export const parseOAuthFailure = (value: string | null): OAuthFailure | null => {
-  if (value === null) return null;
-  if (value === 'cancelled' || value === 'access_denied') return 'cancelled';
-  if (value === 'unavailable') return 'unavailable';
-  return 'failed';
 };
 
 export const createOAuthSuccessNotice = (outcome: OAuthOutcome, provider: OAuthProvider | null): OAuthNotice => {
@@ -131,14 +132,16 @@ export const createOAuthSuccessNotice = (outcome: OAuthOutcome, provider: OAuthP
     case 'merged':
       return {
         tone: 'success',
-        title: `${label} 계정의 기록을 불러왔어요`,
-        description: '이 기기에서 남긴 기록도 함께 옮겼어요. 이제 같은 계정의 기록으로 이어서 써요.',
+        title: `${label} 계정으로 기록을 합쳤어요`,
+        description:
+          '이 기기에서 남긴 매물, 체크리스트, 거리 메모를 그 계정으로 옮겼어요. 날씨 위치와 알림 설정은 계정에 있던 설정을 써요.',
       };
     case 'switched':
       return {
         tone: 'success',
         title: `${label} 계정으로 바꿨어요`,
-        description: '이전 계정의 기록은 합치지 않고 그 계정에 그대로 남아 있어요.',
+        description:
+          '이전 계정의 기록은 합치지 않고 그 계정에 그대로 남아 있어요. 처음 쓰는 계정이면 빈 기록으로 시작해요.',
       };
     case 'completed':
       return { tone: 'success', title: `${label} 계정 인증을 마쳤어요`, description: '계정의 기록으로 이어서 써요.' };
@@ -147,11 +150,17 @@ export const createOAuthSuccessNotice = (outcome: OAuthOutcome, provider: OAuthP
 
 export const createOAuthFailureNotice = (failure: OAuthFailure): OAuthNotice => {
   switch (failure) {
-    case 'cancelled':
+    case 'unfinished':
       return {
         tone: 'error',
-        title: '계정 연결을 취소했어요',
-        description: '지금 기록은 그대로예요. 필요할 때 다시 연결해 주세요.',
+        title: '계정 연결을 마치지 못했어요',
+        description: '취소했거나 인증에 실패했어요. 지금 기록은 그대로예요. 필요할 때 다시 연결해 주세요.',
+      };
+    case 'session':
+      return {
+        tone: 'error',
+        title: '이 브라우저의 접속 정보를 확인하지 못했어요',
+        description: '지금 기록은 그대로예요. 화면을 새로 고친 뒤 다시 시도해 주세요.',
       };
     case 'unavailable':
       return {

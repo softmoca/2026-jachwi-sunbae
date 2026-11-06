@@ -60,6 +60,11 @@ type ApiRequestOptions<T> = {
   requiresAuthentication?: boolean;
   /** Refresh 쿠키(Path=/api/auth)로 같은 기기의 세션을 함께 확인하는 인증 API에만 켠다. */
   includeCredentials?: boolean;
+  /**
+   * Access Token 만료가 아닌 401 오류 코드. 이 코드면 토큰을 갱신하거나 인증을 끝내지 않고 오류로 돌려준다.
+   * OAuth 시작 API는 Refresh 쿠키를 확인하지 못하면 `401 OAUTH_AUTHENTICATION_FAILED`를 준다.
+   */
+  nonSessionUnauthorizedCodes?: readonly string[];
   parseData: (value: unknown) => T;
 };
 
@@ -171,6 +176,18 @@ type ExecuteRequestOptions = {
   signal?: AbortSignal;
   requiresAuthentication: boolean;
   includeCredentials?: boolean;
+  nonSessionUnauthorizedCodes?: readonly string[];
+};
+
+/** 401 응답이 Access Token 문제가 아니라 그 API의 업무 오류인지 본다. 본문은 복제해 읽어 원래 응답을 그대로 둔다. */
+const isNonSessionUnauthorized = async (response: Response, codes: readonly string[] | undefined) => {
+  if (codes === undefined || codes.length === 0) return false;
+  try {
+    const payload: unknown = await response.clone().json();
+    return isErrorDto(payload) && codes.includes(payload.code);
+  } catch {
+    return false;
+  }
 };
 
 const sendRequest = async (
@@ -446,6 +463,7 @@ const executeRequest = async (options: ExecuteRequestOptions): Promise<Response>
   }
   throwIfAuthenticationEnded();
   if (response.status !== 401) return response;
+  if (await isNonSessionUnauthorized(response, options.nonSessionUnauthorizedCodes)) return response;
 
   // Access Token이 만료됐다. 다른 요청이 이미 새 토큰을 받았으면 그 토큰으로, 아니면 갱신해서 한 번만 다시 보낸다.
   const currentToken = getAccessToken();
@@ -488,6 +506,7 @@ const apiRequestInternal = async <T>({
   signal,
   requiresAuthentication = true,
   includeCredentials = false,
+  nonSessionUnauthorizedCodes,
   parseData,
 }: ApiRequestOptions<T>): Promise<T> => {
   if (body !== undefined && formData !== undefined) {
@@ -509,6 +528,7 @@ const apiRequestInternal = async <T>({
     signal,
     requiresAuthentication,
     includeCredentials,
+    nonSessionUnauthorizedCodes,
   });
 
   if (response.status === 204 && response.ok) {

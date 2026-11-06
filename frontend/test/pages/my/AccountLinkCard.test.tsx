@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import AppRoutes from '@/app/router/AppRoutes';
 import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
-import { saveLinkedProvider } from '@/features/auth/model/oauthLink';
+import { saveLinkedProvider, savePendingOAuth } from '@/features/auth/model/oauthLink';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
 import { server } from '../../server';
@@ -43,8 +43,31 @@ describe('마이 화면 계정 연결', () => {
 
     await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }));
     const dialog = screen.getByRole('dialog', { name: '카카오 계정을 연결할까요?' });
+    // #570 mergeOwnedData가 옮기는 기록과, 계정의 설정을 먼저 쓰는 규칙을 알린다.
+    expect(within(dialog).getByText(/매물, 체크리스트, 거리 메모를 이 계정에 보관해요/)).toBeInTheDocument();
     expect(within(dialog).getByText(/다른 계정으로 옮길 수 없어요/)).toBeInTheDocument();
     expect(within(dialog).getByText(/지금 기록을 그쪽으로 합쳐요/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/날씨 위치와 알림 설정은 계정에 있던 설정을 써요/)).toBeInTheDocument();
+  });
+
+  it('제공자 화면에서 완료 없이 돌아와 마이를 다시 보면 연결을 마치지 못했다고 알리고 회원은 그대로다', async () => {
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 1, previousProvider: null });
+    renderMyPage();
+
+    expect(await screen.findByRole('status', { name: '계정 연결을 마치지 못했어요' })).toBeInTheDocument();
+    expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+    expect(screen.getByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+  });
+
+  it('연결한 회원이 다른 계정으로 바꿀 때는 합치지 않고, 처음 쓰는 계정이면 빈 기록이라고 알린다', async () => {
+    const user = userEvent.setup();
+    saveLinkedProvider(1, 'KAKAO');
+    renderMyPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Apple 계정으로 바꾸기' }));
+    const dialog = screen.getByRole('dialog', { name: 'Apple 계정으로 바꿀까요?' });
+    expect(within(dialog).getByText(/합치지 않고 그대로 남아요/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Apple 계정을 처음 쓰면 빈 기록으로 시작해요/)).toBeInTheDocument();
   });
 
   it('시작에 실패하면 지금 회원을 그대로 두고 실패를 안내한다', async () => {

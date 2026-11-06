@@ -1,11 +1,11 @@
 import { css } from '@emotion/css';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { logoutAuthentication } from '@/features/auth/api/apiClient';
 import { isOAuthLinkAvailable } from '@/features/auth/model/oauthAvailability';
-import { startOAuthLink } from '@/features/auth/model/oauthFlow';
+import { detectUnfinishedOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
 import {
   OAUTH_PROVIDER_LABELS,
   OAUTH_PROVIDERS,
@@ -52,6 +52,29 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   const [status, setStatus] = useState<Status>('idle');
   const [notice, setNotice] = useState<OAuthNotice | null>(() => readOAuthNoticeFromState(location.state));
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+
+  /*
+   * 제공자 화면에서 취소하거나 콜백이 실패하면 #570은 JSON 오류로 끝나 사용자가 뒤로 가기로 돌아온다.
+   * 마이를 다시 볼 때 쓰지 않은 시작 정보가 남아 있으면 연결을 마치지 못했다고 알린다.
+   * 뒤로 가기가 페이지를 메모리에서 되살리면(bfcache) 떠나기 직전의 진행 중 버튼과 확인 창도 되돌린다.
+   */
+  useEffect(() => {
+    if (!isOAuthLinkAvailable()) return undefined;
+    const showUnfinished = () => {
+      void detectUnfinishedOAuthLink(() => readPropertyCount(config, queryClient)).then((unfinished) => {
+        if (unfinished !== null) setNotice(unfinished);
+      });
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setDialog(null);
+      setStatus('idle');
+      showUnfinished();
+    };
+    showUnfinished();
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [config, queryClient]);
 
   // 앱 WebView는 네이티브 로그인을 지원할 때까지 계정 연결과 로그아웃을 보여 주지 않는다.
   if (!isOAuthLinkAvailable()) return null;
@@ -167,13 +190,19 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
           description={
             linkedLabel === null ? (
               <>
-                <p>지금까지의 기록을 이 계정에 보관해요. 한 번 보관한 기록은 다른 계정으로 옮길 수 없어요.</p>
-                <p>이미 이 계정으로 쓰던 기록이 있으면 지금 기록을 그쪽으로 합쳐요.</p>
+                <p>
+                  이 기기에서 남긴 매물, 체크리스트, 거리 메모를 이 계정에 보관해요. 한 번 보관한 기록은 다른 계정으로
+                  옮길 수 없어요.
+                </p>
+                <p>
+                  이미 이 계정으로 쓰던 기록이 있으면 지금 기록을 그쪽으로 합쳐요. 날씨 위치와 알림 설정은 계정에 있던
+                  설정을 써요.
+                </p>
               </>
             ) : (
               <p>
-                지금 {linkedLabel} 계정의 기록은 합치지 않고 그대로 남아요. {linkedLabel}로 다시 인증하면 돌아올 수
-                있어요.
+                지금 {linkedLabel} 계정의 기록은 합치지 않고 그대로 남아요. {OAUTH_PROVIDER_LABELS[dialog.provider]}{' '}
+                계정을 처음 쓰면 빈 기록으로 시작해요. {linkedLabel}로 다시 인증하면 돌아올 수 있어요.
               </p>
             )
           }

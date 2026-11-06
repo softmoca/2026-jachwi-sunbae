@@ -8,8 +8,9 @@ vi.mock('@/shared/lib/analytics/posthog', async (importOriginal) => ({
   trackPostHogOutboundEvent: trackOutboundEvent,
 }));
 
+import { apiRequest } from '@/features/auth/api/apiClient';
 import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
-import { completeOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
+import { completeOAuthLink, detectUnfinishedOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
 import { readLinkedProvider, savePendingOAuth, takePendingOAuth } from '@/features/auth/model/oauthLink';
 import { propertyQueryKeys } from '@/features/property/api/propertyQueryKeys';
 import { queryClient } from '@/shared/api/queryClient';
@@ -110,7 +111,7 @@ describe('OAuth 연결 분석 이벤트', () => {
     server.use(loginAs(10));
     let countedAs: number | null = null;
 
-    await completeOAuthLink(config, '', () => {
+    await completeOAuthLink(config, () => {
       countedAs = getAuthenticationSnapshot().session?.memberId ?? null;
       return Promise.resolve(7);
     });
@@ -129,28 +130,31 @@ describe('OAuth 연결 분석 이벤트', () => {
     signIn(20);
     server.use(loginAs(newMemberId));
 
-    await completeOAuthLink(config, '', () => Promise.resolve(1));
+    await completeOAuthLink(config, () => Promise.resolve(1));
 
     expect(oauthEvents()).toEqual([['oauth_link_completed', { provider: 'apple', outcome, property_count: 1 }]]);
   });
 
-  it('제공자 화면에서 취소하고 돌아오면 실패가 아니라 취소 이벤트를 남긴다', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+  it('시작 정보를 잃은 채 완료되면 제공자를 unknown으로, 결과는 빼고 남긴다', async () => {
     signIn(20);
+    server.use(loginAs(20));
 
-    await completeOAuthLink(config, '?error=access_denied', () => Promise.resolve(2));
+    await completeOAuthLink(config, () => Promise.resolve(2));
+
+    expect(oauthEvents()).toEqual([['oauth_link_completed', { provider: 'unknown', property_count: 2 }]]);
+  });
+
+  it('제공자 화면에서 완료 없이 돌아오면 취소 이벤트를 남긴다(취소와 콜백 실패는 구분하지 못한다)', async () => {
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+
+    await detectUnfinishedOAuthLink(() => Promise.resolve(2));
 
     expect(oauthEvents()).toEqual([['oauth_link_cancelled', { provider: 'kakao', property_count: 2 }]]);
   });
 
-  it('콜백 오류로 돌아오면 실패 이벤트를 남기고, 시작 정보를 잃었으면 제공자를 unknown으로 둔다', async () => {
-    signIn(20);
-
-    await completeOAuthLink(config, '?error=server_error', () => Promise.resolve(2));
-
-    expect(oauthEvents()).toEqual([
-      ['oauth_link_failed', { provider: 'unknown', reason: 'failed', property_count: 2 }],
-    ]);
+  it('시작 정보가 없으면 취소 이벤트를 남기지 않는다', async () => {
+    await expect(detectUnfinishedOAuthLink(() => Promise.resolve(2))).resolves.toBeNull();
+    expect(oauthEvents()).toEqual([]);
   });
 });
 
@@ -213,6 +217,60 @@ describe('OAuth 계정 연결 시작', () => {
     expect(getAuthenticationSnapshot().session?.memberId).toBe(20);
   });
 
+  it('시작 API가 쿠키를 확인하지 못한 401이면 토큰을 갱신하거나 인증을 끝내지 않고 안내한다', async () => {
+    signIn(20);
+    let refreshCalls = 0;
+    server.use(
+      http.post(START_URL, () =>
+        HttpResponse.json({ code: 'OAUTH_AUTHENTICATION_FAILED', message: '실패', errors: [] }, { status: 401 }),
+      ),
+      http.post(`${config.apiBaseUrl}/api/auth/refresh`, () => {
+        refreshCalls += 1;
+        return success({ accessToken: 'token-20', tokenType: 'Bearer', expiresIn: 900, member: { memberId: 20 } });
+      }),
+    );
+    const leavePage = vi.fn();
+
+    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, leavePage });
+
+    expect(result).toMatchObject({
+      kind: 'finished',
+      notice: { title: '이 브라우저의 접속 정보를 확인하지 못했어요' },
+    });
+    expect(refreshCalls).toBe(0);
+    expect(getAuthenticationSnapshot()).toMatchObject({ terminationReason: null, session: { memberId: 20 } });
+    expect(leavePage).not.toHaveBeenCalled();
+    expect(oauthEvents()).toEqual([['oauth_link_failed', { provider: 'kakao', reason: 'session' }]]);
+  });
+
+  it('다른 API의 401은 지금처럼 Access Token 만료로 보고 갱신한다', async () => {
+    signIn(20);
+    let refreshCalls = 0;
+    let exampleCalls = 0;
+    server.use(
+      http.get(`${config.apiBaseUrl}/api/example`, () => {
+        exampleCalls += 1;
+        return exampleCalls === 1
+          ? HttpResponse.json({ code: 'ACCESS_TOKEN_INVALID', message: '만료', errors: [] }, { status: 401 })
+          : success('ok');
+      }),
+      http.post(`${config.apiBaseUrl}/api/auth/refresh`, () => {
+        refreshCalls += 1;
+        return success({ accessToken: 'fresh', tokenType: 'Bearer', expiresIn: 900, member: { memberId: 20 } });
+      }),
+    );
+
+    await expect(
+      apiRequest({
+        config,
+        path: '/api/example',
+        nonSessionUnauthorizedCodes: ['OAUTH_AUTHENTICATION_FAILED'],
+        parseData: (value) => value,
+      }),
+    ).resolves.toBe('ok');
+    expect(refreshCalls).toBe(1);
+  });
+
   it('제공자 주소가 HTTPS가 아니면 이동하지 않는다', async () => {
     signIn(20);
     server.use(http.post(START_URL, () => success({ authorizationUrl: 'javascript:alert(1)' })));
@@ -232,9 +290,9 @@ describe('OAuth 복귀', () => {
     queryClient.setQueryData(propertyQueryKeys.detail(1), { name: '이전 회원 매물' });
     server.use(loginAs(10));
 
-    const notice = await completeOAuthLink(config, '');
+    const notice = await completeOAuthLink(config);
 
-    expect(notice).toMatchObject({ tone: 'success', title: '카카오 계정의 기록을 불러왔어요' });
+    expect(notice).toMatchObject({ tone: 'success', title: '카카오 계정으로 기록을 합쳤어요' });
     expect(getAuthenticationSnapshot().session?.memberId).toBe(10);
     expect(queryClient.getQueryData(propertyQueryKeys.detail(1))).toBeUndefined();
     expect(readLinkedProvider(10)).toBe('KAKAO');
@@ -244,7 +302,7 @@ describe('OAuth 복귀', () => {
     savePendingOAuth({ provider: 'APPLE', previousMemberId: 20, previousProvider: null });
     server.use(loginAs(20));
 
-    await expect(completeOAuthLink(config, '')).resolves.toMatchObject({ title: 'Apple 계정을 연결했어요' });
+    await expect(completeOAuthLink(config)).resolves.toMatchObject({ title: 'Apple 계정을 연결했어요' });
     expect(readLinkedProvider(20)).toBe('APPLE');
   });
 
@@ -253,21 +311,22 @@ describe('OAuth 복귀', () => {
     signIn(10);
     server.use(loginAs(30));
 
-    await expect(completeOAuthLink(config, '')).resolves.toMatchObject({ title: 'Apple 계정으로 바꿨어요' });
+    await expect(completeOAuthLink(config)).resolves.toMatchObject({ title: 'Apple 계정으로 바꿨어요' });
     expect(readLinkedProvider(30)).toBe('APPLE');
   });
 
-  it('취소나 실패로 돌아오면 다시 로그인하지 않고 지금 회원을 그대로 둔다', async () => {
+  it('완료 없이 돌아오면 다시 로그인하지 않고 지금 회원을 그대로 둔 채 안내한다', async () => {
     savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
     signIn(20);
     const login = vi.fn();
     server.use(http.post(`${config.apiBaseUrl}/api/auth/login`, login));
 
-    const notice = await completeOAuthLink(config, '?error=access_denied');
+    const notice = await detectUnfinishedOAuthLink();
 
-    expect(notice).toMatchObject({ tone: 'error', title: '계정 연결을 취소했어요' });
+    expect(notice).toMatchObject({ tone: 'error', title: '계정 연결을 마치지 못했어요' });
     expect(login).not.toHaveBeenCalled();
     expect(getAuthenticationSnapshot().session?.memberId).toBe(20);
     expect(readLinkedProvider(20)).toBeNull();
+    expect(takePendingOAuth()).toBeNull();
   });
 });

@@ -16,10 +16,19 @@ type OAuthLinkEvents = {
     provider: OAuthAnalyticsProvider;
     outcome?: Exclude<OAuthOutcome, 'completed'>;
   };
-  /** 제공자 화면에서 사용자가 거부하거나 닫고 돌아왔을 때. */
+  /**
+   * 제공자 화면으로 떠났다가 완료 없이 마이로 돌아왔을 때. #570은 취소와 콜백 실패를 웹으로 돌려보내지 않아
+   * 둘을 구분하지 못하고, 사용자가 돌아와 마이를 다시 볼 때만 남는다.
+   */
   oauth_link_cancelled: PropertyCount & { provider: OAuthAnalyticsProvider };
-  /** 시작 API나 콜백이 실패했을 때. `unavailable`은 제공자 장애나 네트워크, `failed`는 그 밖이다. */
-  oauth_link_failed: PropertyCount & { provider: OAuthAnalyticsProvider; reason: 'unavailable' | 'failed' };
+  /**
+   * 시작 API가 실패했을 때. `session`은 Refresh 쿠키 확인 실패(401), `unavailable`은 제공자 설정 누락이나 장애,
+   * 네트워크(503 등), `failed`는 그 밖이다.
+   */
+  oauth_link_failed: PropertyCount & {
+    provider: OAuthAnalyticsProvider;
+    reason: 'session' | 'unavailable' | 'failed';
+  };
 };
 
 export const toAnalyticsProvider = (provider: OAuthProvider | null | undefined): OAuthAnalyticsProvider => {

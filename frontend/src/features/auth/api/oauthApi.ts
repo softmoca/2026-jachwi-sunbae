@@ -17,9 +17,12 @@ const parseAuthorizationUrl = (value: unknown): string => {
 };
 
 /**
- * OAuth 인증을 시작하고 제공자 인증 주소를 받는다(`POST /api/auth/oauth/{provider}/start`).
- * 서버는 Access Token과 Refresh 쿠키가 같은 회원인지 확인하고, 이번 시작 요청을 이 기기의 세션에 묶는다.
- * 그래서 쿠키를 함께 보내고, 콜백도 같은 쿠키를 가진 브라우저나 WebView 안에서 이어져야 한다.
+ * OAuth 인증을 시작하고 제공자 인증 주소를 받는다(`POST /api/auth/oauth/{provider}/start`, #570).
+ * - 요청: Bearer Access Token과 Refresh 쿠키. 서버는 둘이 같은 회원인지 확인하고 이번 시작을 이 쿠키의 세션에 묶는다(5분).
+ * - 응답: `200 { authorizationUrl }`.
+ * - 오류: 쿠키가 없거나 회원이 다르면 `401 OAUTH_AUTHENTICATION_FAILED`, 제공자 설정이 없으면 `503 OAUTH_PROVIDER_UNAVAILABLE`.
+ *   이 401은 Access Token 만료가 아니므로 토큰을 갱신하거나 인증을 끝내지 않는다.
+ * 콜백도 같은 쿠키를 가진 브라우저 안에서 이어져야 한다.
  */
 export const startOAuth = (config: PublicConfig, provider: OAuthProvider): Promise<string> =>
   apiRequest({
@@ -27,5 +30,6 @@ export const startOAuth = (config: PublicConfig, provider: OAuthProvider): Promi
     path: `/api/auth/oauth/${provider}/start`,
     method: 'POST',
     includeCredentials: true,
+    nonSessionUnauthorizedCodes: ['OAUTH_AUTHENTICATION_FAILED'],
     parseData: parseAuthorizationUrl,
   });

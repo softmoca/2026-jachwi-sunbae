@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  parseOAuthFailure,
+  createOAuthFailureNotice,
+  createOAuthSuccessNotice,
   readLinkedProvider,
   resolveOAuthOutcome,
   saveLinkedProvider,
@@ -53,18 +54,26 @@ describe('OAuth 연결 상태', () => {
     expect(resolveOAuthOutcome(null, 10)).toBe('completed');
   });
 
-  it('서버가 결과를 알려 주면 그 값을 쓴다', () => {
-    const anonymous = { provider: 'KAKAO', previousMemberId: 20, previousProvider: null, startedAt: NOW } as const;
+  it('통합 안내는 #570이 옮기는 기록과 설정 우선순위를 알린다', () => {
+    const notice = createOAuthSuccessNotice('merged', 'KAKAO');
 
-    expect(resolveOAuthOutcome(anonymous, 10, 'switched')).toBe('switched');
-    expect(resolveOAuthOutcome(anonymous, 10, 'unknown')).toBe('merged');
+    expect(notice.title).toBe('카카오 계정으로 기록을 합쳤어요');
+    expect(notice.description).toContain('매물, 체크리스트, 거리 메모');
+    expect(notice.description).toContain('날씨 위치와 알림 설정은 계정에 있던 설정');
   });
 
-  it('제공자 거부는 취소로, 그 밖의 오류는 실패로 본다', () => {
-    expect(parseOAuthFailure(null)).toBeNull();
-    expect(parseOAuthFailure('access_denied')).toBe('cancelled');
-    expect(parseOAuthFailure('cancelled')).toBe('cancelled');
-    expect(parseOAuthFailure('unavailable')).toBe('unavailable');
-    expect(parseOAuthFailure('server_error')).toBe('failed');
+  it('전환 안내는 기록을 합치지 않고, 처음 쓰는 계정이면 빈 기록이라고 알린다', () => {
+    const notice = createOAuthSuccessNotice('switched', 'APPLE');
+
+    expect(notice.description).toContain('합치지 않고');
+    expect(notice.description).toContain('빈 기록');
+  });
+
+  it('완료 없이 돌아온 경우는 취소와 실패를 함께 안내한다', () => {
+    expect(createOAuthFailureNotice('unfinished')).toMatchObject({
+      tone: 'error',
+      title: '계정 연결을 마치지 못했어요',
+    });
+    expect(createOAuthFailureNotice('session').description).toContain('새로 고친');
   });
 });
