@@ -594,7 +594,7 @@ it('위치 확인 중 다른 탭으로 떠났다가 돌아와도 위치 버튼�
 
 it('주소 검색 결과를 선택하면 선택한 좌표의 2km 반경을 조회한다', async () => {
   server.use(
-    http.get('http://localhost:8080/api/maps/geocode', () =>
+    http.get('http://localhost:8080/api/maps/search', () =>
       success([
         { roadAddress: '서울특별시 중구 세종대로 110', jibunAddress: null, latitude: 37.5665, longitude: 126.978 },
       ]),
@@ -729,7 +729,7 @@ it('같은 마커를 여러 번 선택해도 상세 닫기 한 번으로 목록�
 
 it('업소 상세에서 검색한 새 동네를 선택한 뒤 뒤로가면 이전 탭으로 돌아간다', async () => {
   server.use(
-    http.get('http://localhost:8080/api/maps/geocode', () =>
+    http.get('http://localhost:8080/api/maps/search', () =>
       success([
         { roadAddress: '서울특별시 중구 세종대로 110', jibunAddress: null, latitude: 37.5665, longitude: 126.978 },
       ]),

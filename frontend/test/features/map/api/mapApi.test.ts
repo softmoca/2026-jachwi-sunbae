@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { successEnvelope } from '@/app/mocks/fixtures/propertyFixtures';
 import { setAuthentication } from '@/features/auth/model/authStore';
-import { fetchNearby, reverseGeocode, searchAddress } from '@/features/map/api/mapApi';
+import { fetchNearby, reverseGeocode, searchAddress, searchAddressWithNaver } from '@/features/map/api/mapApi';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import { server } from '../../../server';
@@ -44,6 +44,26 @@ describe('MVP2 지도 API', () => {
       address: result.roadAddress,
       ...result,
     });
+  });
+
+  it('동네 찾기와 동네 검색의 네이버 검색은 별도 경로로 건물명 검색어를 보낸다', async () => {
+    authenticate();
+    const result = {
+      roadAddress: '서울특별시 송파구 위례성대로 2',
+      jibunAddress: '서울특별시 송파구 방이동 44-2',
+      latitude: 37.5165,
+      longitude: 127.1123,
+    };
+    server.use(
+      http.get(`${config.apiBaseUrl}/api/maps/search`, ({ request }) => {
+        expect(new URL(request.url).searchParams.get('query')).toBe('우아한형제들');
+        return HttpResponse.json(successEnvelope([result]));
+      }),
+    );
+
+    await expect(searchAddressWithNaver(config, '우아한형제들')).resolves.toEqual([
+      { address: result.roadAddress, ...result },
+    ]);
   });
 
   it('주변 시설 집계와 장소를 반경·카테고리 요청으로 읽는다', async () => {
