@@ -21,6 +21,6 @@ class SystemCheckItemResponseTest {
         SystemCheckItemResponse response = SystemCheckItemResponse.from(item);
 
         // then
-        assertThat(response).isEqualTo(new SystemCheckItemResponse(1L, CheckStage.ON_SITE, CheckItemType.CORE, "수압 확인", CheckItemCategory.WATER_BATHROOM));
+        assertThat(response).isEqualTo(new SystemCheckItemResponse(1L, CheckStage.ON_SITE, CheckItemType.CORE, CheckItemCategory.WATER_BATHROOM, "수압 확인"));
     }
 }

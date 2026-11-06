@@ -9,10 +9,10 @@ public record SystemCheckItemResponse(
         Long id,
         CheckStage stage,
         CheckItemType itemType,
-        String question,
-        CheckItemCategory category) {
+        CheckItemCategory category,
+        String question) {
 
     public static SystemCheckItemResponse from(final SystemCheckItem item) {
-        return new SystemCheckItemResponse(item.getId(), item.getStage(), item.getItemType(), item.getQuestion(), item.getCategory());
+        return new SystemCheckItemResponse(item.getId(), item.getStage(), item.getItemType(), item.getCategory(), item.getQuestion());
     }
 }
