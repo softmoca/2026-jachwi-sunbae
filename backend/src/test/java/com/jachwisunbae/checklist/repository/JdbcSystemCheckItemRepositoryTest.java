@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jachwisunbae.checklist.entity.SystemCheckItem;
 import com.jachwisunbae.checklist.type.CheckItemType;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckStage;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -158,6 +159,23 @@ class JdbcSystemCheckItemRepositoryTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("활성 목록·CORE·ID 순서 조회 모두 저장한 카테고리를 제공한다")
+    void readsCategoryAcrossQueries() {
+        insertItem(1L, CheckStage.ON_SITE, CheckItemType.CORE, "수압 확인", null);
+        insertItem(2L, CheckStage.ON_SITE, CheckItemType.OPTIONAL, "보안 확인", null);
+        jdbcTemplate.update("UPDATE system_check_items SET category = 'WATER_BATHROOM' WHERE id = 1");
+        jdbcTemplate.update("UPDATE system_check_items SET category = 'SECURITY' WHERE id = 2");
+
+        assertThat(repository.findActiveByStage(CheckStage.ON_SITE, null)).extracting(SystemCheckItem::getCategory)
+                .containsExactly(CheckItemCategory.WATER_BATHROOM, CheckItemCategory.SECURITY);
+        assertThat(repository.findActiveCoreByStage(CheckStage.ON_SITE)).extracting(SystemCheckItem::getCategory)
+                .containsExactly(CheckItemCategory.WATER_BATHROOM);
+        assertThat(repository.findByIdsAndStageInOrder(CheckStage.ON_SITE, List.of(2L, 1L)))
+                .extracting(SystemCheckItem::getCategory)
+                .containsExactly(CheckItemCategory.SECURITY, CheckItemCategory.WATER_BATHROOM);
     }
 
     private void insertItem(long id, CheckStage stage, CheckItemType itemType, String question,
