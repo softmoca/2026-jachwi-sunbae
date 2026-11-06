@@ -1,3 +1,13 @@
+export const CHECK_ITEM_CATEGORIES = [
+  'SECURITY',
+  'WINDOW_LIGHT',
+  'WATER_BATHROOM',
+  'ROOM_CONDITION',
+  'BASIC_OPTIONS',
+  'OTHER',
+] as const;
+export type CheckItemCategory = (typeof CHECK_ITEM_CATEGORIES)[number];
+
 export const CHECKLIST_STAGES = ['ON_SITE', 'PRE_CONTRACT'] as const;
 
 export type ChecklistStage = (typeof CHECKLIST_STAGES)[number];
@@ -10,6 +20,7 @@ export type CheckItem = {
   checkItemId: number;
   stage: ChecklistStage;
   itemType: 'CORE' | 'OPTIONAL';
+  category?: CheckItemCategory;
   question: string;
   guide: string | null;
 };
@@ -17,6 +28,7 @@ export type CheckItem = {
 type ChecklistItemBase = {
   checklistItemId: number;
   itemType: 'CORE' | 'OPTIONAL';
+  category?: CheckItemCategory;
   question: string;
   guide: string | null;
   order: number;

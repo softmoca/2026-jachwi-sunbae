@@ -92,6 +92,39 @@ export const control = cx(
       cursor: text;
     }
 
+    .TextField-field[data-variant='inline'] & textarea {
+      display: block;
+      min-height: 1.75rem;
+      padding: 0.15rem 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--color-muted);
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      resize: none;
+      field-sizing: content;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+
+    .TextField-field[data-variant='inline'] & textarea::placeholder {
+      color: var(--color-muted);
+    }
+
+    .TextField-field[data-variant='inline'] & textarea:focus-visible {
+      outline: 2px solid var(--color-focus);
+      outline-offset: 2px;
+      box-shadow: none;
+    }
+
+    @media (pointer: coarse) {
+      .TextField-field[data-variant='inline'] & textarea {
+        min-height: 2.75rem;
+        font-size: 1rem;
+      }
+    }
+
     .TextField-field[data-size='large'] & input {
       min-height: 3.25rem;
       font-size: 1.15rem;

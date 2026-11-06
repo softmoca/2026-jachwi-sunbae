@@ -10,7 +10,7 @@ type PropertyPriceProps = {
   className?: string;
 };
 
-/** 매물 카드, 비교 화면, 최근 기록이 함께 쓰는 가격 글. 보증금과 월세가 둘 다 0이면 흐린 `가격 입력 전`을 보인다. */
+/** 매물 카드, 비교 화면, 최근 기록이 함께 쓰는 가격 글. 미입력 금액은 흐리게 표시하며, 짧은 표기는 `월세 0/0`, 나머지는 `가격 입력 전`을 보인다. */
 const PropertyPrice = ({ depositAmount, monthlyRentAmount, variant, className }: PropertyPriceProps) => (
   <span className={cx(className, !hasPropertyPrice(depositAmount, monthlyRentAmount) && styles.pending)}>
     {formatPropertyPrice(depositAmount, monthlyRentAmount, variant)}

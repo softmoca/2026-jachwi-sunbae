@@ -8,6 +8,7 @@ import com.jachwisunbae.checklist.entity.UserChecklist;
 import com.jachwisunbae.checklist.entity.UserChecklistItem;
 import com.jachwisunbae.checklist.repository.query.UserChecklistItemDetail;
 import com.jachwisunbae.checklist.repository.query.UserChecklistSummaryQuery;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckItemType;
 import com.jachwisunbae.checklist.type.CheckStage;
 import java.time.LocalDateTime;
@@ -180,11 +181,27 @@ class JdbcUserChecklistRepositoryTest {
         return repository.save(UserChecklist.create(memberId, "양식", stage)).getId();
     }
 
+    @Test
+    @DisplayName("사용자 양식의 비활성 항목도 카테고리를 연결해 조회한다")
+    void readsCategoryForInactiveItem() {
+        long checklistId = saveChecklist(MEMBER_ID, CheckStage.ON_SITE);
+        jdbcTemplate.update("""
+                INSERT INTO user_checklist_items (user_checklist_id, system_check_item_id, display_order)
+                VALUES (?, 1, 1)
+                """, checklistId);
+        jdbcTemplate.update("UPDATE system_check_items SET category = 'WATER_BATHROOM', deleted_at = NOW(6) WHERE id = 1");
+
+        var details = repository.findItemDetails(checklistId);
+
+        assertThat(details).extracting(detail -> detail.category()).containsExactly(CheckItemCategory.WATER_BATHROOM);
+        assertThat(details).extracting(detail -> detail.active()).containsExactly(false);
+    }
+
     private SystemCheckItem systemItem(long id) {
         return jdbcTemplate.queryForObject("SELECT id, stage, item_type, question, deleted_at FROM system_check_items "
                         + "WHERE id = ?", (rs, row) -> SystemCheckItem.reconstruct(rs.getLong("id"),
                         CheckStage.valueOf(rs.getString("stage")), CheckItemType.valueOf(rs.getString("item_type")),
-                        rs.getString("question"), null), id);
+                        CheckItemCategory.OTHER, rs.getString("question"), null), id);
     }
 
     private void insertMember(long id) {

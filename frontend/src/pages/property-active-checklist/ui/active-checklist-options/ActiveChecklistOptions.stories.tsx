@@ -49,6 +49,7 @@ const meta = {
   args: {
     items: checklists,
     selectedId: SYSTEM_DEFAULT_ID,
+    currentId: SYSTEM_DEFAULT_ID,
     newlyCreatedId: null,
     isDisabled: false,
     onSelect: fn(),

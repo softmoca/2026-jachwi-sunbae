@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import PropertyActiveChecklistPage from '@/pages/property-active-checklist/PropertyActiveChecklistPage';
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
 import usePreloadMapSdk from '@/features/map/hooks/usePreloadMapSdk';
 import type { MapAddress } from '@/features/map/model/Map';
@@ -23,6 +24,7 @@ import RecordNotice from '../ui/record-notice/RecordNotice';
 import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsDesktopMap from './RecordsDesktopMap';
 
+import * as detailStyles from './RecordsDesktopDetail.styles';
 import * as styles from './RecordsDesktopPage.styles';
 
 /**
@@ -36,8 +38,10 @@ import * as styles from './RecordsDesktopPage.styles';
  */
 const RecordsDesktopPage = () => {
   const navigate = useNavigate();
+  const params = useParams();
+  const isReplacingChecklist = params.stage !== undefined;
   const records = useRecords({
-    selectedId: useParams().propertyId ?? null,
+    selectedId: params.propertyId ?? null,
     setSelectedId: (id) => navigate(id === null ? RECORDS_PATH : `${RECORDS_PATH}/${id}`),
   });
   const { selected, setSelectedId, setNotice } = records;
@@ -92,15 +96,25 @@ const RecordsDesktopPage = () => {
   const neighbors = selected !== undefined ? recordNeighbors(records.records, selected.id) : null;
   const detail =
     selected !== undefined ? (
-      <aside className={styles.detail} aria-label="선택한 매물 상세">
-        <PropertyDetailPage
-          key={selected.id}
-          panel={{
-            propertyId: Number(selected.id),
-            onClose: () => setSelectedId(null),
-            headerEnd: neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />,
-          }}
-        />
+      <aside
+        className={detailStyles.detail}
+        aria-label="선택한 매물 상세"
+        data-checklist-replacement={isReplacingChecklist || undefined}
+      >
+        <div className={detailStyles.detailScroll} key={`${selected.id}:${isReplacingChecklist}`}>
+          {isReplacingChecklist ? (
+            <PropertyActiveChecklistPage embedded />
+          ) : (
+            <PropertyDetailPage
+              key={selected.id}
+              panel={{
+                propertyId: Number(selected.id),
+                onClose: () => setSelectedId(null),
+                headerEnd: neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />,
+              }}
+            />
+          )}
+        </div>
       </aside>
     ) : undefined;
 

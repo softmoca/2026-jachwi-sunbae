@@ -2,6 +2,7 @@ package com.jachwisunbae.property.repository;
 
 import com.jachwisunbae.checklist.type.CheckStage;
 import com.jachwisunbae.checklist.type.CheckStatus;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.property.repository.query.PropertyChecklistApplicationQuery;
 import com.jachwisunbae.property.repository.query.PropertyChecklistItemQuery;
 import java.sql.PreparedStatement;
@@ -72,10 +73,12 @@ public class JdbcPropertyChecklistRepository implements PropertyChecklistReposit
         }
 
         String sqlItems = """
-                SELECT id, system_check_item_id, question, display_order, status, memo
-                FROM property_checklist_items
-                WHERE property_checklist_id = ?
-                ORDER BY display_order ASC, id ASC
+                SELECT pci.id, pci.system_check_item_id, pci.question, pci.display_order, pci.status, pci.memo,
+                       COALESCE(sci.category, 'OTHER') AS category
+                FROM property_checklist_items pci
+                LEFT JOIN system_check_items sci ON sci.id = pci.system_check_item_id
+                WHERE pci.property_checklist_id = ?
+                ORDER BY pci.display_order ASC, pci.id ASC
                 """;
         List<PropertyChecklistItemQuery> savedItems = jdbcTemplate.query(
             sqlItems,
@@ -85,7 +88,8 @@ public class JdbcPropertyChecklistRepository implements PropertyChecklistReposit
                 rs.getString("question"),
                 rs.getInt("display_order"),
                 CheckStatus.valueOf(rs.getString("status")),
-                rs.getString("memo")
+                rs.getString("memo"),
+                CheckItemCategory.valueOf(rs.getString("category"))
             ),
             propertyChecklistId);
 

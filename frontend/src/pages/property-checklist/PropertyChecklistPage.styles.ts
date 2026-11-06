@@ -51,13 +51,6 @@ export const heading = css`
   }
 `;
 
-export const actions = css`
-  label: PropertyChecklistPage-actions;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-`;
-
 /* 적용한 체크리스트를 바꾸는 진입점. 상단 헤더 오른쪽에 둔다. */
 export const editAction = css`
   label: PropertyChecklistPage-editAction;
@@ -82,19 +75,6 @@ export const editAction = css`
     background: var(--color-surface-muted, #f2f3eb);
     outline: none;
   }
-`;
-
-export const items = css`
-  label: PropertyChecklistPage-items;
-  /* 항목을 카드로 띄우지 않고 둥근 묶음 하나에 붙여, 항목이 늘어도 한 화면에 더 많이 보이게 한다. */
-  display: grid;
-  overflow: hidden;
-  margin: 0;
-  border: 1px solid var(--color-border);
-  padding: 0 1rem;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  list-style: none;
 `;
 
 export const saveAction = css`

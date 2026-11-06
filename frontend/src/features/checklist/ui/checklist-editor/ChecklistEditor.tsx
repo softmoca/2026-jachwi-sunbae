@@ -20,7 +20,7 @@ type ChecklistEditorProps = {
   serverError?: string;
   onOpenItemPicker: () => void;
   onSubmit: (input: ChecklistDraftInput) => Promise<ChecklistDetail>;
-  /** 데스크탑은 저장 버튼을 다른 화면처럼 파란 기본 버튼으로 두고, 화면 폭이 아니라 본문 열 아래에 붙인다. */
+
   isDesktop?: boolean;
 };
 
@@ -43,9 +43,13 @@ const ChecklistEditor = ({
   const isInactive = (item: ChecklistEditorItem) =>
     item.origin === 'PROVIDED' && activeCatalog.isSuccess && !activeSourceIds.has(item.sourceCheckItemId);
 
-  // 휴대폰은 화면 맨 아래에 고정하고, 데스크탑은 목록 아래 본문 열에 붙인다.
   const submitArea = (
-    <BottomActionArea placement={isDesktop ? 'sticky' : 'screen'} divider={false}>
+    <BottomActionArea placement="screen" className={`${styles.fixedActions} ${styles.editorActions}`}>
+      <div className={styles.addActionRow}>
+        <AddItemAction compact disabled={isSubmitting} onClick={onOpenItemPicker}>
+          항목 추가
+        </AddItemAction>
+      </div>
       <Button
         type="submit"
         variant={isDesktop ? 'primary' : 'soft'}
@@ -66,12 +70,6 @@ const ChecklistEditor = ({
         void draft.submit(onSubmit);
       }}
     >
-      <AddItemAction disabled={isSubmitting} onClick={onOpenItemPicker}>
-        체크 항목 추가
-      </AddItemAction>
-
-      {!isDesktop && submitArea}
-
       <p className={styles.editorSaveStatus} role="status" aria-live="polite">
         {draft.announcement}
       </p>
@@ -84,11 +82,10 @@ const ChecklistEditor = ({
       <section className={styles.editorSection} aria-labelledby="selected-items-heading">
         <div className={styles.sectionHeadingRow}>
           <div>
-            <h2 id="selected-items-heading">확인 순서</h2>
+            <h2 id="selected-items-heading">추가된 체크리스트</h2>
           </div>
           <span className={styles.selectionCount}>{draft.items.length}개</span>
         </div>
-        <p className="field-help">제공 항목을 원하는 확인 순서로 저장할 수 있어요.</p>
         {draft.items.length === 0 ? (
           <p className={styles.emptyItems}>체크 항목을 한 개 이상 추가해 주세요.</p>
         ) : (
@@ -108,7 +105,7 @@ const ChecklistEditor = ({
           </p>
         )}
       </section>
-      {isDesktop && submitArea}
+      {submitArea}
     </form>
   );
 };

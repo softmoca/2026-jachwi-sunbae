@@ -21,7 +21,7 @@ export const formatRentSummary = (depositAmount: number, monthlyRentAmount: numb
 };
 
 /**
- * 매물 가격 표기. 둘 다 0이면 `가격 입력 전`을 돌려준다.
+ * 매물 가격 표기. 짧은 표기는 미입력이어도 `월세 0/0`, 나머지는 `가격 입력 전`을 돌려준다.
  * - `labeled`: 카드처럼 이름을 붙인다. `보증금 1,000만원 / 월세 55만원`
  * - `plain`: 표처럼 머리에 이름이 있는 자리. `1,000만원 / 55만원`
  * - `summary`: 좁은 자리. `월세 1,000/55`
@@ -33,8 +33,8 @@ export const formatPropertyPrice = (
   monthlyRentAmount: number,
   variant: PropertyPriceVariant,
 ): string => {
-  if (!hasPropertyPrice(depositAmount, monthlyRentAmount)) return PRICE_PENDING_LABEL;
   if (variant === 'summary') return `월세 ${formatRentSummary(depositAmount, monthlyRentAmount)}`;
+  if (!hasPropertyPrice(depositAmount, monthlyRentAmount)) return PRICE_PENDING_LABEL;
   if (variant === 'plain') return `${formatManwon(depositAmount)} / ${formatManwon(monthlyRentAmount)}`;
   return `보증금 ${formatManwon(depositAmount)} / 월세 ${formatManwon(monthlyRentAmount)}`;
 };

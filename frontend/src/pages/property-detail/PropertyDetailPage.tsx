@@ -27,7 +27,7 @@ import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 import TopNavigationMenu from '@/shared/ui/top-navigation-menu/TopNavigationMenu';
 
-import { type DetailTab, parseDetailTab, readLastDetailTab, writeLastDetailTab } from './model/detailTab';
+import { type DetailTab, parseDetailTab } from './model/detailTab';
 import type { PropertyEditField } from './model/editField';
 import PropertyDetailSkeleton from './PropertyDetailSkeleton';
 import PropertyAdditionalInfoSection from './ui/property-additional-info-section/PropertyAdditionalInfoSection';
@@ -118,11 +118,10 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = parseDetailTab(searchParams.get(PROPERTY_DETAIL_TAB_PARAM)) ?? readLastDetailTab();
-  // 고른 탭을 주소에 남겨 체크리스트에서 돌아와도 그 탭으로 열고, 마지막 탭으로 기억해 다른 매물도 그 탭으로 연다.
+  const activeTab = parseDetailTab(searchParams.get(PROPERTY_DETAIL_TAB_PARAM)) ?? 'details';
+  // 고른 탭을 주소에 남겨 교체 후에는 체크리스트 탭으로 돌아오고, 탭 없는 새 진입은 정보부터 연다.
   // 들어온 화면(state)은 그대로 둔다.
   const setActiveTab = (next: DetailTab) => {
-    writeLastDetailTab(next);
     setSearchParams(
       (current) => {
         current.set(PROPERTY_DETAIL_TAB_PARAM, next);
@@ -214,6 +213,19 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
           )}
           <h1 className={styles.headerTitle}>{detail.name}</h1>
           {panel?.headerEnd}
+          <TopNavigationMenu label="매물 정보 메뉴 열기">
+            <button
+              ref={deleteButtonRef}
+              type="button"
+              data-tone="danger"
+              onClick={() => {
+                removeMutation.reset();
+                setIsDeleteDialogOpen(true);
+              }}
+            >
+              삭제
+            </button>
+          </TopNavigationMenu>
         </header>
 
         <nav className={styles.tabs} role="tablist" aria-label="매물 상세 메뉴">
@@ -255,23 +267,6 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
               }}
             />
             <div className={styles.infoPanel}>
-              <div className={styles.titleRow}>
-                {/* 화면 제목(h1)은 헤더가 맡고, 정보 탭의 이름은 같은 내용을 크게 다시 보여준다. */}
-                <p className={styles.infoTitle}>{detail.name}</p>
-                <TopNavigationMenu label="매물 정보 메뉴 열기">
-                  <button
-                    ref={deleteButtonRef}
-                    type="button"
-                    data-tone="danger"
-                    onClick={() => {
-                      removeMutation.reset();
-                      setIsDeleteDialogOpen(true);
-                    }}
-                  >
-                    삭제
-                  </button>
-                </TopNavigationMenu>
-              </div>
               <PropertyBasicInfoSection property={detail} {...inlineEdit} />
 
               <PropertyAdditionalInfoSection property={detail} {...inlineEdit} />
@@ -421,7 +416,7 @@ const styles = {
     position: relative;
     z-index: 1;
     margin: -2rem -1rem 0;
-    padding: 0 1rem 1.5rem;
+    padding: 1rem 1rem 1.5rem;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--color-surface);
 
@@ -429,32 +424,6 @@ const styles = {
     & > section[aria-label='매물 부가 정보'] {
       margin-bottom: 0.5rem;
     }
-  `,
-
-  titleRow: css`
-    label: PropertyDetailPage-titleRow;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 1.25rem 0 0.8rem;
-
-    & > details > summary {
-      width: 2rem;
-      height: 2rem;
-    }
-  `,
-
-  infoTitle: css`
-    label: PropertyDetailPage-infoTitle;
-    min-width: 0;
-    flex: 1;
-    margin: 0;
-    color: var(--color-ink);
-    font-size: 1.35rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1.3;
   `,
 
   deleteError: css`

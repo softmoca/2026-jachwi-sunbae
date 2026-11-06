@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { type FocusEvent, type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
 
 import { requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import type { MapAddress } from '@/features/map/model/Map';
@@ -17,6 +17,7 @@ import type { PropertyDetail } from '@/features/property/model/Property';
 import MoneyField from '@/features/property/ui/money-field/MoneyField';
 import PropertyLocationPicker from '@/features/property/ui/property-location-picker/PropertyLocationPicker';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import useOutsideInteraction from '@/shared/lib/hooks/useOutsideInteraction';
 import { Button } from '@/shared/ui/button/Button';
 
 import type { BasicEditField } from '../../model/editField';
@@ -47,14 +48,11 @@ const toPresetLocation = ({ location }: PropertyDetail): MapAddress | undefined 
         longitude: location.longitude,
       };
 
-/** 새 매물은 금액을 0으로 만든다. 둘 다 0이면 빈칸으로 열어 바로 입력하게 한다. */
-const toPriceInputs = ({ depositAmount, monthlyRentAmount }: PropertyDetail) =>
-  depositAmount === 0 && monthlyRentAmount === 0
-    ? { depositAmount: '', monthlyRentAmount: '' }
-    : {
-        depositAmount: formatAmountForInput(depositAmount),
-        monthlyRentAmount: formatAmountForInput(monthlyRentAmount),
-      };
+/** 입력하지 않은 금액도 0으로 열어, 바꾸지 않고 닫을 수 있게 한다. */
+const toPriceInputs = ({ depositAmount, monthlyRentAmount }: PropertyDetail) => ({
+  depositAmount: formatAmountForInput(depositAmount),
+  monthlyRentAmount: formatAmountForInput(monthlyRentAmount),
+});
 
 /**
  * 상세의 그 줄 안에서 기본 정보(보증금과 월세, 위치) 중 누른 항목 하나를 고친다. 이름은 `PropertyNameInput`이 맡는다.
@@ -64,6 +62,12 @@ const toPriceInputs = ({ depositAmount, monthlyRentAmount }: PropertyDetail) =>
 const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyBasicInfoFormProps) => {
   const updateProperty = useUpdateProperty(property.propertyId);
   const [initialValues] = useState<BasicInfoValues>(() => toPriceInputs(property));
+  const formRef = useRef<HTMLFormElement>(null);
+  useOutsideInteraction({
+    ref: formRef,
+    enabled: field === 'price' && !updateProperty.isPending,
+    onOutside: () => formRef.current?.requestSubmit(),
+  });
   const [values, setValues] = useState<BasicInfoValues>(initialValues);
   const [errors, setErrors] = useState<PropertyFormErrors>({});
   const [presetLocation] = useState(() => toPresetLocation(property));
@@ -74,7 +78,6 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
     longitude: location.selectedLocation.longitude,
   });
   const { setInitialQuery } = search;
-  const formRef = useRef<HTMLFormElement>(null);
   // 주소를 확인하는 중에 저장을 누르면 주소를 받을 때까지 기다렸다가 저장한다.
   const [isWaitingAddress, setIsWaitingAddress] = useState(false);
   const { locationStatus } = location;
@@ -108,9 +111,13 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const priceValues = {
+      depositAmount: values.depositAmount.trim() === '' ? '0' : values.depositAmount,
+      monthlyRentAmount: values.monthlyRentAmount.trim() === '' ? '0' : values.monthlyRentAmount,
+    };
     // 화면에 보이는 항목의 오류만 본다. 아직 비어 있는 다른 항목이 저장을 막지 않게 한다.
     const allErrors = validatePropertyForm({
-      ...values,
+      ...priceValues,
       name: property.name,
       discoverySource: property.discoverySource.value,
     });
@@ -141,8 +148,8 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
     }
     if (
       field === 'price' &&
-      values.depositAmount === initialValues.depositAmount &&
-      values.monthlyRentAmount === initialValues.monthlyRentAmount
+      priceValues.depositAmount === initialValues.depositAmount &&
+      priceValues.monthlyRentAmount === initialValues.monthlyRentAmount
     ) {
       onCancel();
       return;
@@ -151,8 +158,8 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
     const changes =
       field === 'price'
         ? {
-            depositAmount: (parseMoneyInput(values.depositAmount) ?? 0) * WON_PER_MANWON,
-            monthlyRentAmount: (parseMoneyInput(values.monthlyRentAmount) ?? 0) * WON_PER_MANWON,
+            depositAmount: (parseMoneyInput(priceValues.depositAmount) ?? 0) * WON_PER_MANWON,
+            monthlyRentAmount: (parseMoneyInput(priceValues.monthlyRentAmount) ?? 0) * WON_PER_MANWON,
           }
         : {
             address: selectedLocation.roadAddress ?? selectedLocation.jibunAddress ?? selectedLocation.address,
@@ -165,12 +172,6 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
       .catch(() => undefined);
   };
 
-  // 금액은 입력 칸 둘 밖으로 떠나면 저장한다. 보증금에서 월세로 옮길 때는 저장하지 않는다.
-  const saveOnLeave = (event: FocusEvent<HTMLFormElement>) => {
-    if (field !== 'price' || updateProperty.isPending) return;
-    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-    event.currentTarget.requestSubmit();
-  };
   const cancelOnEscape = (event: KeyboardEvent<HTMLFormElement>) => {
     if (event.key !== 'Escape') return;
     event.stopPropagation();
@@ -184,7 +185,6 @@ const PropertyBasicInfoForm = ({ property, field, onSaved, onCancel }: PropertyB
       aria-label={field === 'price' ? '보증금 / 월세 입력' : '주소 입력'}
       noValidate
       onSubmit={submit}
-      onBlur={saveOnLeave}
       onKeyDown={cancelOnEscape}
     >
       {field === 'price' && (

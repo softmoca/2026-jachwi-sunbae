@@ -242,6 +242,7 @@ const useRecordsMapLayers = (
   const allMarkers = useMemo(() => [...recordMarkers, ...markers], [recordMarkers, markers]);
   /** 두 화면의 지도가 그대로 넘기는 MapCanvas 설정. 찍은 자리 말풍선(coordinateMenu)은 데스크탑만 더한다. */
   const canvasProps = {
+    interactive: process.env.NODE_ENV !== 'production',
     customStyleId: SERVICE_MAP_STYLE_ID,
     center: records.center,
     level: records.level,

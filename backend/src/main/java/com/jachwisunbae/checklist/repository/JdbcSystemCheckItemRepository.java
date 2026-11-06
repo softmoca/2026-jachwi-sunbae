@@ -2,6 +2,7 @@ package com.jachwisunbae.checklist.repository;
 
 import com.jachwisunbae.checklist.entity.SystemCheckItem;
 import com.jachwisunbae.checklist.type.CheckStage;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckItemType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -19,6 +20,7 @@ public class JdbcSystemCheckItemRepository implements SystemCheckItemRepository 
             SystemCheckItem.reconstruct(resultSet.getLong("id"),
                     CheckStage.valueOf(resultSet.getString("stage")),
                     CheckItemType.valueOf(resultSet.getString("item_type")),
+                    CheckItemCategory.valueOf(resultSet.getString("category")),
                     resultSet.getString("question"),
                     resultSet.getTimestamp("deleted_at") == null
                             ? null : resultSet.getTimestamp("deleted_at").toLocalDateTime());
@@ -30,7 +32,7 @@ public class JdbcSystemCheckItemRepository implements SystemCheckItemRepository 
     @Override
     public List<SystemCheckItem> findActiveByStage(final CheckStage stage, final String question) {
         String sql = """
-                SELECT id, stage, item_type, question, deleted_at
+                SELECT id, stage, item_type, category, question, deleted_at
                 FROM system_check_items
                 WHERE stage = ?
                   AND deleted_at IS NULL
@@ -44,7 +46,7 @@ public class JdbcSystemCheckItemRepository implements SystemCheckItemRepository 
     @Override
     public List<SystemCheckItem> findActiveCoreByStage(final CheckStage stage) {
         String sql = """
-                SELECT id, stage, item_type, question, deleted_at
+                SELECT id, stage, item_type, category, question, deleted_at
                 FROM system_check_items
                 WHERE stage = ? AND item_type = 'CORE' AND deleted_at IS NULL
                 ORDER BY id
@@ -59,7 +61,7 @@ public class JdbcSystemCheckItemRepository implements SystemCheckItemRepository 
         }
         String placeholders = ids.stream().map(id -> "?").collect(Collectors.joining(", "));
         String sql = """
-                SELECT id, stage, item_type, question, deleted_at
+                SELECT id, stage, item_type, category, question, deleted_at
                 FROM system_check_items
                 WHERE stage = ? AND id IN (%s)
                 ORDER BY FIELD(id, %s)

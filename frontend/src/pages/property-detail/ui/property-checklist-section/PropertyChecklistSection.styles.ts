@@ -32,38 +32,6 @@ export const expandedChecklist = css`
   background: var(--color-surface);
 `;
 
-export const expandedHeader = css`
-  label: PropertyChecklistSection-expandedHeader;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-bottom: 0.2rem;
-
-  & h3 {
-    min-width: 0;
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
-  }
-
-  & > span {
-    flex: 0 0 auto;
-    color: var(--color-muted);
-    font-size: 0.78rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-`;
-
-export const items = css`
-  label: PropertyChecklistSection-items;
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-`;
-
 const shimmerKeyframes = keyframes`
   to {
     background-position: -200% 0;

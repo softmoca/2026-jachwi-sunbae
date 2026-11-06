@@ -1,6 +1,7 @@
 export { default as ArrowLeftIcon } from './ArrowLeftIcon';
 export { default as ArrowRightIcon } from './ArrowRightIcon';
 export { default as ChecklistIcon } from './ChecklistIcon';
+export { BedIcon, DropletIcon, LockIcon, WindowIcon } from './ChecklistCategoryIcons';
 export { default as ChevronDownIcon } from './ChevronDownIcon';
 export { default as ChevronLeftIcon } from './ChevronLeftIcon';
 export { default as ChevronRightIcon } from './ChevronRightIcon';
@@ -19,6 +20,7 @@ export { default as MinusIcon } from './MinusIcon';
 export { default as MoreVerticalIcon } from './MoreVerticalIcon';
 export { default as PlusIcon } from './PlusIcon';
 export { default as RefreshIcon } from './RefreshIcon';
+export { default as ReplaceIcon } from './ReplaceIcon';
 export { default as SearchIcon } from './SearchIcon';
 export { default as TargetIcon } from './TargetIcon';
 export { default as TrashIcon } from './TrashIcon';

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.jachwisunbae.checklist.entity.SystemCheckItem;
 import com.jachwisunbae.checklist.entity.UserChecklistItem;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckItemType;
 import com.jachwisunbae.checklist.type.CheckStage;
 import org.junit.jupiter.api.DisplayName;
@@ -55,7 +56,7 @@ class UserChecklistItemTest {
     @DisplayName("사용자 체크리스트 항목은 시스템 항목 ID가 null이면 예외를 발생시킨다")
     void rejectsNullSystemItemId() {
         SystemCheckItem systemItem = SystemCheckItem.reconstruct(
-                null, CheckStage.ON_SITE, CheckItemType.CORE, "질문", null);
+                null, CheckStage.ON_SITE, CheckItemType.CORE, CheckItemCategory.OTHER, "질문", null);
 
         assertThatThrownBy(() -> UserChecklistItem.create(1L, systemItem, 1))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -95,6 +96,6 @@ class UserChecklistItemTest {
     }
 
     private static SystemCheckItem systemItem() {
-        return SystemCheckItem.reconstruct(2L, CheckStage.ON_SITE, CheckItemType.CORE, "질문", null);
+        return SystemCheckItem.reconstruct(2L, CheckStage.ON_SITE, CheckItemType.CORE, CheckItemCategory.OTHER, "질문", null);
     }
 }

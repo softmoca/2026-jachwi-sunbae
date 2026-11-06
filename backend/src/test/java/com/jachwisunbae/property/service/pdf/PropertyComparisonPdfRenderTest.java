@@ -2,6 +2,7 @@ package com.jachwisunbae.property.service.pdf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckStage;
 import com.jachwisunbae.checklist.type.CheckStatus;
 import com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse;
@@ -146,7 +147,7 @@ class PropertyComparisonPdfRenderTest {
 
     private static PropertyChecklistItemQuery item(final long id, final String question, final CheckStatus status,
                                                    final String memo) {
-        return new PropertyChecklistItemQuery(id, id, question, (int) id, status, memo);
+        return new PropertyChecklistItemQuery(id, id, question, (int) id, status, memo, CheckItemCategory.OTHER);
     }
 
     /** 실제 사진 대신 방 모양을 단순한 도형으로 그린 그림. 가로 사진과 세로 사진을 섞는다. */

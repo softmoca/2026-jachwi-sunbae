@@ -27,8 +27,8 @@ describe('매물 표시 형식과 경로 입력', () => {
     expect(formatRentSummary(1_234_500, 335_000)).toBe('123.5/33.5');
   });
 
-  it('보증금과 월세가 둘 다 0이면 가격 입력 전으로, 아니면 자리에 맞는 월세 형식으로 표시한다', () => {
-    expect(formatPropertyPrice(0, 0, 'summary')).toBe('가격 입력 전');
+  it('미입력 금액은 짧은 표기에서 월세 0/0으로, 다른 자리에서는 가격 입력 전으로 표시한다', () => {
+    expect(formatPropertyPrice(0, 0, 'summary')).toBe('월세 0/0');
     expect(formatPropertyPrice(0, 0, 'labeled')).toBe('가격 입력 전');
     expect(formatPropertyPrice(0, 0, 'plain')).toBe('가격 입력 전');
     expect(formatPropertyPrice(10_000_000, 0, 'summary')).toBe('월세 1,000/0');

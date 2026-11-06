@@ -4,7 +4,7 @@ import Skeleton from '@/shared/ui/skeleton/Skeleton';
 
 /**
  * 매물 상세 화면의 뼈대. 뒤로 가기와 매물 이름 줄, 정보와 체크리스트 탭, 화면 끝까지 닿는 대표 사진,
- * 이름과 가격 줄, 정보 묶음 카드 자리와 크기를 따른다.
+ * 정보 묶음 카드 자리와 크기를 따른다.
  */
 const PropertyDetailSkeleton = () => (
   <main className={`property-page ${styles.page}`}>
@@ -17,11 +17,7 @@ const PropertyDetailSkeleton = () => (
       <Skeleton width="4.5rem" height="1rem" />
     </div>
     <Skeleton shape="bleed" height="13.875rem" className={styles.hero} />
-    <div className={styles.title}>
-      <Skeleton width="50%" height="1.4rem" />
-      <Skeleton width="35%" height="1rem" />
-    </div>
-    <Skeleton shape="card" height="12.5rem" />
+    <Skeleton shape="card" height="12.5rem" className={styles.section} />
     <Skeleton shape="card" height="20rem" className={styles.section} />
     <Skeleton shape="card" height="7.8rem" className={styles.section} />
   </main>
@@ -54,13 +50,6 @@ const styles = {
     label: PropertyDetailSkeleton-hero;
     width: auto !important;
     margin-inline: calc(-1 * var(--page-inline-padding));
-  `,
-
-  title: css`
-    label: PropertyDetailSkeleton-title;
-    display: grid;
-    gap: 0.5rem;
-    padding: 1.1rem 0 1rem;
   `,
 
   section: css`

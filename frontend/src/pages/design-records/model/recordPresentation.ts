@@ -18,7 +18,7 @@ export const recordPresentation = (property: PropertySummary) => ({
   district: propertyArea(property.location.address),
   name: property.name,
   note: property.location.address ?? '주소 미등록',
-  /** 지도 마커에 붙는 짧은 가격. 가격을 넣기 전이면 `가격 입력 전`이다. */
+  /** 지도 마커에 붙는 짧은 가격. 가격을 넣기 전에도 `월세 0/0`으로 표시한다. */
   price: formatPropertyPrice(property.depositAmount, property.monthlyRentAmount, 'summary'),
   latitude: property.location.latitude,
   longitude: property.location.longitude,
