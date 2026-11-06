@@ -9,7 +9,12 @@
 - 첫 정상 웹 로드 후 안내에서 사용자가 알림 받기를 선택하면 OS 권한을 요청한다. 나중에를 선택해도 서비스 이용은 그대로 가능하다.
 - 동의 전에는 FCM 토큰 자동 발급과 iOS 원격 알림 자동 등록을 끈다.
 - OS 권한과 앱 선택이 유효한 경우에만 토큰을 발급하고 공개 서비스 안내 토픽에 구독한다. 토큰 변경 및 앱 재진입 때 상태를 복구한다.
-- 백그라운드 알림 표시는 OS에 맡긴다. 포그라운드에서는 확인/닫기 안내를 표시한다. 알림 클릭은 현재 환경의 서비스 내부 경로만 연다.
+- 백그라운드 알림 표시는 OS에 맡긴다. 알림 클릭은 현재 환경의 서비스 내부 경로만 연다.
+- 앱이 켜져 있을 때도 알림을 시스템 배너로 보여 준다. 앱 안 확인/닫기 안내는 쓰지 않는다.
+  - iOS는 `firebase.json`의 `messaging_ios_foreground_presentation_options`(`banner`, `list`, `sound`, `badge`)로 OS가 배너를 띄운다. 배너를 누르면 FCM `onNotificationOpenedApp`으로 이동한다.
+  - Android는 포그라운드 FCM을 OS가 띄우지 않아 `@notifee/react-native`로 띄운다(`src/push/foreground.ts`). notifee는 Android에만 링크한다(`react-native.config.js`).
+  - Android 알림 채널은 id `default`, 이름 `알림`, 중요도 높음이다. 백그라운드 FCM 알림도 같은 채널로 오도록 `firebase.json`의 `messaging_android_notification_channel_id`를 `default`로 두고, 앱이 켜질 때 채널을 먼저 만든다.
+  - notifee가 더하는 예약 알림, 부팅 후 복원, 포그라운드 서비스용 권한과 구성 요소는 앱 매니페스트에서 `tools:node="remove"`로 뺀다.
 
 ## 계정 설정과 파일
 

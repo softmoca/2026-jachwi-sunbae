@@ -1,9 +1,16 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- notifee는 포그라운드 알림 표시에만 쓴다. 예약 알림, 부팅 후 복원, 포그라운드 서비스용 권한은 뺀다. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" tools:node="remove" />
 
     <application
       android:name=".MainApplication"
@@ -15,6 +22,11 @@
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
       <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />
+      <!-- 위 권한을 쓰는 notifee 구성 요소도 뺀다. -->
+      <service android:name="app.notifee.core.ForegroundService" tools:node="remove" />
+      <receiver android:name="app.notifee.core.RebootBroadcastReceiver" tools:node="remove" />
+      <receiver android:name="app.notifee.core.AlarmPermissionBroadcastReceiver" tools:node="remove" />
+      <receiver android:name="app.notifee.core.NotificationAlarmReceiver" tools:node="remove" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
