@@ -138,6 +138,7 @@ const demoPlaces: DemoPlace[] = [
 
 export const mapHandlers = [
   http.get('*/api/maps/geocode', () => success([address])),
+  http.get('*/api/maps/search', () => success([address])),
   http.get('*/api/maps/reverse-geocode', ({ request }) => {
     const url = new URL(request.url);
     const latitude = Number(url.searchParams.get('latitude') ?? address.latitude);
@@ -176,7 +177,15 @@ export const mapHandlers = [
           place.distanceMeters <= radius &&
           (categories.length === 0 || categories.includes(place.category)),
       )
-      .map(({ direction, ...place }) => ({ ...place, ...at(latitude, longitude, place.distanceMeters, direction) }));
+      .map(({ direction, ...place }) => {
+        const point = at(latitude, longitude, place.distanceMeters, direction);
+        // 실제 장소는 자리마다 ID가 달라서, 조회 중심을 옮겨 다른 자리에 생긴 예시 장소도 다른 ID로 준다.
+        return {
+          ...place,
+          ...point,
+          providerPlaceId: `${place.providerPlaceId}@${point.latitude.toFixed(4)},${point.longitude.toFixed(4)}`,
+        };
+      });
     const counts = { HOSPITAL: 0, SCHOOL: 0, CONVENIENCE: 0, AGENCY: 0 };
     places.forEach((place) => {
       if (place.category !== 'TRANSPORT') counts[place.category] += 1;

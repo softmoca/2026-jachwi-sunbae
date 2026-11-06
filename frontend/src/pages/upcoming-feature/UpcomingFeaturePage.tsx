@@ -1,5 +1,6 @@
 import { injectGlobal } from '@emotion/css';
 
+import { CHECKLISTS_PATH, MY_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 
 import PageHeading from './ui/page-heading/PageHeading';
@@ -25,13 +26,13 @@ const UpcomingFeaturePage = ({ feature }: { feature: UpcomingFeature }) => {
   return (
     <main className="property-page upcoming-feature-page">
       <div className="page-container page-container--form">
-        <PageHeading title={content.title} backTo="/me" backLabel="마이페이지" focusOnMount />
+        <PageHeading title={content.title} backTo={MY_PATH} backLabel="마이페이지" focusOnMount />
         <section className="upcoming-feature-card" aria-labelledby="upcoming-feature-heading">
           <h2 id="upcoming-feature-heading">1차 MVP에서는 안내만 제공해요</h2>
           <p>{content.description}</p>
           <div className="upcoming-feature-card__actions">
-            <ButtonLink to="/properties">내 매물 보기</ButtonLink>
-            <ButtonLink variant="secondary" to="/checklists">
+            <ButtonLink to={RECORDS_PATH}>내 매물 보기</ButtonLink>
+            <ButtonLink variant="secondary" to={CHECKLISTS_PATH}>
               체크리스트 보기
             </ButtonLink>
           </div>

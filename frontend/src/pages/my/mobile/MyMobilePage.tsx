@@ -1,11 +1,10 @@
 import { css } from '@emotion/css';
-import { useOutletContext } from 'react-router-dom';
 
-import type { Member } from '@/features/auth/model/Member';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
-import AccountDeletionCard from '../ui/account-deletion-card/AccountDeletionCard';
+import { formatAppVersionLabel } from '../lib/appVersionLabel';
+import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
 import * as shared from '../MyPage.styles';
@@ -13,7 +12,6 @@ import * as shared from '../MyPage.styles';
 /** 휴대폰·태블릿 마이. 뒤로 가기·제목은 앱 상단 바가 그리고, 홈과 같은 본문(최대 45rem)에 카드를 늘이지 않고 쌓는다. */
 const MyMobilePage = () => {
   const config = usePublicConfig();
-  const member = useOutletContext<Member>();
 
   return (
     <main className={shared.page}>
@@ -21,11 +19,11 @@ const MyMobilePage = () => {
         <WeatherSummaryCard />
         <div className={styles.links}>
           <PrivacyLinkCard />
-          <AccountDeletionCard memberId={member.memberId} />
+          <AccountResetCard />
         </div>
       </div>
       <footer className={`${shared.footer} ${styles.footer}`}>
-        <span>자취선배 MVP2 · {config.mapProviderMode === 'demo' ? 'DEMO MAP' : 'LIVE MAP'}</span>
+        <span>{formatAppVersionLabel(config)}</span>
       </footer>
     </main>
   );
@@ -85,7 +83,7 @@ const styles = {
     }
   `,
 
-  /* 개인정보 처리방침·계정 삭제 요청은 한 묶음으로 쌓는다(넓은 화면에서는 날씨 옆 열). */
+  /* 개인정보 처리방침과 초기화는 한 묶음으로 쌓는다(넓은 화면에서는 날씨 옆 열). */
   links: css`
     label: MyMobilePage-links;
     display: grid;

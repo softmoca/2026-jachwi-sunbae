@@ -10,6 +10,7 @@
 | `configuration.ts`                        | 공개 설정 검증, 마스킹·자동 수집 옵션                                              |
 | `platform.ts`                             | 기기 컨텍스트를 사용해 앱 주입 정보·자취선배 전용 UA로 플랫폼 분류                 |
 | `errorClassification.ts`, `exceptions.ts` | 순수 오류 분류와 오류 전송                                                         |
+| `webVitals.ts`                            | Web Vitals(LCP, INP, CLS, FCP, TTFB)를 따로 받은 청크에서 재서 `web_vital`로 전송  |
 | `types.ts`                                | SDK·공통 속성·오류 등급 타입                                                       |
 
 `app/analytics/PostHogTracker.tsx`는 React와 SDK 수명주기를 연결한다. 초기화·공통 속성·식별은 layout effect에서 처리해 페이지의 첫 effect 이벤트가 초기화보다 먼저 실행되어 버려지지 않게 한다. 페이지뷰는 그 이후 전송한다. 로그인은 수집의 전제 조건이 아니며 익명 방문에서도 경로와 기능 이벤트를 수집한다.
@@ -19,7 +20,7 @@
 ## 이벤트 추가·수정 기준
 
 - 화면 방문·UI 행동은 소유 페이지/기능에서 기록한다. 성공은 클릭 시점이 아니라 API 성공 경계에서 기록한다.
-- 여러 화면에서 같은 기능을 호출하면 성공·실패 이벤트는 공통 mutation에 한 번만 둔다. `useCreateProperty`가 제출·생성 성공·생성 실패 이벤트를 소유하며 폼과 지도 확인 화면에서 중복 전송하지 않는다.
+- 여러 화면에서 같은 기능을 호출하면 성공·실패 이벤트는 공통 mutation에 한 번만 둔다. `useCreateProperty`가 제출·생성 성공·생성 실패 이벤트를 소유하며 매물을 만드는 본 방 기록 지도에서 중복 전송하지 않는다.
 - React state updater 안에서는 이벤트를 전송하지 않는다. 매물 비교 선택은 이벤트 핸들러에서 한 번만 기록하며, StrictMode나 한 번에 여러 선택이 발생해도 선택 수를 정확히 유지한다.
 - `first_property`는 생성 전 캐시에서 전체 매물 수를 아는 경우에만 보낸다. 캐시가 없다고 첫 매물로 추정하지 않는다.
 - 기존 인사이트가 참조하는 이벤트 이름을 임의로 바꾸지 않는다. 새 필수 속성은 의미와 발생 시점을 문서화하고 테스트한다.
@@ -47,13 +48,19 @@ SDK 로딩 중 액션은 순서대로 큐에 넣는다. 일시적인 import/초�
 
 수동 기능 이벤트에 공통 속성을 직접 보강하고 `before_send`에서도 자동 수집·오류 이벤트를 보강한다. 속성 등록 실패나 reset으로 환경/버전이 빠지는 경우를 줄이고 호출부가 공통 값을 임의로 덮어쓰지 못하게 한다.
 
-Access Token은 메모리에만 있어 새로고침 직후에는 늘 세션이 없다. 그래서 세션이 없다는 이유만으로 `reset()`하지 않고, 서버가 Refresh 쿠키로도 회원 복원을 거절해 인증이 끝났을 때만 reset한다. reset 뒤 환경·버전·플랫폼을 다시 등록한다. 같은 회원의 반복 identify는 생략한다. 자동 로그인은 페이지를 열고 처음 회원을 정할 때만 `login_succeeded`(`login_method: anonymous`, `new_member`)로, 실패는 `login_failed`로 남기고 토큰 갱신은 기록하지 않는다.
+Access Token은 메모리에만 있어 새로고침 직후에는 늘 세션이 없다. 그래서 세션이 없다는 이유만으로 `reset()`하지 않고, 서버가 Refresh 쿠키로도 회원 복원을 거절해 인증이 끝났을 때만 reset한다. reset 뒤 환경·버전·플랫폼을 다시 등록한다. 같은 회원의 반복 identify는 생략한다. 자동 로그인은 페이지를 열고 처음 회원을 정할 때만 `login_succeeded`(`login_method: anonymous`, `new_member`)로, 실패는 `login_failed`로 남기고 토큰 갱신은 기록하지 않는다. 마이의 초기화는 성공하면 이전 회원 식별로 `account_reset_succeeded`를 남긴 뒤 reset하고, 이어지는 새 회원 로그인은 `login_succeeded`(`new_member: true`)로 남고, 새 회원은 회원 조회가 끝나면 다시 식별한다. 탈퇴 요청의 실패는 `account_reset_failed`(`error_kind`, `error_code`)로 남기며 식별은 그대로 둔다.
 
 오류 등급은 [에러 트래킹 문서](error-tracking.md)를 따른다. 이전 청크 삭제 정책은 그대로 유지한다.
 
 auth_status는 발생 당시 로컬 인증 세션 상태를 나타내는 이벤트 속성이다. app이 인증 저장소 조회 함수를 수집 런타임에 주입하므로 shared가 auth 기능을 역참조하지 않는다. 수동 이벤트·스토어 이동·수동 예외는 큐 접수 전에 속성을 복사하고, 자동 수집은 before_send에서 보강한다. 회원 프로필이나 현재 로그인 상태로 과거 이벤트를 다시 분류하지 않는다.
 
 기기·익명 테스트 트래픽 판정은 `deviceContext.ts`·`trafficContext.ts`가 소유한다. 일반 인앱 브라우저는 자취선배 앱이 아니며, 늦은 앱 브리지 주입은 등록 속성과 전송 직전 속성에 반영한다. 외부 스토어 CTA는 즉시 Beacon 전송을 시도한다. 자세한 판정 기준과 테스트 표시·필터 적용은 [탐색 측정 기준](exploration-analytics.md#수집-보강과-오류-경계)을 따른다.
+
+## 성능과 화면 경로
+
+`web-vitals`로 LCP, INP, CLS, FCP, TTFB를 재서 지표마다 `web_vital` 이벤트(`metric_name`, `metric_value`, `metric_rating`, `navigation_type`)로 보낸다. PostHog의 `capture_performance.web_vitals`는 TTFB가 없고 측정 스크립트를 PostHog 서버에서 따로 받으므로 쓰지 않는다. 측정 코드는 초기화 뒤 별도 청크로 받아 초기 번들을 늘리지 않는다. CLS와 INP는 화면을 숨길 때 확정되므로 Beacon으로 바로 보낸다.
+
+모든 이벤트의 `before_send`가 `screen_route`(지금 화면의 라우트 패턴, `shared/lib/analytics/screenRoute.ts`)를 붙인다. 매물 번호, 동 코드, 쿼리는 싣지 않고 라우터에 없는 주소는 `*`로 묶는다. `web_vital`의 `screen_route`는 처음 연 화면이고, 값이 확정된 때의 화면은 `report_screen_route`다. 플랫폼(`platform`)과 트래픽 구분(`traffic_type`)은 다른 이벤트처럼 `before_send`가 붙인다.
 
 ## 검증
 

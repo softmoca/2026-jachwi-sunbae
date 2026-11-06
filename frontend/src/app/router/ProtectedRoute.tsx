@@ -3,22 +3,24 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { authenticate, getSafeApiErrorMessage } from '@/features/auth/api/apiClient';
 import { useCurrentMember } from '@/features/auth/api/useCurrentMember';
 import { useAuthentication } from '@/features/auth/model/useAuthentication';
+import { useWeatherPushSync } from '@/features/weather/model/useWeatherPushSync';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
-import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import { Button } from '@/shared/ui/button/Button';
-import ContentState from '@/shared/ui/content-state/ContentState';
 import StatusPanel from '@/shared/ui/status-panel/StatusPanel';
 
 /**
  * 회원 화면 입구. 회원 정보를 부르면 API 클라이언트가 먼저 자동 로그인(복원 또는 익명 회원 생성)을 마친다.
  * 서버가 복원을 거절해도 새 회원으로 조용히 바꾸지 않는다. 새 기록으로 시작할지는 사용자가 고른다.
+ * 로그인을 기다리는 동안에도 화면을 그린다. 화면의 요청은 API 클라이언트가 진행 중인 로그인을 기다렸다가 보내므로,
+ * 처음 여는 화면은 빈 화면이나 준비 문구 없이 자기 뼈대를 바로 보여 주고, 화면 코드도 로그인과 함께 받는다.
+ * 회원 정보가 필요한 화면은 `useMember`로 회원이 정해질 때까지 기다린다.
  */
 const ProtectedRoute = () => {
   const config = usePublicConfig();
   const navigate = useNavigate();
   const { terminationReason } = useAuthentication();
   const currentMember = useCurrentMember();
-  const isLoadingVisible = useDelayedLoading(currentMember.isPending);
+  useWeatherPushSync(true);
 
   if (terminationReason === 'unauthorized') {
     return (
@@ -46,10 +48,6 @@ const ProtectedRoute = () => {
     );
   }
 
-  if (currentMember.isPending) {
-    return isLoadingVisible ? <ContentState loading title="기록을 불러올 준비를 하고 있어요." /> : null;
-  }
-
   if (currentMember.isError) {
     return (
       <StatusPanel
@@ -61,7 +59,7 @@ const ProtectedRoute = () => {
     );
   }
 
-  return <Outlet context={currentMember.data} />;
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

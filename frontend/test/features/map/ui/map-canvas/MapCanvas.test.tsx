@@ -87,6 +87,7 @@ describe('Naver 지도 상태 동기화', () => {
     refresh: ReturnType<typeof vi.fn>;
     autoResize: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
+    container: HTMLElement;
   };
   let maps: FakeMapInstance[];
   let mapOptions: unknown[];
@@ -111,7 +112,10 @@ describe('Naver 지도 상태 동기화', () => {
       autoResize = vi.fn();
       destroy = vi.fn();
 
-      constructor(_: HTMLElement, options: { center: FakeLatLng; zoom: number }) {
+      container: HTMLElement;
+
+      constructor(container: HTMLElement, options: { center: FakeLatLng; zoom: number }) {
+        this.container = container;
         mapOptions.push(options);
         this.center = options.center;
         this.zoom = options.zoom;
@@ -148,20 +152,62 @@ describe('Naver 지도 상태 동기화', () => {
       <MapCanvas center={{ latitude: 37.5, longitude: 127 }} customStyleId="style" interactive />,
     );
     // 금방 준비되는 지도에서 안내가 번쩍이지 않게, 처음에는 띄우지 않는다.
-    expect(view.queryByRole('status')).not.toBeInTheDocument();
+    expect(view.queryByRole('progressbar', { name: '지도를 불러오는 중이에요.' })).not.toBeInTheDocument();
     await waitFor(() => expect(maps).toHaveLength(1));
-    expect(await view.findByRole('status', {}, { timeout: 1500 })).toHaveTextContent('지도를 불러오고 있어요');
+    // 지도 위에 덧그리는 작은 Overlay라 글자 없이 Progress Circle(24)만 둔다.
+    expect(
+      await view.findByRole('progressbar', { name: '지도를 불러오는 중이에요.' }, { timeout: 1500 }),
+    ).toBeInTheDocument();
+    expect(view.queryByText('지도를 불러오고 있어요')).not.toBeInTheDocument();
 
     (maps[0] as FakeMapInstance & { _glReady?: boolean })._glReady = true;
 
-    await waitFor(() => expect(view.queryByRole('status')).not.toBeInTheDocument(), { timeout: 1500 });
+    await waitFor(
+      () => expect(view.queryByRole('progressbar', { name: '지도를 불러오는 중이에요.' })).not.toBeInTheDocument(),
+      { timeout: 1500 },
+    );
+  });
+
+  it('지도가 처음 그려진 뒤에야 onReady를 부른다', async () => {
+    const onReady = vi.fn();
+    renderWithConfig(
+      <MapCanvas center={{ latitude: 37.5, longitude: 127 }} customStyleId="style" interactive onReady={onReady} />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    // 지도 객체를 만든 것만으로는 타일이 그려지지 않았으니 급하지 않은 요청을 시작하지 않는다.
+    expect(onReady).not.toHaveBeenCalled();
+
+    (maps[0] as FakeMapInstance & { _glReady?: boolean })._glReady = true;
+
+    await waitFor(() => expect(onReady).toHaveBeenCalledOnce());
+  });
+
+  it('GL 지도는 준비를 마친 뒤에 마커와 좌표 버튼을 넣어 가운데 쪽에 먼저 그렸다가 옮기지 않는다', async () => {
+    const center = { latitude: 37.5, longitude: 127 };
+    renderWithConfig(
+      <MapCanvas
+        center={center}
+        customStyleId="style"
+        markers={[{ id: 'property-10', latitude: 37.51, longitude: 127.01, label: '테스트 매물', tone: 'property' }]}
+        coordinateAction={{ ...center, label: '조회', onClick: vi.fn() }}
+      />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    // 준비 전 좌표 변환으로 그린 마커는 준비가 끝나면 제자리로 옮겨 가므로, 이때는 넣지 않는다.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(overlayInstances).toHaveLength(0);
+
+    (maps[0] as FakeMapInstance & { _glReady?: boolean })._glReady = true;
+
+    await waitFor(() => expect(overlayInstances).toHaveLength(2));
+    expect(overlayInstances.some((overlay) => overlay.pane.querySelector('[aria-label="테스트 매물"]'))).toBe(true);
   });
 
   it('화면이 자체 로딩으로 지도를 덮으면 지도 준비 안내를 띄우지 않는다', () => {
     const view = renderWithConfig(
       <MapCanvas center={{ latitude: 37.5, longitude: 127 }} customStyleId="style" interactive hideLoading />,
     );
-    expect(view.queryByRole('status')).not.toBeInTheDocument();
+    expect(view.queryByRole('progressbar', { name: '지도를 불러오는 중이에요.' })).not.toBeInTheDocument();
   });
 
   it('동네에 마우스를 올리면 채움이 진해지고 벗어나면 복원한다', async () => {
@@ -383,6 +429,141 @@ describe('Naver 지도 상태 동기화', () => {
     });
     expect(maps[0].autoResize).toHaveBeenCalledOnce();
     expect(maps[0].refresh).not.toHaveBeenCalled();
+  });
+
+  it('시점을 옮기는 중에 크기가 바뀌면 이동이 끝난 idle까지 autoResize를 미룬다', async () => {
+    const resizeCallbacks: (() => void)[] = [];
+    class FakeResizeObserver {
+      constructor(private readonly callback: () => void) {}
+      observe = () => {
+        resizeCallbacks.push(this.callback);
+      };
+      disconnect = vi.fn();
+    }
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    const nextFrame = () =>
+      act(async () => {
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} animateView />,
+    );
+    await waitFor(() => expect(resizeCallbacks).toHaveLength(1));
+    resizeCallbacks[0]();
+    await waitFor(() => expect(maps[0].autoResize).toHaveBeenCalledOnce());
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} animateView />);
+    await waitFor(() => expect(maps[0].zoom).toBe(15));
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(640);
+    resizeCallbacks[0]();
+    await nextFrame();
+    expect(maps[0].autoResize).toHaveBeenCalledOnce();
+
+    const idle = vi
+      .mocked(window.naver!.maps.Event.addListener)
+      .mock.calls.find((call) => call[0] === maps[0] && call[1] === 'idle')!;
+    act(() => idle[2]());
+    expect(maps[0].autoResize).toHaveBeenCalledTimes(2);
+  });
+
+  it('옆 칸이 열려 지도 칸 크기가 바뀐 채로 시점을 옮기면, 옮기기 전에 크기를 맞춰 한 번에 옮긴다', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = vi.fn();
+        disconnect = vi.fn();
+      },
+    );
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} animateView />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(560);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(760);
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} animateView />);
+
+    await waitFor(() => expect(maps[0].setCenter).toHaveBeenCalled());
+    expect(maps[0].autoResize).toHaveBeenCalledOnce();
+    expect(maps[0].autoResize.mock.invocationCallOrder[0]).toBeLessThan(maps[0].setCenter.mock.invocationCallOrder[0]);
+  });
+
+  it('시점을 옮기는 도중에 온 idle은 중간 좌표를 알리지 않고, 목표에 닿거나 기다릴 시간이 지나면 알린다', async () => {
+    const onCenterChange = vi.fn();
+    const props = { animateView: true, onCenterChange };
+    const { rerender } = renderWithConfig(
+      <MapCanvas center={{ latitude: 37.4, longitude: 127 }} level={10} {...props} />,
+    );
+    await waitFor(() => expect(maps).toHaveLength(1));
+    const morph = vi.fn();
+    Object.assign(maps[0], { morph });
+    const idle = vi
+      .mocked(window.naver!.maps.Event.addListener)
+      .mock.calls.find((call) => call[0] === maps[0] && call[1] === 'idle')![2];
+
+    rerender(<MapCanvas center={{ latitude: 37.5, longitude: 127.03 }} level={5} {...props} />);
+    await waitFor(() => expect(morph).toHaveBeenCalledOnce());
+    // 아직 출발한 자리(중간)에서 온 idle
+    act(() => idle());
+    expect(onCenterChange).not.toHaveBeenCalled();
+
+    maps[0].center = new FakeLatLng(37.5, 127.03);
+    maps[0].zoom = 15;
+    act(() => idle());
+    expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03);
+
+    // 목표에 닿지 못해도(경계에 걸림 등) 기다릴 시간이 지나면 그 자리를 알린다.
+    onCenterChange.mockClear();
+    rerender(<MapCanvas center={{ latitude: 37.6, longitude: 127.1 }} level={5} {...props} />);
+    await waitFor(() => expect(morph).toHaveBeenCalledTimes(2));
+    act(() => idle());
+    expect(onCenterChange).not.toHaveBeenCalled();
+    await waitFor(() => expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03), { timeout: 1500 });
+  });
+
+  it('트랙패드 핀치(ctrl+휠)는 직접 받아 deltaY에 비례해 커서 자리를 기준으로 확대하고, ctrl 없는 휠은 SDK에 맡긴다', async () => {
+    renderWithConfig(<MapCanvas center={{ latitude: 37.5, longitude: 127 }} level={5} />);
+    await waitFor(() => expect(maps).toHaveLength(1));
+    const zoomBy = vi.fn();
+    const fromOffsetToCoord = vi.fn((point: { x: number; y: number }) => new FakeLatLng(point.y, point.x));
+    Object.assign(maps[0], { zoomBy, getProjection: () => ({ fromOffsetToCoord }) });
+    Object.assign(window.naver!.maps, {
+      Point: class {
+        constructor(
+          readonly x: number,
+          readonly y: number,
+        ) {}
+      },
+    });
+    const { container } = maps[0];
+
+    const plain = new WheelEvent('wheel', { deltaY: -100, cancelable: true, bubbles: true });
+    container.dispatchEvent(plain);
+    expect(plain.defaultPrevented).toBe(false);
+
+    const pinch = (deltaY: number) => {
+      const event = new WheelEvent('wheel', {
+        deltaY,
+        ctrlKey: true,
+        clientX: 30,
+        clientY: 40,
+        cancelable: true,
+        bubbles: true,
+      });
+      container.dispatchEvent(event);
+      return event;
+    };
+    expect(pinch(-20).defaultPrevented).toBe(true);
+    pinch(-20);
+    await act(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    // 한 프레임에 온 두 이벤트(deltaY -40)를 모아 Naver zoom을 40 / (100 ln 2)만큼 올린다.
+    expect(zoomBy).toHaveBeenCalledOnce();
+    expect(zoomBy.mock.calls[0][0]).toBeCloseTo(40 / (100 * Math.LN2), 5);
+    expect(fromOffsetToCoord).toHaveBeenCalledWith(expect.objectContaining({ x: 30, y: 40 }));
+    expect(zoomBy.mock.calls[0][2]).toBe(false);
   });
 
   it('앱 확대 단계를 반대 방향인 Naver zoom으로 바꿔 전달한다', async () => {

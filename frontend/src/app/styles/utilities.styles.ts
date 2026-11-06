@@ -74,40 +74,6 @@ injectGlobal`
   text-align: center;
 }
 
-.content-state__skeleton {
-  display: grid;
-  width: min(100%, 18rem);
-  gap: 0.45rem;
-}
-
-.content-state__skeleton span {
-  display: block;
-  height: 0.65rem;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--color-surface-muted) 25%,
-    var(--color-border) 50%,
-    var(--color-surface-muted) 75%
-  );
-  background-size: 200% 100%;
-  animation: content-state-shimmer 1.4s ease-in-out infinite;
-}
-
-.content-state__skeleton span:nth-child(2) {
-  width: 78%;
-}
-
-.content-state__skeleton span:nth-child(3) {
-  width: 56%;
-}
-
-@keyframes content-state-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
 .content-state strong {
   color: var(--color-ink);
   font-size: 0.82rem;

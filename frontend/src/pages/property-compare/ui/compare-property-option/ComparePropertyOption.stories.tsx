@@ -98,6 +98,6 @@ export const Disabled: Story = {
 
 export const NoChecklist: Story = {
   args: {
-    property: property(3, '신림 전세 오피스텔', 150_000_000, 0, '', null),
+    property: property(3, '신림 오피스텔', 10_000_000, 650_000, '', null),
   },
 };

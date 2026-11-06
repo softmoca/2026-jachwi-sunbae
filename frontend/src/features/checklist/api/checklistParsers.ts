@@ -20,6 +20,7 @@ import type {
   ChecklistSummary,
   CreatedChecklist,
 } from '../model/checklistTypes';
+import { CHECK_ITEM_CATEGORIES, type CheckItemCategory } from '../model/checklistTypes';
 
 const unknownDate = '1970-01-01T00:00:00Z';
 
@@ -33,12 +34,16 @@ const parseItemType = (value: unknown): CheckItem['itemType'] => {
   return value;
 };
 
+const parseCategory = (value: unknown): CheckItemCategory =>
+  CHECK_ITEM_CATEGORIES.find((category) => category === value) ?? 'OTHER';
+
 const parseCheckItem = (value: unknown): CheckItem => {
   const item = readRecord(value);
   return {
     checkItemId: readInteger(item, 'id', 1),
     stage: parseStage(item.stage),
     itemType: parseItemType(item.itemType),
+    category: parseCategory(item.category),
     question: readString(item, 'question', { maximumCodePoints: 200 }),
     guide: null,
   };
@@ -105,6 +110,7 @@ const parseChecklistItem = (value: unknown): ChecklistItem => {
   const common = {
     checklistItemId,
     itemType: parseItemType(item.itemType),
+    category: parseCategory(item.category),
     question: readString(item, 'question', { maximumCodePoints: 200 }),
     guide: null,
     order: readInteger(item, 'displayOrder', 1),

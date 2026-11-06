@@ -18,8 +18,14 @@ import LandingGetStarted from '../ui/LandingGetStarted';
 import LandingTech from '../ui/LandingTech';
 import LandingWhy from '../ui/LandingWhy';
 
+type LandingMobilePageProps = {
+  search: string;
+  /** 서비스 안에서 들어왔을 때 돌아갈 주소 */
+  returnTo?: string;
+};
+
 /** 휴대폰 랜딩. 글, 버튼, 영상을 위에서부터 쌓고, 기능마다 휴대폰으로 찍은 운영 화면을 보여준다. */
-const LandingMobilePage = ({ search }: { search: string }) => (
+const LandingMobilePage = ({ search, returnTo }: LandingMobilePageProps) => (
   <main className={styles.page}>
     <section className={styles.hero} aria-labelledby="landing-title">
       <p className={styles.brand}>
@@ -32,7 +38,7 @@ const LandingMobilePage = ({ search }: { search: string }) => (
         {HERO_TITLE[1]}
       </h1>
       <p className={styles.lead}>{HERO_LEAD}</p>
-      <LandingGetStarted search={search} position="top" layout="stack" />
+      <LandingGetStarted search={search} returnTo={returnTo} position="top" layout="stack" />
       <figure className={styles.video}>
         <video src={flyoverVideo} autoPlay muted loop playsInline preload="metadata" aria-label={VIDEO_LABEL} />
       </figure>
@@ -44,6 +50,9 @@ const LandingMobilePage = ({ search }: { search: string }) => (
         className={`${styles.section} ${index % 2 === 0 ? styles.tinted : ''}`}
         aria-labelledby={`landing-${story.id}-title`}
       >
+        <p className={styles.menu} style={{ '--landing-tone': STORY_TONE_COLOR[story.tone] } as CSSProperties}>
+          {story.menu}
+        </p>
         <h2
           id={`landing-${story.id}-title`}
           style={{ '--landing-tone': STORY_TONE_COLOR[story.tone] } as CSSProperties}
@@ -97,13 +106,26 @@ const LandingMobilePage = ({ search }: { search: string }) => (
         <br />
         찾아볼까요?
       </h2>
-      <LandingGetStarted search={search} position="bottom" layout="stack" />
+      <LandingGetStarted search={search} returnTo={returnTo} position="bottom" layout="stack" />
       <p className={styles.footer}>우아한테크코스 8기 팀 프로젝트</p>
     </section>
   </main>
 );
 
 const styles = {
+  /* 기능 섹션 제목 위에 서비스 메뉴 이름을 둬, 랜딩에서 본 기능을 서비스 어디에서 찾는지 알린다. */
+  menu: css`
+    label: LandingMobilePage-menu;
+    display: inline-block;
+    margin: 0 0 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--landing-tone) 18%, transparent);
+    color: var(--color-ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+  `,
+
   /* 제목 왼쪽 색 막대로 동네 찾기(파랑), 본 방 기록(노랑), 만든 이야기를 구분한다. */
   toned: css`
     label: LandingMobilePage-toned;

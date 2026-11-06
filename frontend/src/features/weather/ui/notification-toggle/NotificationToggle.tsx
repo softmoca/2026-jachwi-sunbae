@@ -1,35 +1,53 @@
 import { css } from '@emotion/css';
 import { useId } from 'react';
 
+import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
+
 type NotificationToggleProps = {
   checked: boolean;
   disabled: boolean;
   /** 받을 수 없는 이유나 실패 안내. 없으면 그리지 않는다. */
   message: string | null;
+  /** 토글이 잠긴 채 무언가를 기다리는 중이면 잠시 뒤 토글 옆에 진행 표시를 그린다. */
+  isBusy?: boolean;
+  /** 진행 표시의 이름. 읽기 프로그램에만 알린다. */
+  busyLabel?: string;
   onToggle: () => void;
 };
 
 /** 알림 받기 토글. 권한은 OS가 직접 묻고, 받을 수 없는 이유만 토글 아래에 알린다. */
-const NotificationToggle = ({ checked, disabled, message, onToggle }: NotificationToggleProps) => {
+const NotificationToggle = ({
+  checked,
+  disabled,
+  message,
+  isBusy = false,
+  busyLabel = '알림 설정을 바꾸고 있어요.',
+  onToggle,
+}: NotificationToggleProps) => {
   const labelId = useId();
+  const showsBusy = useDelayedLoading(isBusy);
   return (
     <>
       <div className={styles.row}>
         <p className={styles.label}>
           <strong id={labelId}>알림 받기</strong>
-          <span>매일 오전 7시, 오후 10시</span>
+          <span>생활 날씨·배달 할인</span>
         </p>
-        <button
-          className={styles.toggle}
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-labelledby={labelId}
-          disabled={disabled}
-          onClick={onToggle}
-        >
-          <span />
-        </button>
+        <span className={styles.control}>
+          {showsBusy && <ProgressCircle size={24} label={busyLabel} />}
+          <button
+            className={styles.toggle}
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-labelledby={labelId}
+            disabled={disabled}
+            onClick={onToggle}
+          >
+            <span />
+          </button>
+        </span>
       </div>
       {message && (
         <p className={styles.blocker} role="status">
@@ -49,7 +67,7 @@ const styles = {
     gap: 0.7rem;
   `,
 
-  /* 라벨과 발송 시각을 한 줄에 둔다. */
+  /* 라벨과 받는 알림 종류를 한 줄에 둔다. */
   label: css`
     label: NotificationToggle-label;
     display: flex;
@@ -66,6 +84,14 @@ const styles = {
       color: var(--color-ink-soft);
       font-size: var(--my-subtext-size, 0.78rem);
     }
+  `,
+
+  control: css`
+    label: NotificationToggle-control;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
   `,
 
   toggle: css`

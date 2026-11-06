@@ -2,6 +2,7 @@ import { css } from '@emotion/css';
 import { useState } from 'react';
 
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 
 import { getPropertyErrorMessage } from '../../api/propertyErrorMessages';
 import { usePropertyPhotos } from '../../api/useProperties';
@@ -16,13 +17,13 @@ type PropertyPhotoManagerProps = {
 const PropertyPhotoManager = ({ propertyId, showHeading = false }: PropertyPhotoManagerProps) => {
   const [visibleCount, setVisibleCount] = useState(6);
   const photos = usePropertyPhotos(propertyId);
-  // 빠른 응답에는 로딩 문구 없이 바로 사진을 보여 주고, 오래 걸릴 때만 알린다.
+  // 빠른 응답에는 로딩 표시 없이 바로 사진을 보여 주고, 오래 걸릴 때만 그 자리에 Progress Circle을 둔다.
   const isLoadingVisible = useDelayedLoading(photos.isPending);
 
   if (photos.isPending || isLoadingVisible) {
     return isLoadingVisible ? (
-      <div className={styles.state} role="status">
-        사진 정보를 불러오는 중이에요.
+      <div className={styles.state}>
+        <ProgressCircle size={24} label="사진 정보를 불러오는 중이에요." />
       </div>
     ) : null;
   }

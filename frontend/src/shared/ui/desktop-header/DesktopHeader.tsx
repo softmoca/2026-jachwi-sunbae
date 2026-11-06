@@ -4,17 +4,25 @@ import { Link, NavLink } from 'react-router-dom';
 import iconProfile from '@/shared/assets/icon-profile.webp';
 import logo from '@/shared/assets/jachwi-sunbae-goose.webp';
 import logo2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
-import { HOME_PATH, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import {
+  CHEAP_MEALS_PATH,
+  CHECKLISTS_PATH,
+  COMPARE_PATH,
+  HOME_PATH,
+  MY_PATH,
+  NEIGHBORHOODS_PATH,
+  RECORDS_PATH,
+} from '@/shared/lib/navigation/appPaths';
 
 import { useRegisterDesktopHeaderSlot } from './DesktopHeaderSlot';
 
 /** 데스크탑 헤더에서 바로 옮겨 갈 수 있는 주요 화면. */
 const DESKTOP_NAV_ITEMS = [
   { label: '본 방 기록', to: RECORDS_PATH },
-  { label: '동네 찾기', to: '/neighborhoods' },
-  { label: '체크리스트', to: '/checklists' },
-  { label: '방 비교', to: '/compare' },
-  { label: '저렴한 한 끼', to: '/cheap-meals' },
+  { label: '동네 찾기', to: NEIGHBORHOODS_PATH },
+  { label: '체크리스트', to: CHECKLISTS_PATH },
+  { label: '방 비교', to: COMPARE_PATH },
+  { label: '저렴한 한 끼', to: CHEAP_MEALS_PATH },
 ] as const;
 
 type DesktopHeaderProps = {
@@ -43,7 +51,7 @@ const DesktopHeader = ({ className }: DesktopHeaderProps) => {
           </NavLink>
         ))}
       </nav>
-      <Link className={styles.profile} to="/me" aria-label="마이페이지">
+      <Link className={styles.profile} to={MY_PATH} aria-label="마이페이지">
         <img src={iconProfile} alt="" width={96} height={96} />
       </Link>
     </header>
@@ -88,10 +96,15 @@ const styles = {
     }
   `,
 
+  /*
+   * 가운데 자리는 로고와 같은 높이로 고정한다. 화면 기준 글자 크기(rem)로 그린 검색창이 로고보다 조금 높아도
+   * 헤더 높이가 검색창 유무에 따라 바뀌지 않게 해, 아래 지도가 크기를 다시 잡으며 깜빡이지 않게 한다.
+   */
   slot: css`
     label: DesktopHeader-slot;
     display: flex;
     min-width: 0;
+    height: 2.5em;
     flex: 0 1 28em;
     align-items: center;
     gap: 0.5em;
@@ -104,6 +117,8 @@ const styles = {
   nav: css`
     label: DesktopHeader-nav;
     display: flex;
+    /* 좁은 데스크탑(1024px)에서도 메뉴 이름이 두 줄로 꺾이지 않게 메뉴는 줄이지 않고 가운데 검색 자리가 줄어든다. */
+    flex: none;
     gap: 0;
     margin-left: auto;
 
@@ -115,6 +130,7 @@ const styles = {
       font-size: 0.95em;
       font-weight: 600;
       text-decoration: none;
+      white-space: nowrap;
       transition:
         background-color 0.18s ease,
         color 0.18s ease;

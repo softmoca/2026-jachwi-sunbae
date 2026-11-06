@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 import { Button } from '@/shared/ui/button/Button';
@@ -30,6 +30,7 @@ const demoMarkerStyle = (marker: MapMarker, center: { latitude: number; longitud
 const MapCanvas = ({
   center,
   onRetry,
+  onReady,
   animateView = false,
   coordinateAction,
   coordinateMenu,
@@ -47,6 +48,7 @@ const MapCanvas = ({
   onCenterChange,
   onLevelChange,
   onBoundsChange,
+  onDragStart,
   radiusCenter = center,
   regions,
   selectedRegionId,
@@ -69,12 +71,16 @@ const MapCanvas = ({
     onLevelChange,
     onSelectMarker,
     onBoundsChange,
+    onDragStart,
     regions,
     selectedRegionId,
     onSelectRegion,
   });
   // 지도가 금방 준비되면 불러오는 중 안내 없이 바로 보여 주고, 오래 걸릴 때만 알린다.
   const isMapLoadingVisible = useDelayedLoading(isLoading);
+  useEffect(() => {
+    if (!isLoading && !sdkError) onReady?.();
+  }, [isLoading, sdkError, onReady]);
 
   return (
     <div
@@ -273,9 +279,8 @@ const MapCanvas = ({
         </div>
       )}
       {isMapLoadingVisible && !hideLoading && (
-        <div className={styles.mapLoading} role="status">
+        <div className={styles.mapLoading}>
           <ProgressCircle size={24} label="지도를 불러오는 중이에요." />
-          지도를 불러오고 있어요
         </div>
       )}
       {sdkError && (

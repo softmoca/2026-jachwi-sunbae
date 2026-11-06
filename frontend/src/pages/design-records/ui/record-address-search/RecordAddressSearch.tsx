@@ -1,8 +1,9 @@
 import { css } from '@emotion/css';
 import { useEffect, useRef } from 'react';
 
-import useAddressSearch from '@/pages/create-property/hooks/useAddressSearch';
 import type { MapAddress } from '@/features/map/model/Map';
+import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
+import useAddressSearch from '@/features/property/hooks/useAddressSearch';
 import SearchField from '@/shared/ui/search-field/SearchField';
 
 type Props = {
@@ -61,34 +62,16 @@ const RecordAddressSearch = ({
         onSubmit={() => void search.submit()}
         onClear={search.clear}
       />
-      {(search.status !== 'idle' || search.results.length > 0) && (
-        <div className={styles.dropdown}>
-          {search.status === 'loading' && <p className={styles.status}>주소를 찾는 중이에요.</p>}
-          {search.status === 'error' && (
-            <p className={styles.status} role="alert">
-              주소를 찾지 못했어요. 다시 시도해 주세요.
-            </p>
-          )}
-          {search.results.length > 0 && (
-            <ul className={styles.results} aria-label="주소 검색 결과">
-              {search.results.map((result) => (
-                <li key={`${result.latitude}-${result.longitude}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pickedRef.current = formatAddress(result);
-                      search.pick(result);
-                      onSelect(result);
-                    }}
-                  >
-                    {formatAddress(result)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <AddressSearchResults
+        results={search.results}
+        dropdown
+        status={search.status === 'idle' && search.results.length > 0 ? 'success' : search.status}
+        onSelect={(result) => {
+          pickedRef.current = formatAddress(result);
+          search.pick(result);
+          onSelect(result);
+        }}
+      />
     </div>
   );
 };
@@ -108,53 +91,6 @@ const styles = {
     min-width: 0;
     background: white;
     box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
-  `,
-
-  dropdown: css`
-    label: RecordAddressSearch-dropdown;
-    position: absolute;
-    top: calc(100% + 0.4rem);
-    right: 0;
-    left: 0;
-    z-index: 40;
-    max-height: 16rem;
-    overflow-y: auto;
-    border: 1px solid #e3e5e9;
-    border-radius: 1rem;
-    background: white;
-    box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 14%);
-  `,
-
-  status: css`
-    label: RecordAddressSearch-status;
-    margin: 0;
-    padding: 0.85rem 1rem;
-    color: #868b94;
-    font-size: 0.82rem;
-  `,
-
-  results: css`
-    label: RecordAddressSearch-results;
-    margin: 0;
-    padding: 0.3rem 0;
-    list-style: none;
-
-    & button {
-      display: block;
-      width: 100%;
-      padding: 0.7rem 1rem;
-      border: 0;
-      background: transparent;
-      color: #25282d;
-      font: inherit;
-      font-size: 0.85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    & button:hover {
-      background: #f5f6f8;
-    }
   `,
 };
 

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { FROM_PROPERTY_DETAIL_STATE } from '@/features/property/lib/propertyNavigation';
 import type { PropertyPhotoPreview } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyPlaceholderPhoto from '@/features/property/ui/property-placeholder-photo/PropertyPlaceholderPhoto';
+import { propertyPhotosPath, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 
 type PropertyHeroPhotoProps = {
@@ -47,7 +49,8 @@ const PropertyHeroPhoto = ({
     ) : (
       <Link
         className={`${styles.button} ${styles.emptyButton}`}
-        to={`/properties/${propertyId}/photos`}
+        aria-label="사진 추가"
+        to={propertyPhotosPath(propertyId)}
         state={FROM_PROPERTY_DETAIL_STATE}
         onClick={(event) => {
           if (onManagePhotos === undefined) return;
@@ -55,6 +58,7 @@ const PropertyHeroPhoto = ({
           onManagePhotos();
         }}
       >
+        <PropertyPlaceholderPhoto className={styles.photo} alt="기본 매물 이미지" />
         <span className={styles.addLabel}>
           <Icon name="plus" size={16} />
           사진 추가
@@ -66,7 +70,7 @@ const PropertyHeroPhoto = ({
         className={styles.backButton}
         to={backTo}
         state={backState}
-        aria-label={backTo === '/properties' ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
+        aria-label={backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}
       >
         <Icon name="chevron-left" size={24} />
       </Link>
@@ -101,14 +105,14 @@ const styles = {
 
   emptyButton: css`
     label: PropertyHeroPhoto-emptyButton;
-    display: grid;
-    place-items: center;
-    /* 아래 정보 칸이 사진 칸을 2rem 덮으므로 그만큼 위로 올려 보이는 칸 가운데에 둔다. */
-    padding-bottom: 2rem;
+    position: relative;
   `,
 
   addLabel: css`
     label: PropertyHeroPhoto-addLabel;
+    position: absolute;
+    right: 1rem;
+    bottom: 2.75rem;
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;

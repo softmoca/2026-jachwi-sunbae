@@ -39,7 +39,6 @@ const routeByScenario: Record<string, string> = {
   'not-found': '/does-not-exist',
   'list-empty': '/',
   'list-two': '/',
-  new: '/properties/new',
   detail: '/properties/10',
   'memo-empty': '/properties/10',
   'memo-success': '/properties/10',

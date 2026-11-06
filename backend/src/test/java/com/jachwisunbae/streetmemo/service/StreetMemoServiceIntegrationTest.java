@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
@@ -16,6 +19,8 @@ import com.jachwisunbae.member.service.MemberService;
 import com.jachwisunbae.streetmemo.domain.StreetMemoPreference;
 import com.jachwisunbae.streetmemo.repository.JdbcStreetMemoRepository;
 import com.jachwisunbae.streetmemo.service.dto.result.StreetMemoResult;
+import com.jachwisunbae.transit.repository.JdbcAdminDongRepository;
+import com.jachwisunbae.transit.service.AdminDongFinder;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,9 +38,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -184,6 +189,11 @@ class StreetMemoServiceIntegrationTest {
     static class TestConfig {
 
         @Bean
+        RefreshTokenRepository refreshTokenRepository() {
+            return mock(RefreshTokenRepository.class);
+        }
+
+        @Bean
         JdbcTemplate jdbcTemplate(DataSource dataSource) {
             return new JdbcTemplate(dataSource);
         }
@@ -191,6 +201,11 @@ class StreetMemoServiceIntegrationTest {
         @Bean
         PlatformTransactionManager transactionManager(DataSource dataSource) {
             return new DataSourceTransactionManager(dataSource);
+        }
+
+        @Bean
+        AdminDongFinder adminDongFinder(JdbcTemplate jdbcTemplate) {
+            return new AdminDongFinder(new JdbcAdminDongRepository(jdbcTemplate, new ObjectMapper()));
         }
 
         @Bean

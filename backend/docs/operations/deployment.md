@@ -75,6 +75,8 @@ dev는 `jachwi-sunbae-dev-asg`, prod는 `jachwi-sunbae-prod-asg`를 사용하며
 
 GitHub Actions는 PR과 `main`·`develop` push에서 `clean build`를 실행한다. 병합 전에 필수 검사를 통과해야 하므로 배포 빌드는 `clean bootJar -x test`로 JAR를 만든다.
 
+백엔드 문서 전용 변경은 CI의 무거운 단계를 생략한다. CI 실행 범위와 캐시·테스트 정책은 [Backend CI](ci.md)를 따른다. AWS 배포 트리거는 CI의 변경 감지와 별개이므로 CI 생략이 배포 생략을 뜻하지 않는다.
+
 팀은 AWS 액세스 키와 서비스 역할 정책을 직접 관리할 수 없어 AWS 파이프라인을 사용한다. 별도 CodeBuild 프로젝트는 `SourceArtifact` 읽기 권한 문제로 사용하지 않고, 파이프라인 서비스 역할을 사용하는 `Commands`를 사용한다. **빌드 명령은 콘솔에 있으므로 설정 변경 시 문서도 갱신한다.**
 
 Corretto 21을 준비하고 소스 SHA를 애플리케이션 빌드 정보와 `deployment-revision.txt`에 기록한다.
@@ -115,7 +117,7 @@ Thread Dump 스크립트와 logrotate 설정도 `scripts/` 아래에 두어 기�
 
 EC2에는 Java 21, 실행 사용자 `jachwi`, CodeDeploy 에이전트와 배포 디렉터리가 필요하다. Vault 준비 스크립트는 Java·사용자·CodeDeploy 에이전트를 설치하지 않는다.
 
-[jachwi-sunbae.service](../../deploy/jachwi-sunbae.service)는 환경변수 파일을 읽어 `jachwi` 사용자로 실행한다. Dev는 `SPRING_PROFILES_ACTIVE=dev`, Prod는 `SPRING_PROFILES_ACTIVE=prod`를 사용한다. 기존 Dev의 `prod` 설정은 이 버전 배포 전에 Vault의 Dev `app_env`에서 변경해야 한다. 기존 날씨 실행 여부·Firebase 프로젝트 ID 환경변수는 YAML보다 우선하므로 제거한다. 현재 Dev·Prod FCM은 인증정보·앱 연동 준비가 끝나기 전이라 OFF다.
+[jachwi-sunbae.service](../../deploy/jachwi-sunbae.service)는 환경변수 파일을 읽어 `jachwi` 사용자로 실행한다. Dev는 `SPRING_PROFILES_ACTIVE=dev`, Prod는 `SPRING_PROFILES_ACTIVE=prod`를 사용한다. 기존 Dev의 `prod` 설정은 이 버전 배포 전에 Vault의 Dev `app_env`에서 변경해야 한다. 기존 날씨 실행 여부·Firebase 프로젝트 ID 환경변수는 YAML보다 우선하므로 제거한다. 날씨 알림 FCM은 Dev·Prod 모두 ON이며, 각 환경의 Firebase 서비스 계정 JSON이 없으면 서버가 시작되지 않는다.
 
 ### 포트와 파일 권한
 
@@ -198,7 +200,25 @@ set +x
 vault kv patch -mount=secret jachwi-sunbae/dev firebase_service_account_json=- < /secure/path/dev-service-account.json
 ```
 
-Prod는 경로를 `jachwi-sunbae/prod`로 바꾸고 Prod 전용 JSON을 입력한다. 별도 훅 없이 다음 CodeDeploy 배포에서 새 ASG 인스턴스에도 배치된다. 알림은 Dev만 ON이며, Dev는 이 JSON이 없으면 서버가 시작되지 않는다. Prod는 실제 프로젝트·자격증명·앱 연동 확인 후 별도로 활성화한다.
+Prod는 경로를 `jachwi-sunbae/prod`로 바꾸고 Prod 전용 JSON을 입력한다. 별도 훅 없이 다음 CodeDeploy 배포에서 새 ASG 인스턴스에도 배치된다. 알림은 Dev·Prod 모두 ON이므로 두 환경 모두 이 JSON이 없으면 서버가 시작되지 않는다. 알림 활성화 배포 전에 JSON을 먼저 등록한다.
+
+| 환경 | Firebase 프로젝트    | 앱 빌드                    |
+| ---- | -------------------- | -------------------------- |
+| Dev  | `jachwi-sunbae-de`   | Debug 빌드                 |
+| Prod | `jachwi-sunbae-prod` | Release(TestFlight·스토어) |
+
+FCM 토큰은 발급한 Firebase 프로젝트의 서비스 계정으로만 발송할 수 있다. 앱 빌드의 Firebase 설정 파일과 서버의 서비스 계정 프로젝트가 다르면 발송이 실패한다. 스토어 앱 `2.1.1(8)`은 `jachwi-sunbae-de`로 빌드되어 있으므로, Prod 설정 파일로 재빌드한 앱이 배포된 뒤부터 Prod 발송이 기기에 도달한다.
+
+발송을 긴급 중단하려면 Vault의 해당 환경 `app_env`에 `WEATHER_NOTIFICATION_ENABLED=false`를 추가하고 `fetch_env.sh` 실행 후 재시작한다. 환경변수가 YAML보다 우선하므로 코드 배포 없이 적용된다. 원인 해결 후 이 줄을 제거하고 같은 절차로 다시 적용한다.
+
+운영자 테스트 알림 `POST /internal/weather-notifications/test`는 `app_env`의 `WEATHER_TEST_PUSH_KEY`와 같은 값을 `X-Test-Push-Key` 헤더로 보낼 때만 `{"memberId": <회원 ID>}`의 등록 기기로 고정 문구를 보낸다. 키가 없으면 API는 항상 404다. 키는 `openssl rand -base64 32`로 환경마다 다르게 만들고 문서·채팅·셸 기록에 남기지 않는다. 회원 ID는 DB `notification_devices`의 `member_id`와 등록 시각 `updated_at`(UTC)으로 찾는다.
+
+```bash
+read -rs KEY
+curl -fsS -X POST https://dev-api.jachwi-sunbae.kr/internal/weather-notifications/test \
+  -H "X-Test-Push-Key: ${KEY}" -H 'Content-Type: application/json' -d '{"memberId": 1}'
+unset KEY
+```
 
 Vault 값 변경은 실행 중인 앱에 즉시 반영되지 않는다. 이 리비전 배포 후 파일을 갱신하고 성공했을 때만 재시작한다. prod에서는 인자를 `prod`로 바꾼다.
 

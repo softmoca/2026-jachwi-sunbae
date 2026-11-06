@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import { EXPLORE_PATH } from '@/shared/lib/navigation/appPaths';
 
 type SearchConditions = { maxMinutes: number; maxTransfers: number; maxRent: number };
 type AnalyticsOptions = {
@@ -28,7 +29,9 @@ const useNeighborhoodAnalytics = (options: AnalyticsOptions) => {
   const visit = useRef<string | null>(null);
   const search = useRef<{ id: string; finished: boolean; conditions: SearchConditions } | null>(null);
   const entrypoint =
-    location.pathname === '/explore' || location.pathname.startsWith('/explore/') ? 'public_explore' : 'neighborhoods';
+    location.pathname === EXPLORE_PATH || location.pathname.startsWith(`${EXPLORE_PATH}/`)
+      ? 'public_explore'
+      : 'neighborhoods';
   const context = { feature, entrypoint, mock_data: options.mock };
 
   useEffect(() => {
@@ -88,6 +91,9 @@ const useNeighborhoodAnalytics = (options: AnalyticsOptions) => {
     selectArea: () => capture('neighborhood_area_selected'),
     changeStation: () => capture('commute_departure_station_changed'),
     openListing: () => capture('neighborhood_listing_link_clicked', { provider: 'dabang' }),
+    /** 동네를 고른 결과 지도의 분류 레일(메모, 병원, 교통, 학교, 편의)을 켜거나 끌 때. */
+    toggleMapCategory: (category: string, selected: boolean) =>
+      capture('neighborhood_map_category_toggled', { category, selected }),
   };
 };
 

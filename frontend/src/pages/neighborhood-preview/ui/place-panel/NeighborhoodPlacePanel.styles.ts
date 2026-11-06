@@ -146,3 +146,22 @@ export const phone = css`
     font-size: 0.75rem;
   }
 `;
+
+/** 장소 정보의 항목과 값(주소, 거리 등). */
+export const facts = css`
+  label: NeighborhoodPlacePanel-facts;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+
+  & dt {
+    color: var(--color-muted);
+  }
+
+  & dd {
+    margin: 0;
+    color: var(--color-ink);
+  }
+`;

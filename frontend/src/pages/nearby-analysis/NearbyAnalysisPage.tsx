@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { readAreaNearbyBackPath, readAreaNearbyTarget } from '@/features/map/lib/areaNearbyTarget';
 import { usePropertyDetail } from '@/features/property/api/useProperties';
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
+import { propertyDetailPath, propertyEditPath } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 import EmptyState from '@/shared/ui/empty-state/EmptyState';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
@@ -32,7 +33,7 @@ const PropertyNearbyAnalysisPage = ({ propertyId }: { propertyId: number }) => {
       <TopNavigation
         className={styles.mapNavigation}
         title="매물 주변 분석"
-        backTo={`/properties/${propertyId}`}
+        backTo={propertyDetailPath(propertyId)}
         backLabel="매물 상세로 돌아가기"
       />
       {property.isError ? (
@@ -47,7 +48,7 @@ const PropertyNearbyAnalysisPage = ({ propertyId }: { propertyId: number }) => {
           <EmptyState
             title="먼저 매물 위치를 등록해 주세요"
             description="위치를 저장하면 반경별 주변 시설을 분석할 수 있어요."
-            action={<ButtonLink to={`/properties/${propertyId}/edit`}>위치 등록하기</ButtonLink>}
+            action={<ButtonLink to={propertyEditPath(propertyId)}>위치 등록하기</ButtonLink>}
           />
         </div>
       ) : (

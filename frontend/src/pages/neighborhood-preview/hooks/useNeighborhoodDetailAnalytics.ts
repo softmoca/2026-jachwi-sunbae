@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import { EXPLORE_PATH } from '@/shared/lib/navigation/appPaths';
 
 type DetailOptions = {
   mock: boolean;
@@ -22,7 +23,7 @@ const useNeighborhoodDetailAnalytics = (options: DetailOptions) => {
     emitted.current = key;
     trackPostHogEvent(options.failed ? 'commute_route_failed' : 'commute_route_viewed', {
       feature: 'commute',
-      entrypoint: location.pathname.startsWith('/explore/') ? 'public_explore' : 'neighborhoods',
+      entrypoint: location.pathname.startsWith(`${EXPLORE_PATH}/`) ? 'public_explore' : 'neighborhoods',
       mock_data: options.mock,
       has_rent: options.hasRent,
     });

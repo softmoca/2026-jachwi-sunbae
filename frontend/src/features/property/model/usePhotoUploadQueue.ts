@@ -33,7 +33,7 @@ const prepareFiles = (files: File[], availableCount: number): PreparedFile[] =>
     };
 
     if (index >= availableCount) {
-      return { item: { ...item, status: 'error', message: '매물당 최대 30장까지만 등록할 수 있습니다.' }, file: null };
+      return { item: { ...item, status: 'error', message: '사진은 매물마다 30장까지 올릴 수 있어요.' }, file: null };
     }
 
     if (!acceptedPhotoTypes.some((type) => type === file.type)) {
@@ -41,12 +41,12 @@ const prepareFiles = (files: File[], availableCount: number): PreparedFile[] =>
     }
 
     if (file.size === 0) {
-      return { item: { ...item, status: 'error', message: '내용이 없는 파일은 등록할 수 없습니다.' }, file: null };
+      return { item: { ...item, status: 'error', message: '빈 파일이에요. 다른 사진을 골라 주세요.' }, file: null };
     }
 
     if (file.size > MAX_PHOTO_BYTES) {
       return {
-        item: { ...item, status: 'error', message: '사진 한 장은 5MiB 이하만 등록할 수 있습니다.' },
+        item: { ...item, status: 'error', message: '사진 한 장은 5MB 이하만 올릴 수 있어요.' },
         file: null,
       };
     }

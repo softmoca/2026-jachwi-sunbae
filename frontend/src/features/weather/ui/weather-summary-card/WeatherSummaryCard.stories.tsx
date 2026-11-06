@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
-import { weatherQueryKeys } from '../../api/weatherApi';
 import type { WeatherForecastResponse, WeatherHour } from '../../model/weather';
+import { weatherQueryKeys } from '../../model/weatherQueryKeys';
 import WeatherSummaryCard from './WeatherSummaryCard';
 
 const coordinate = { latitude: 37.4842, longitude: 126.9297 };
@@ -50,7 +50,7 @@ type Story = StoryObj<typeof meta>;
 
 export const NotificationOff: Story = {
   parameters: {
-    queryData: [[weatherQueryKeys.settings, { enabled: false }]],
+    queryData: [[weatherQueryKeys.settings(null), { enabled: false }]],
   },
 };
 
@@ -58,7 +58,7 @@ export const NotificationOff: Story = {
 export const WithForecast: Story = {
   parameters: {
     queryData: [
-      [weatherQueryKeys.settings, { enabled: true }],
+      [weatherQueryKeys.settings(null), { enabled: true }],
       [weatherQueryKeys.forecast(coordinate), forecast],
       [weatherQueryKeys.place(coordinate), '관악구 신림동'],
     ],

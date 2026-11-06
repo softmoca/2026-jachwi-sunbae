@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>자취선배 스토어 스크린샷</title>
+<script>
+// 장면 목록. 순서대로 01 ~ 06 파일이 되고, 물결도 이 순서로 이어진다.
+// icon은 frontend/src/shared/assets/illustrations, screen은 frontend/src/shared/assets/app-screens 안의 파일 이름이다.
+const SCENES = [
+  { id: 'hero', name: '자취선배', title: ['직접 쓴 기록이', '<em>방을 고르는 기준</em>이 되도록'] },
+  { id: 'explore', icon: 'icon-map.webp', title: ['출퇴근 시간으로', '<em>살 동네</em> 찾기'], screen: 'explore-mobile.jpg' },
+  { id: 'records', icon: 'icon-home.webp', title: ['본 방은', '<em>지도 위에</em> 남겨요'], screen: 'records-mobile.jpg' },
+  { id: 'checklist', icon: 'icon-info.webp', title: ['놓친 게 없는지', '<em>하나씩</em> 확인해요'], screen: 'checklist-mobile.jpg' },
+  { id: 'compare', icon: 'rank-1.webp', title: ['고민되는 방은', '<em>나란히</em> 놓고 골라요'], screen: 'compare-mobile.jpg' },
+  { id: 'cheap-meals', icon: 'icon-map.webp', title: ['그 동네 한 끼 값도', '<em>미리</em> 봐요'], screen: 'cheap-meals-mobile.jpg' },
+];
+const ASSETS = '../../../frontend/src/shared/assets';
+const DUCK = '../ios/app-icon-source.png';
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.css">
+<style>
+/* 설치된 Pretendard를 먼저 쓰고, 없으면 위 jsDelivr 웹폰트를 쓴다. */
+@font-face { font-family: 'Pretendard Local'; src: local('Pretendard Variable'), local('PretendardVariable'); font-weight: 100 900; }
+:root { --blue: #6b9ae6; --blue-ink: #3f6fc4; --yellow: #f5b91e; --ink: #212124; --soft: #5c5f66; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1290px; height: var(--h); overflow: hidden; background: #fff; font-family: 'Pretendard Local', 'Pretendard Variable', sans-serif; color: var(--ink); }
+.slide { position: relative; width: 1290px; height: var(--h); overflow: hidden; background: #fff; }
+.wave { position: absolute; inset: 0; width: 1290px; height: var(--h); }
+.head, .phone, .hero .name, .hero .duck, .hero .copy { z-index: 1; }
+.head { position: absolute; top: 190px; left: 0; right: 0; text-align: center; }
+.head img { width: 150px; height: 150px; }
+.head h1 { margin-top: 36px; font-size: 104px; font-weight: 800; line-height: 1.28; letter-spacing: -0.035em; }
+.head h1 em { font-style: normal; color: var(--blue-ink); }
+.phone { position: absolute; left: 50%; top: 820px; width: 960px; transform: translateX(-50%);
+  border: 22px solid #1d1d1f; border-bottom: 0; border-radius: 120px 120px 0 0; background: #fff; overflow: hidden;
+  box-shadow: 0 30px 90px rgba(30, 50, 90, 0.18); }
+.status { height: 118px; display: flex; align-items: center; justify-content: space-between; padding: 22px 70px 0 86px;
+  font-size: 40px; font-weight: 700; background: #fff; position: relative; }
+.status::after { content: ''; position: absolute; left: 50%; top: 26px; width: 250px; height: 72px; transform: translateX(-50%); background: #1d1d1f; border-radius: 40px; }
+.bars { display: flex; gap: 12px; align-items: center; }
+.bars i { display: block; background: var(--ink); border-radius: 4px; }
+.screen { display: block; width: 100%; }
+.hero .duck { position: absolute; left: 50%; width: 560px; height: 560px; transform: translateX(-50%); border-radius: 132px; box-shadow: 0 36px 90px rgba(63, 111, 196, 0.32); }
+.hero .name { position: absolute; left: 0; right: 0; text-align: center; font-size: 150px; font-weight: 900; color: var(--ink); letter-spacing: -0.05em; line-height: 1; }
+.hero .copy { position: absolute; left: 0; right: 0; text-align: center; }
+.hero h1 { font-size: 92px; font-weight: 800; line-height: 1.32; letter-spacing: -0.04em; }
+.hero h1 em { font-style: normal; color: var(--blue-ink); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// ?s=<장면 id>&h=<세로 픽셀>. 가로는 늘 1290px이다.
+const q = new URLSearchParams(location.search);
+const id = q.get('s') || SCENES[0].id;
+const h = Number(q.get('h') || 2796);
+const k = h / 2796;
+document.documentElement.style.setProperty('--h', h + 'px');
+
+// 6장 전체 폭에 걸친 사인파 4겹을 그리고, 각 장은 viewBox로 자기 구간만 보여 준다.
+const W = 1290 * SCENES.length;
+const LAYERS = [
+  { base: 1180, amp: 170, len: 2900, phase: 0.3, color: '#e6eefc' },
+  { base: 1520, amp: 150, len: 3500, phase: 1.9, color: '#bcd2f6' },
+  { base: 1900, amp: 130, len: 2500, phase: 3.6, color: '#8fb3ee' },
+  { base: 2280, amp: 110, len: 3100, phase: 5.0, color: '#6b9ae6' },
+];
+const wave = () => {
+  const paths = LAYERS.map((l) => {
+    let d = `M0 ${h}`;
+    for (let x = 0; x <= W; x += 30) {
+      const y = (l.base + l.amp * Math.sin((2 * Math.PI * x) / l.len + l.phase)) * k;
+      d += ` L${x} ${y.toFixed(1)}`;
+    }
+    return `<path d="${d} L${W} ${h} Z" fill="${l.color}"/>`;
+  }).join('');
+  const i = SCENES.findIndex((s) => s.id === id);
+  return `<svg class="wave" viewBox="${i * 1290} 0 1290 ${h}" preserveAspectRatio="none">${paths}</svg>`;
+};
+
+const status = `<div class="status"><span>9:41</span><span class="bars">
+  <i style="width:9px;height:14px"></i><i style="width:9px;height:20px"></i><i style="width:9px;height:26px"></i><i style="width:9px;height:32px"></i>
+  <i style="width:62px;height:30px;border-radius:9px;margin-left:16px"></i></span></div>`;
+
+const s = SCENES.find((x) => x.id === id);
+const root = document.getElementById('root');
+if (!s.screen) {
+  root.innerHTML = `<div class="slide hero">${wave()}
+    <img class="duck" style="top:${420 * k}px" src="${DUCK}">
+    <div class="name" style="top:${420 * k + 560 + 70}px">${s.name}</div>
+    <div class="copy" style="top:${420 * k + 560 + 70 + 230}px"><h1>${s.title.join('<br>')}</h1></div>
+  </div>`;
+} else {
+  const short = h < 2700;
+  root.innerHTML = `<div class="slide">${wave()}
+    <div class="head" style="top:${short ? 150 : 190}px"><img src="${ASSETS}/illustrations/${s.icon}"><h1>${s.title.join('<br>')}</h1></div>
+    <div class="phone" style="top:${short ? 760 : 820}px">${status}<img class="screen" src="${ASSETS}/app-screens/${s.screen}"></div></div>`;
+}
+</script>
+</body>
+</html>

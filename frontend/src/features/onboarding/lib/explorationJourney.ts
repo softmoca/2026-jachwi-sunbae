@@ -9,7 +9,6 @@ type Journey = {
   completed: boolean;
   converted?: boolean;
   selectedLocation?: MapAddress;
-  formViewed?: boolean;
 };
 const KEY = 'jachwi.exploration-journey';
 let memoryJourney: Journey | null = null;
@@ -71,21 +70,4 @@ export const getExplorationRecordLocation = () => {
 export const trackExplorationLogin = (newMember: boolean) => {
   const journey = read();
   if (journey?.converted) capture('exploration_login_completed', journey, { new_member: newMember });
-};
-export const trackExplorationRecordView = () => {
-  const journey = read();
-  if (!journey?.converted || journey.formViewed) return;
-  write({ ...journey, formViewed: true });
-  capture('exploration_record_form_viewed', journey);
-};
-export const trackExplorationSaved = () => {
-  const journey = read();
-  if (!journey?.converted || !journey.formViewed) return;
-  capture('exploration_property_saved', journey);
-  memoryJourney = null;
-  try {
-    sessionStorage.removeItem(KEY);
-  } catch {
-    /* 다음 화면 이동을 막지 않는다. */
-  }
 };

@@ -37,6 +37,8 @@ frontend/
 
 `public`은 `/logo.svg`처럼 URL로 직접 제공하는 파일이고, `shared/assets`는 코드에서 import하여 Webpack이 처리하는 이미지·폰트입니다.
 
+화면 주소는 `shared/lib/navigation/appPaths.ts`에서만 정합니다. 라우터 정의(`app/router/AppRoutes.tsx`)와 링크, 이동은 문자열 대신 고정 주소 상수(`CHECKLISTS_PATH`), 라우터 패턴(`ROUTE_PATTERNS`), 동적 주소 함수(`propertyDetailPath(id)`), 쿼리 파라미터 이름(`PROPERTY_DETAIL_TAB_PARAM`)을 씁니다. 테스트(`test`)는 상수를 잘못 바꿔도 잡을 수 있도록 주소 문자열을 그대로 씁니다.
+
 테스트 파일은 구현 파일과 함께 두지 않고 `test` 아래에서 `src`와 동일한 경로를 유지합니다. 예를 들어 `src/features/map/lib/mapClustering.ts`의 테스트는 `test/features/map/lib/mapClustering.test.ts`에 둡니다. 공통 테스트 설정과 서버는 각각 `test/setup.ts`, `test/server.ts`에 둡니다.
 
 ## 2. 네이밍
@@ -177,11 +179,34 @@ const DesignHomePage = () => (useIsDesktop() ? <HomeDesktopPage /> : <HomeMobile
 - 서버 응답 형식과 화면 모델이 다르면 API 경계에서 변환합니다.
 - 조회·변경 Query Hook도 같은 기능의 `api`에 둡니다.
 - 화면에는 최소한 loading, error, empty, success 상태를 고려합니다.
-- 페이지 전체를 조회 결과로 그릴 때는 `shared/ui/query-state/QueryState`로 로딩·오류 화면을 맡깁니다. 오류 안내는 `describePropertyLoadError`, `describeChecklistLoadError`처럼 소유 기능의 `api`에서 만듭니다.
-- 화면 일부만 불러올 때는 `shared/ui/delayed-fallback/DelayedFallback`으로 감쌉니다. 500ms 안에 끝나면 로딩 UI 없이 빈자리(`placeholder`)만 두었다가 바로 내용을 보여 주고, 그보다 길어지면 `fallback`을 띄워 최소 250ms는 남깁니다. 오류 처리는 맡지 않습니다. 감싸기 어려운 곳(스켈레톤, 지도 안내 등)은 같은 규칙의 `useDelayedLoading`을 씁니다.
-- 공용 `Button`의 `isLoading`은 켜지는 즉시 두 번째 클릭을 막고 `aria-busy`를 달지만, 스피너와 문구, 비활성 모양은 500ms가 지나야 보여 줍니다. 라우트 Suspense 대체 화면(`RouteLoading`)도 처음엔 투명하게 두고 500ms 뒤 CSS 애니메이션으로 나타냅니다.
+- 페이지 전체를 조회 결과로 그릴 때는 `shared/ui/query-state/QueryState`로 로딩·오류 화면을 맡깁니다. 오류 안내는 `describePropertyLoadError`, `describeChecklistLoadError`처럼 소유 기능의 `api`에서 만듭니다. 기다리는 동안 로딩을 늦추지 않고 바로 보여 주며, 화면 뼈대가 있으면 `skeleton`으로 넘겨 로딩 문구 대신 뼈대를 그립니다.
+- 지연 로딩(`DelayedFallback`, `useDelayedLoading`)은 이미 화면에 남아 있는 요소 안에서 짧은 로딩이 번쩍이지 않게 할 때만 씁니다. 페이지를 바꾸거나 새로 여는 로딩(라우트 대체 화면, 페이지 전체 조회)에는 남겨 둘 내용이 없어 늦추면 빈 화면만 길어지므로 쓰지 않습니다.
+- 남아 있는 화면의 일부만 불러올 때는 `shared/ui/delayed-fallback/DelayedFallback`으로 감쌉니다. 300ms 안에 끝나면 로딩 UI 없이 빈자리(`placeholder`)만 두었다가 바로 내용을 보여 주고, 그보다 길어지면 `fallback`을 띄워 최소 250ms는 남깁니다. 오류 처리는 맡지 않습니다. 감싸기 어려운 곳(지도 위 안내, 사진 등)은 같은 규칙의 `useDelayedLoading`을 씁니다. 같은 자리라도 처음 열어 보여 줄 내용이 없을 때는 늦추지 않습니다. 예: 저렴한 한 끼 식당 탭의 첫 목록
+- 공용 `Button`의 `isLoading`은 켜지는 즉시 두 번째 클릭을 막고 `aria-busy`를 달지만, 스피너와 문구, 비활성 모양은 300ms가 지나야 보여 줍니다. 라우트 Suspense 대체 화면(`RouteLoading`)은 늦추지 않고 바로 보여 주고, 뼈대가 있는 경로는 그 뼈대를 대체 화면으로 넘깁니다.
+- 화면 뼈대는 라우트 Suspense 대체 화면과 데이터 로딩에 같은 것을 써서 뼈대에서 내용으로 한 번만 바뀌게 합니다. 라우트 대체 화면은 첫 번들(350KiB 한도)에 들어가므로, 뼈대가 무거우면 데이터 로딩에만 씁니다. 예: 체크리스트의 `ChecklistEditorSkeleton`
+- 몇 개가 올지 모르는 목록은 카드 뼈대를 두지 않습니다. 개수가 다르면 뼈대에서 내용으로 바뀔 때 칸이 펼쳐졌다 줄어듭니다. 남아 있는 화면 안의 목록이면 `DelayedFallback`을 쓰고, 아래가 크게 밀리면 데이터 전 최소 높이만 한 줄 정도로 잡습니다. 예: 홈 `RecentRooms`
+- `index.html`의 `#root`에는 JS를 받는 동안 보여 줄 CSS 앱 뼈대(`.boot-skeleton`)를 둡니다. 홈 뼈대는 실제 첫 화면과 같은 자리와 크기로 맞추고, 홈 라우트의 대체 화면(`HomePageSkeleton`)도 같은 마크업을 써서 JS를 받기 전부터 홈이 그려질 때까지 모양이 그대로 이어지게 합니다.
+- 회원 화면 입구(`ProtectedRoute`)는 자동 로그인을 기다리는 동안에도 화면을 그립니다. 화면의 요청은 API 클라이언트가 진행 중인 로그인을 기다렸다가 보내므로 입구에서 따로 기다리거나 지연 로딩을 붙이지 않습니다. 회원 정보가 필요한 화면은 `useMember`로 회원이 정해질 때까지 기다립니다.
 - 오류 코드는 `isApiErrorCode(error, 'CODE')`로 확인합니다.
+- 처음 여는 화면은 남겨 둘 내용이 없으므로 늦추지 않고 그 화면의 뼈대를 바로 보여 줘도 됩니다. 이때 라우트 Suspense 대체 화면과 데이터 로딩에 같은 뼈대를 써서, 뼈대에서 내용으로 한 번만 바뀌게 합니다. 뼈대는 실제 배치를 따릅니다. 지도 화면(본 방 기록 `RecordsPageSkeleton`, 동네 찾기 `NeighborhoodPageSkeleton`)은 목록 영역과 지도 영역의 배치만 `AreaSkeleton`으로 채우고 카드, 칩, 필터 모양은 그리지 않습니다. 휴대폰은 지금 보기 방식의 한 영역만, 데스크탑은 실제 화면과 같은 `ListDetailLayout`으로 두 영역을 채워 폭 규칙을 함께 씁니다.
 - 서버 상태와 UI 상태를 구분합니다. 서버에서 가져온 데이터를 불필요하게 여러 컴포넌트의 로컬 상태로 복사하지 않습니다.
+
+### 로딩 표시 기준
+
+[SEED Loading 패턴](https://seed-design.io/patterns/loading)의 사용처 기준을 따릅니다. 글자로만 된 로딩은 두지 않고, 안내 문구는 읽기 프로그램에만 알립니다(Progress Circle의 `label`, `LoadingRegion`, `QueryState`의 `loadingTitle`).
+
+| 상황                                   | 표시                                                                                     | 예                                                        |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 첫 진입, 페이지 전환(남은 콘텐츠 없음) | 지연 없이 화면 구조. 첫 진입은 `index.html` CSS 앱 뼈대, 그 뒤는 그 화면의 레이아웃 뼈대 | 홈 `HomePageSkeleton`, 매물 상세 `PropertyDetailSkeleton` |
+| 고정 레이아웃 페이지                   | 실제 크기를 따른 스켈레톤(`PageSkeleton`)                                                | 수정, 사진, 부가 정보, 체크리스트 화면                    |
+| 뼈대가 없는 페이지 전체                | 가운데에 Progress Circle 40(`PageLoading`)                                               | 방 비교, 저렴한 한 끼 패널                                |
+| 남아 있는 요소 안의 부분 로딩          | 지연(300ms) 뒤 그 자리에 Progress Circle 24                                              | 사진, 메모, 체크 항목 고르기, 식당 목록, 최근 기록        |
+| 콘텐츠가 있는 상태에서 다시 불러오기   | 콘텐츠 위 Overlay와 Progress Circle. 뒤를 조작할 수 있으면 작은 Overlay                  | 지도 불러오기                                             |
+| 버튼 동작                              | 누르는 즉시 중복 클릭만 막고, 지연(300ms) 뒤 버튼 안 스피너                              | 공용 `Button`의 `isLoading`                               |
+
+- 스켈레톤은 실제 크기와 같게 하고, 둥글기는 글자 줄 8px, 카드와 썸네일 16px, 원형 9999px로 둡니다(`shared/ui/skeleton/Skeleton`).
+- 스켈레톤과 Progress Circle을 같이 쓰지 않습니다.
+- 개수를 알 수 없고 높이가 바뀌면 아래 요소를 미는 목록에는 스켈레톤을 쓰지 않습니다. 예: 홈 최근 기록한 방
 
 ## 8. 접근성
 

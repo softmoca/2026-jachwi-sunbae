@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 
 import type { AdditionalEditField } from '@/pages/property-detail/model/editField';
 import { useUpdateProperty } from '@/features/property/api/usePropertyMutations';
@@ -7,6 +7,7 @@ import { formatAmountForInput, parseMoneyInput, WON_PER_MANWON } from '@/feature
 import type { PropertyDetail, RoomOption, UtilityOption } from '@/features/property/model/Property';
 import { MAINTENANCE_OPTIONS, PROPERTY_OPTIONS } from '@/features/property/model/propertyOptions';
 import MoneyField from '@/features/property/ui/money-field/MoneyField';
+import useOutsideInteraction from '@/shared/lib/hooks/useOutsideInteraction';
 import BottomActionArea from '@/shared/ui/bottom-action-area/BottomActionArea';
 import { Button } from '@/shared/ui/button/Button';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
@@ -68,6 +69,11 @@ const PropertyAdditionalInfoForm = ({
   const [values, setValues] = useState(initialValues);
   const isInline = layout === 'inline';
   const formRef = useRef<HTMLFormElement>(null);
+  useOutsideInteraction({
+    ref: formRef,
+    enabled: isInline && !updateProperty.isPending,
+    onOutside: () => formRef.current?.requestSubmit(),
+  });
   // 줄 안에서 열면 첫 입력(선택지면 첫 버튼)으로 포커스를 옮긴다. 그래야 다른 곳을 누를 때 떠난 것으로 보고 저장한다.
   useEffect(() => {
     if (isInline) formRef.current?.querySelector<HTMLElement>('input, button:not([hidden]), textarea')?.focus();
@@ -83,12 +89,6 @@ const PropertyAdditionalInfoForm = ({
     </Button>
   );
 
-  // 줄 안에서 고칠 때는 입력 칸들 밖으로 떠나면 저장한다. 관리비 금액에서 공과금 선택지로 옮길 때는 저장하지 않는다.
-  const saveOnLeave = (event: FocusEvent<HTMLFormElement>) => {
-    if (!isInline || updateProperty.isPending) return;
-    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-    event.currentTarget.requestSubmit();
-  };
   const cancelOnEscape = (event: KeyboardEvent<HTMLFormElement>) => {
     if (!isInline || event.key !== 'Escape') return;
     event.stopPropagation();
@@ -100,7 +100,6 @@ const PropertyAdditionalInfoForm = ({
       ref={formRef}
       className={styles.form}
       data-layout={layout}
-      onBlur={saveOnLeave}
       onKeyDown={cancelOnEscape}
       onSubmit={(event) => {
         event.preventDefault();

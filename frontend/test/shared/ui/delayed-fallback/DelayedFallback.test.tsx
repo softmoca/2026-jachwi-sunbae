@@ -21,21 +21,21 @@ const view = (isPending: boolean) => (
   </DelayedFallback>
 );
 
-it('500ms 안에 끝난 요청은 로딩 UI 없이 빈자리를 두었다가 바로 내용을 보여 준다', () => {
+it('300ms 안에 끝난 요청은 로딩 UI 없이 빈자리를 두었다가 바로 내용을 보여 준다', () => {
   const { rerender } = render(view(true));
   expect(screen.getByTestId('placeholder')).toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
-  act(() => vi.advanceTimersByTime(499));
+  act(() => vi.advanceTimersByTime(299));
   rerender(view(false));
   act(() => vi.runOnlyPendingTimers());
   expect(screen.getByText('내용')).toBeInTheDocument();
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('600ms에 끝난 요청은 로딩 UI를 750ms까지 유지한 뒤 내용으로 바꾼다', () => {
+it('400ms에 끝난 요청은 로딩 UI를 550ms까지 유지한 뒤 내용으로 바꾼다', () => {
   const { rerender } = render(view(true));
-  act(() => vi.advanceTimersByTime(500));
+  act(() => vi.advanceTimersByTime(300));
   expect(screen.getByRole('status')).toHaveTextContent('불러오는 중이에요.');
 
   act(() => vi.advanceTimersByTime(100));

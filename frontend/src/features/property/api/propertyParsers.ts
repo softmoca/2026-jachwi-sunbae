@@ -32,6 +32,7 @@ import type {
   RoomOption,
   UtilityOption,
 } from '../model/Property';
+import { PROPERTY_CHECKLIST_CATEGORIES } from '../model/Property';
 
 const parseDiscoverySource = (value: unknown): DiscoverySource => {
   if (value === null) return { type: 'TEXT', value: '' };
@@ -318,6 +319,13 @@ const parsePropertyChecklistItemStatus = (value: unknown): PropertyChecklistItem
   return value;
 };
 
+const parsePropertyChecklistCategory = (value: unknown) => {
+  if (value === undefined) return undefined;
+  const category = PROPERTY_CHECKLIST_CATEGORIES.find((category) => category === value);
+  if (category === undefined) throw new Error('체크리스트 카테고리가 올바르지 않습니다.');
+  return category;
+};
+
 export const parsePropertyChecklistDetail = (value: unknown): PropertyChecklistDetail => {
   const record = readRecord(value);
   const stage = readString(record, 'stage');
@@ -340,6 +348,7 @@ export const parsePropertyChecklistDetail = (value: unknown): PropertyChecklistD
           displayOrder: readInteger(item, 'displayOrder', 1),
           status: parsePropertyChecklistItemStatus(item.status),
           memo: readString(item, 'memo', { allowEmpty: true, maximumCodePoints: 500 }),
+          category: parsePropertyChecklistCategory(item.category),
         };
       })
       .sort((a, b) => a.displayOrder - b.displayOrder),
@@ -398,6 +407,8 @@ export const parsePropertyCommuteTimes = (value: unknown): PropertyCommuteTimes 
         throw new Error('매물 통근 시간이 상태와 맞지 않습니다.');
       return {
         propertyId: readInteger(property, 'propertyId', 1),
+        // 예전 응답에는 이름이 없을 수 있어 빈 이름으로 받는다. 화면은 이름이 없는 매물을 목록에 넣지 않는다.
+        propertyName: typeof property.propertyName === 'string' ? property.propertyName : '',
         status: status as PropertyCommuteStatus,
         commuteMinutes,
       };

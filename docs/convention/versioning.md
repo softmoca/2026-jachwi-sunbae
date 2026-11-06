@@ -3,7 +3,7 @@
 ## 기본 원칙
 
 - 저장소 루트의 `VERSION`을 제품 버전의 단일 기준으로 사용한다.
-- 백엔드와 프론트엔드는 같은 제품 버전을 사용한다. Android·iOS 앱은 별도 저장소에서 관리한다.
+- 백엔드와 프론트엔드는 같은 제품 버전을 사용한다. Android·iOS 앱은 `mobile/`에서 제품 버전과 별도의 앱 버전으로 관리한다. 자세한 규칙은 [모바일 문서](../../mobile/README.md)를 따른다.
 - 제품 버전은 `MAJOR.MINOR.PATCH` 형식의 시맨틱 버저닝을 따른다.
 - 배포 전에 `python3 .github/scripts/check_versions.py`로 버전 동기화를 검사한다.
 - 릴리스별 변경은 루트의 `CHANGELOG.md`에 기록한다.

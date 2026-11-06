@@ -13,6 +13,8 @@ export type AdminBoundary = {
 export type AdminBoundaries = Record<string, AdminBoundary>;
 /** files는 SGIS 시도 코드(행정동 코드 앞 두 자리)별 파일이다. 없으면 전국 file 하나를 쓴다. */
 export type BoundaryManifest = { version: string; file: string; files?: Record<string, string> };
+/** 미리 받기처럼 급하지 않은 요청은 우선순위를 낮추고, 파싱(JSON.parse와 좌표 변환)을 브라우저가 한가할 때로 미룬다. */
+export type BoundaryRequestOptions = { priority?: RequestPriority; beforeParse?: () => Promise<void> };
 
 const parseDetail = (value: unknown, polygons: AdminBoundary['polygons']) => {
   if (!Array.isArray(value) || value.length !== polygons.length) throw new Error('단순화 경계 면이 올바르지 않습니다.');
@@ -55,11 +57,13 @@ export const selectBoundaryFiles = (manifest: BoundaryManifest, codes: string[])
 export const fetchBoundaryManifest = async (
   baseUrl = '/boundaries',
   signal?: AbortSignal,
+  { priority }: BoundaryRequestOptions = {},
 ): Promise<BoundaryManifest> => {
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/manifest.json`, {
     signal,
     credentials: 'omit',
     cache: 'no-cache',
+    ...(priority ? { priority } : {}),
   });
   if (!response.ok) throw new Error('경계 파일 목록을 불러오지 못했습니다.');
   const record = readRecord(await response.json());
@@ -86,10 +90,19 @@ export const fetchAdminBoundaries = async (
   manifest: BoundaryManifest,
   baseUrl = '/boundaries',
   signal?: AbortSignal,
+  { priority, beforeParse }: BoundaryRequestOptions = {},
 ): Promise<AdminBoundaries> => {
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/${manifest.file}`, { signal, credentials: 'omit' });
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/${manifest.file}`, {
+    signal,
+    credentials: 'omit',
+    ...(priority ? { priority } : {}),
+  });
   if (!response.ok) throw new Error('동네 경계 파일을 불러오지 못했습니다.');
-  const body = readRecord(await response.json());
+  // 본문을 다 받은 뒤에 파싱을 미뤄야 응답이 도착하는 순간이 아니라 한가한 때 긴 작업이 돈다.
+  const text = await response.text();
+  await beforeParse?.();
+  signal?.throwIfAborted();
+  const body = readRecord(JSON.parse(text));
   if (body.type !== 'FeatureCollection') throw new Error('경계 파일 형식이 올바르지 않습니다.');
   const boundaries: AdminBoundaries = {};
   for (const value of readArray(body, 'features')) {

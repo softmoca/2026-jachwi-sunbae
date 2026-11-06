@@ -46,7 +46,7 @@ const renderHome = () => {
 
 it('기능 카드, 빠른 메뉴 2개와 내 매물로 만든 최근 기록을 보여준다', async () => {
   renderHome();
-  expect(screen.getByRole('link', { name: /본 방을 기록해요/ })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '방을 기록해요' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '최근 기록한 방' })).toBeInTheDocument();
   expect(await screen.findByText('신림역 원룸')).toBeInTheDocument();
   expect(screen.getByText('망원동 투룸')).toBeInTheDocument();
@@ -60,10 +60,10 @@ it('기능 카드, 빠른 메뉴 2개와 내 매물로 만든 최근 기록을 �
 });
 
 it.each([
-  ['link', /본 방을 기록해요/, '본 방 기록 화면'],
+  ['link', '방을 기록해요', '본 방 기록 화면'],
   ['link', '체크리스트', '체크리스트 화면'],
   ['link', '방 비교', '방 비교 화면'],
-  ['link', '동네를 알아보는 중이에요', '동네 찾기 화면'],
+  ['link', '동네를 알아봐요', '동네 찾기 화면'],
   ['link', '마이페이지', '마이페이지 화면'],
   ['link', /오늘 한 끼, 저렴하게/, '저렴한 한 끼 화면'],
 ] as const)('%s %s는 기존 앱 화면(%s)으로 이동한다', async (role, name, heading) => {
@@ -100,10 +100,24 @@ it('최근 기록을 불러오지 못하면 안내와 다시 시도 버튼을 �
   expect(await screen.findByText('신림역 원룸')).toBeInTheDocument();
 });
 
-it('푸터에 사용 방법과 개인정보 안내 링크를 둔다', () => {
+it('푸터에 서비스 소개, 개인정보 안내 링크를 두고 사용 방법은 홈 카드에만 둔다', () => {
   renderHome();
   const footer = within(screen.getByRole('contentinfo'));
-  expect(footer.getByRole('link', { name: '사용 방법' })).toHaveAttribute('href', '/guide');
+  expect(footer.getByRole('link', { name: '자취선배 소개' })).toHaveAttribute('href', '/landing');
+  expect(footer.queryByRole('link', { name: '사용 방법' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '사용방법 알아보기' })).toHaveAttribute('href', '/guide');
   expect(footer.getByRole('link', { name: '개인정보·광고 측정 안내' })).toHaveAttribute('href', '/privacy');
   expect(footer.getByText('© 2026 자취선배')).toBeInTheDocument();
+});
+
+it('최근 기록은 제목을 처음부터 보이고, 빠른 응답에는 안내 문구나 카드 뼈대 없이 바로 목록을 보여 준다', async () => {
+  renderHome();
+  const section = screen.getByRole('heading', { name: '최근 기록한 방' }).closest('section') as HTMLElement;
+  // 몇 개가 올지 모르는 목록이라 카드 뼈대를 두지 않는다.
+  expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+  expect(section.querySelector('[class*="skeleton"]')).toBeNull();
+  // 데이터 전에도 문구 한 줄 높이는 잡아 둔다.
+  expect(section.querySelector('[class*="RecentRooms-body"]')).not.toBeNull();
+  expect(await within(section).findByText('신림역 원룸')).toBeInTheDocument();
+  expect(within(section).queryByText('기록을 불러오는 중이에요.')).not.toBeInTheDocument();
 });

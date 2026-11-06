@@ -1,10 +1,11 @@
 import { css } from '@emotion/css';
 
 import { usePropertyList } from '@/features/property/api/useProperties';
+import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import InlineNotice from '@/shared/ui/inline-notice/InlineNotice';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
-import usePropertyComparison, { MAX_SELECTION, MIN_SELECTION } from '../hooks/usePropertyComparison';
+import usePropertyComparison, { MAX_SELECTION } from '../hooks/usePropertyComparison';
 import CompareActionBar from '../ui/compare-action-bar/CompareActionBar';
 import CompareEmpty from '../ui/compare-empty/CompareEmpty';
 import CompareLoadState from '../ui/compare-load-state/CompareLoadState';
@@ -17,11 +18,11 @@ const CompareMobilePage = () => {
   const properties = usePropertyList();
   const items = properties.data?.pages.flatMap((page) => page.content) ?? [];
   const { selectedIds, isExporting, hasExportError, toggle, downloadPdf } = usePropertyComparison();
-  const hasEnoughProperties = items.length >= MIN_SELECTION;
+  const hasProperties = items.length > 0;
 
   return (
     <main className={shared.page}>
-      <TopNavigation title="비교할 매물 선택" backTo="/" />
+      <TopNavigation title="비교할 매물 선택" backTo={HOME_PATH} />
       <CompareLoadState properties={properties}>
         {() => (
           <div className={shared.content}>
@@ -29,7 +30,7 @@ const CompareMobilePage = () => {
               <strong>{selectedIds.length}개 선택</strong>
               <span>최대 {MAX_SELECTION}개</span>
             </div>
-            {hasEnoughProperties ? (
+            {hasProperties ? (
               <ul className={styles.propertyList} aria-label="비교할 매물 목록">
                 {items.map((property) => {
                   const isSelected = selectedIds.includes(property.propertyId);
@@ -51,8 +52,9 @@ const CompareMobilePage = () => {
             {hasExportError && (
               <InlineNotice tone="error">PDF를 만들지 못했어요. 잠시 후 다시 시도해 주세요.</InlineNotice>
             )}
-            {hasEnoughProperties && (
+            {hasProperties && (
               <CompareActionBar
+                propertyCount={items.length}
                 selectedCount={selectedIds.length}
                 isExporting={isExporting}
                 onDownload={() => void downloadPdf()}

@@ -5,7 +5,8 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import type { AdminBoundaries } from './adminBoundaryApi';
-import { fetchAdminBoundaries, fetchBoundaryManifest, selectBoundaryFiles } from './adminBoundaryApi';
+import { fetchBoundaryManifest, selectBoundaryFiles } from './adminBoundaryApi';
+import { getAdminBoundaryQueryOptions } from './adminBoundaryQueries';
 import { fetchCommuteAreas } from './commuteApi';
 
 type Options = {
@@ -18,6 +19,7 @@ type Options = {
 
 /**
  * 통근 결과와 manifest를 함께 받고, 결과 행정동이 속한 시도의 경계 파일만 받아 합친다.
+ * 수도권 파일은 장소를 고르는 동안 `usePrefetchMetroBoundaries`가 같은 키로 미리 받아 두므로 대개 캐시에서 바로 꺼낸다.
  * 거래가 5건보다 적어 서버가 월세 시세를 비워 보낸 동네는 그리지 않으므로, 경계를 받기 전에 뺀다.
  */
 const loadResult = async (client: QueryClient, options: Options, signal: AbortSignal) => {
@@ -32,15 +34,7 @@ const loadResult = async (client: QueryClient, options: Options, signal: AbortSi
     selectBoundaryFiles(
       manifest,
       rentAreas.map((area) => area.adminDongCode),
-    ).map((file) =>
-      client.ensureQueryData({
-        queryKey: ['admin-boundaries', file.file, config.boundaryBaseUrl],
-        queryFn: ({ signal }) => fetchAdminBoundaries(file, config.boundaryBaseUrl, signal),
-        staleTime: Infinity,
-        gcTime: 30 * 60 * 1000,
-        retry: false,
-      }),
-    ),
+    ).map((file) => client.ensureQueryData(getAdminBoundaryQueryOptions(file, config.boundaryBaseUrl))),
   );
   signal.throwIfAborted();
   const boundaries = chunks.reduce<AdminBoundaries>((all, chunk) => Object.assign(all, chunk), {});

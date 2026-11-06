@@ -1,13 +1,17 @@
 import { css, cx } from '@emotion/css';
 
 import { usePropertyList } from '@/features/property/api/useProperties';
-import { formatRentSummary } from '@/features/property/lib/propertyFormat';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyAddress from '@/features/property/ui/property-address/PropertyAddress';
+import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
+import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
 import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
 import Icon from '@/shared/ui/icon/Icon';
+import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import RailCard from '@/shared/ui/rail-card/RailCard';
+import StateIllustration from '@/shared/ui/state-illustration/StateIllustration';
 
 const RECENT_ROOM_LIMIT = 5;
 
@@ -24,58 +28,69 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
       <div className={styles.sectionHeading}>
         <h2 id="recent-heading">최근 기록한 방</h2>
       </div>
-      {/* 빠른 응답에는 로딩 문구 없이 바로 목록을 보여 주고, 오래 걸릴 때만 알린다. */}
-      <DelayedFallback isPending={properties.isPending} fallback={<p role="status">기록을 불러오는 중이에요.</p>}>
-        {() =>
-          properties.isError ? (
-            <div className={styles.loadError} role="alert">
-              {/* 불러오기 실패 이미지는 준비되면 이 자리에 넣는다. */}
-              <span className={styles.loadErrorImage} aria-hidden="true" />
-              <p>기록을 불러오지 못했어요.</p>
-              <Button variant="secondary" isLoading={properties.isFetching} onClick={() => void properties.refetch()}>
-                다시 시도
-              </Button>
-            </div>
-          ) : rooms.length === 0 ? (
-            <p>아직 기록한 방이 없어요.</p>
-          ) : (
-            <HorizontalRail className={styles.rooms} aria-label="최근 기록한 방 목록">
-              {rooms.map((property) => (
-                <RailCard
-                  // 데스크탑은 같은 주소에서 본 방 기록 화면이 이 매물을 고른 채로 열린다.
-                  to={`/properties/${property.propertyId}`}
-                  state={{ returnTo: '/' }}
-                  key={property.propertyId}
-                  className={styles.roomCard}
-                >
-                  {property.representativePhoto ? (
-                    <AuthenticatedPhoto
-                      propertyId={property.propertyId}
-                      photoId={property.representativePhoto.photoId}
-                      contentUrl={property.representativePhoto.contentUrl}
-                      alt={`${property.name} 대표 사진`}
-                      className={styles.roomPicture}
-                      errorMode="retry-only"
-                    />
-                  ) : (
-                    <span className={`${styles.roomPicture} ${styles.photoFallback}`} aria-label="대표 사진 없음">
-                      <Icon name="image" size={18} />
-                    </span>
-                  )}
-                  <div className={styles.roomInfo}>
-                    <strong>{property.name}</strong>
-                    <span className={styles.rent}>
-                      {property.monthlyRentAmount > 0 ? '월세 ' : ''}
-                      {formatRentSummary(property.depositAmount, property.monthlyRentAmount)}
-                    </span>
-                    <p>{property.location.address ?? '주소 미등록'}</p>
-                  </div>
-                </RailCard>
-              ))}
-            </HorizontalRail>
-          )
-        }
-      </DelayedFallback>
+      {/*
+        홈의 다른 요소가 남아 있는 칸이라, 빠른 응답에는 로딩 문구 없이 바로 목록을 보여 주고 오래 걸릴 때만 알린다.
+        몇 개가 올지 모르는 목록이라 카드 뼈대는 두지 않고, 데이터 전에도 문구 한 줄 높이를 잡아 아래가 덜 밀리게 한다.
+      */}
+      <div className={styles.body}>
+        <DelayedFallback
+          isPending={properties.isPending}
+          fallback={<ProgressCircle size={24} label="기록을 불러오는 중이에요." />}
+        >
+          {() =>
+            properties.isError ? (
+              <div className={styles.loadError} role="alert">
+                <StateIllustration name="error" size={7} />
+                <p>기록을 불러오지 못했어요.</p>
+                <Button variant="secondary" isLoading={properties.isFetching} onClick={() => void properties.refetch()}>
+                  다시 시도
+                </Button>
+              </div>
+            ) : rooms.length === 0 ? (
+              <p>아직 기록한 방이 없어요.</p>
+            ) : (
+              <HorizontalRail className={styles.rooms} aria-label="최근 기록한 방 목록">
+                {rooms.map((property) => (
+                  <RailCard
+                    // 데스크탑은 같은 주소에서 본 방 기록 화면이 이 매물을 고른 채로 열린다.
+                    to={propertyDetailPath(property.propertyId)}
+                    state={{ returnTo: HOME_PATH }}
+                    key={property.propertyId}
+                    className={styles.roomCard}
+                  >
+                    {property.representativePhoto ? (
+                      <AuthenticatedPhoto
+                        propertyId={property.propertyId}
+                        photoId={property.representativePhoto.photoId}
+                        contentUrl={property.representativePhoto.contentUrl}
+                        alt={`${property.name} 대표 사진`}
+                        className={styles.roomPicture}
+                        errorMode="retry-only"
+                      />
+                    ) : (
+                      <span className={`${styles.roomPicture} ${styles.photoFallback}`} aria-label="대표 사진 없음">
+                        <Icon name="image" size={18} />
+                      </span>
+                    )}
+                    <div className={styles.roomInfo}>
+                      <strong>{property.name}</strong>
+                      <PropertyPrice
+                        className={styles.rent}
+                        depositAmount={property.depositAmount}
+                        monthlyRentAmount={property.monthlyRentAmount}
+                        variant="summary"
+                      />
+                      <p>
+                        <PropertyAddress address={property.location.address} />
+                      </p>
+                    </div>
+                  </RailCard>
+                ))}
+              </HorizontalRail>
+            )
+          }
+        </DelayedFallback>
+      </div>
     </section>
   );
 };
@@ -104,6 +119,15 @@ const styles = {
     }
   `,
 
+  /*
+   * 데이터 전 빈자리도 안내 문구, 빈 기록 문구 한 줄만큼은 차지한다. 문구(줄 높이 약 1.28rem)의 위 여백이
+   * 제목 아래 여백보다 0.1rem 커서 그만큼을 더한다.
+   */
+  body: css`
+    label: RecentRooms-body;
+    min-height: 1.38rem;
+  `,
+
   /* 불러오기에 실패하면 이미지·안내·다시 시도 버튼을 가운데에 세로로 둔다. */
   loadError: css`
     label: RecentRooms-loadError;
@@ -118,15 +142,6 @@ const styles = {
       color: var(--color-muted);
       font-size: 0.85rem;
     }
-  `,
-
-  /* 이미지가 들어올 자리. 크기만 잡아 둔다. */
-  loadErrorImage: css`
-    label: RecentRooms-loadErrorImage;
-    width: 6rem;
-    height: 6rem;
-    border-radius: var(--radius-tile);
-    background: var(--color-card-surface);
   `,
 
   rooms: css`

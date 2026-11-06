@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
+import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import { ButtonLink } from '@/shared/ui/button/Button';
 import Icon, { type IconName } from '@/shared/ui/icon/Icon';
 
@@ -26,7 +27,7 @@ const iconNames: IconName[] = [
 const actions = {
   없음: undefined,
   '등록 버튼': (
-    <ButtonLink to="/properties/new">
+    <ButtonLink to={RECORDS_PATH}>
       <Icon name="plus" size={15} />첫 매물 등록하기
     </ButtonLink>
   ),

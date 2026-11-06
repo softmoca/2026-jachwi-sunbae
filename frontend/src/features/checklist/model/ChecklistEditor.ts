@@ -1,4 +1,4 @@
-import type { CheckItem, ChecklistItem } from './checklistTypes';
+import type { CheckItem, CheckItemCategory, ChecklistItem } from './checklistTypes';
 
 type ChecklistEditorItemBase = {
   clientKey: string;
@@ -6,6 +6,7 @@ type ChecklistEditorItemBase = {
   question: string;
   itemType: 'CORE' | 'OPTIONAL';
   active: boolean;
+  category?: CheckItemCategory;
 };
 
 export type ChecklistEditorProvidedItem = ChecklistEditorItemBase & {
@@ -30,6 +31,7 @@ export const checklistItemToEditorItem = (item: ChecklistItem): ChecklistEditorI
         checklistItemId: item.checklistItemId,
         sourceCheckItemId: item.sourceCheckItemId,
         question: item.question,
+        category: item.category,
         guide: item.guide,
         itemType: item.itemType,
         active: item.active,
@@ -40,6 +42,7 @@ export const checklistItemToEditorItem = (item: ChecklistItem): ChecklistEditorI
         checklistItemId: item.checklistItemId,
         sourceCheckItemId: null,
         question: item.question,
+        category: item.category,
         guide: null,
         itemType: item.itemType,
         active: item.active,
@@ -51,6 +54,7 @@ export const checkItemToEditorItem = (item: CheckItem): ChecklistEditorProvidedI
   checklistItemId: null,
   sourceCheckItemId: item.checkItemId,
   question: item.question,
+  category: item.category,
   guide: item.guide,
   itemType: item.itemType,
   active: true,

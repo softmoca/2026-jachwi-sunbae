@@ -6,16 +6,19 @@ React 19·TypeScript 6·Webpack 5 기반 모바일 우선 SPA입니다.
 
 ## 관련 문서
 
+매물 상세의 앱·데스크탑 화면과 체크리스트 전용 화면은 같은 `PropertyChecklist`를 사용합니다. 항목 묶음 안에 ‘사용자 체크리스트’와 전체 평가 수를 표시하고, 보안, 창문·채광, 수도·화장실, 방 상태, 기본 옵션으로 분류합니다. 메모는 질문 바로 아래에서 회색 글씨로 입력하며 입력칸을 벗어나면 저장합니다. 실패하면 입력을 유지하고 다시 저장할 수 있습니다. 분류와 공용 UI 기준은 [매물 체크리스트 UI](docs/DESIGN.md)를 참고하세요.
+
 홈 진입 카드와 전체·식당·편의점·배달 화면은 [저렴한 한 끼 찾기](docs/cheap-meals.md)를 참고하세요. `/cheap-meals`에서 기존 인증·공통 API 클라이언트와 실제 백엔드 API를 사용합니다.
 
 체크리스트 집계 막대와 범례는 괜찮음=초록, 주의=빨강, 미확인=회색을 사용합니다. 동네 찾기 통근 범례도 홈 집계처럼 짧은 세로 색상 막대와 텍스트로 표시하며, 통근 구간의 파랑·초록·빨강 의미는 유지합니다.
 
-페이지 전환의 화면 파일 로딩은 공용 `ProgressCircle`(40px)로 표시하되, 500ms 안에 끝나면 보여 주지 않습니다. 홈(`/properties`)은 사진·텍스트 형태의 매물 스켈레톤을 사용하며 목록 데이터 로딩에도 같은 스켈레톤을 재사용합니다. 실제 진행률을 알 수 없어 원형 로딩은 불확정 회전으로 표시합니다. `LazyRouteBoundary`의 fallback만 변경하면 기존 안내 UI로 되돌릴 수 있으며 오류·재시도 화면은 유지합니다.
+페이지 전환의 화면 파일 로딩은 공용 `ProgressCircle`(40px)로 표시하되, 300ms 안에 끝나면 보여 주지 않습니다. 지도 화면인 본 방 기록(`/properties`)과 동네 찾기는 진행 표시 대신 목록 영역과 지도 영역의 배치만 채운 스켈레톤(`AreaSkeleton`)을 바로 보여 주고, 본 방 기록은 목록 데이터 로딩에도 같은 스켈레톤을 씁니다. 카드, 칩, 필터 모양은 그리지 않습니다. 휴대폰은 지금 보기 방식의 한 영역만, 데스크탑은 실제 화면과 같은 폭 규칙(`ListDetailLayout`)으로 두 영역을 함께 채웁니다. 실제 진행률을 알 수 없어 원형 로딩은 불확정 회전으로 표시합니다. `LazyRouteBoundary`의 fallback만 변경하면 기존 안내 UI로 되돌릴 수 있으며 오류·재시도 화면은 유지합니다.
 
 - [백엔드와 프론트엔드 로컬 개발](../backend/docs/guides/local-development.md)
 - [백엔드 환경변수](../backend/docs/guides/environment-variables.md)
 - [프론트엔드 배포](docs/deployment.md)
 - [프론트엔드 테스트 전략](docs/testing-strategy.md)
+- [프론트엔드 로딩 성능 리포트](docs/performance-report.md)
 - [뮤테이션 테스트](docs/mutation-testing.md)
 - [생활 날씨 카드](docs/weather-ui-prototype.md)
 
@@ -34,6 +37,8 @@ npm run dev
 ```
 
 기본 `.env.example`은 외부 키가 필요 없는 익명 자동 로그인·데모 지도 모드입니다. `.env.example`을 `.env.local`로 복사하면 Webpack이 빌드 시작에 그 값을 읽습니다(`.env.local`은 저장소에 올라가지 않으며, 이미 설정된 셸 환경변수를 덮어쓰지 않습니다). `http://localhost:3000`에 들어가면 로그인 입력 없이 자동으로 익명 회원으로 시작합니다.
+
+로컬 개발에서는 본 방 기록 지도의 빈 곳을 클릭하면 매물 등록 메뉴가 열립니다. ‘여기에 매물 등록’을 눌러 체크리스트 확인용 매물을 만들 수 있습니다. 이 데모 지도 클릭 기능은 프로덕션 빌드에서는 꺼져 있습니다.
 
 `npm run dev`는 실제 백엔드 API에 연결합니다. 백엔드 없이 UI fixture만 확인할 때에만 `npm run dev:mock`을 사용합니다. dev 배포에서 fixture가 꼭 필요한 경우에는 CodePipeline 빌드 환경변수에 `ENABLE_MSW=true`를 지정할 수 있으며, 운영에서는 이 값을 사용하지 않습니다.
 
@@ -97,24 +102,23 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 
 첫 진입은 홈(`/`)이며 자동 로그인합니다. 랜딩(`/landing`, `src/pages/landing`)은 광고로 들어오는 사람에게 서비스와 프로젝트를 소개하는 페이지로, 로그인 없이 보고 앱 스토어와 웹 바로가기로 잇습니다. 사용법은 사용 방법(`/guide`, `src/pages/usage-guide`)이 맡고, `/about`은 `/guide`로 이동합니다. 두 화면의 구성은 [사용 방법과 비로그인 동네 탐색](docs/public-exploration.md)에 정리했습니다.
 
-| 화면                 | 경로                                                      | 기능                                            |
-| -------------------- | --------------------------------------------------------- | ----------------------------------------------- |
-| 공개 안내            | `/privacy`                                                | 광고 측정 동의·철회                             |
-| 매물 목록            | `/properties`                                             | 매물 목록, 단계별 진행 현황, PDF 비교 진입      |
-| 매물 비교            | `/compare`                                                | 2~5개 매물 선택과 전체 기록 PDF 다운로드        |
-| 매물 등록            | `/properties/new`                                         | 위치만 골라 `새 매물`로 바로 등록               |
-| 매물 상세            | `/properties/:propertyId`                                 | 항목 줄을 눌러 하나씩 수정, 사진·메모·체크 요약 |
-| 매물 사진            | `/properties/:propertyId/photos`                          | 업로드·대표 지정·삭제                           |
-| 매물 메모            | `/properties/:propertyId/memo`                            | 자유 메모 저장                                  |
-| 매물 정보 수정       | `/properties/:propertyId/edit`                            | 위치가 없는 매물의 주소·좌표 보정               |
-| 적용 체크리스트 선택 | `/properties/:propertyId/active-checklists/:stage`        | 기본 또는 내 체크리스트 적용·교체               |
-| 매물 체크 진행       | `/properties/:propertyId/checklists/:propertyChecklistId` | 상태 즉시 저장·항목 메모 저장·진행 집계         |
-| 내 체크리스트 목록   | `/checklists`                                             | 단계별 내 체크리스트 목록                       |
-| 체크리스트 상세·수정 | `/checklists/:checklistId`                                | 체크리스트 상세·수정                            |
-| 체크리스트 생성      | `/checklists/new`                                         | 기본·선택 항목 조합 생성                        |
-| 마이페이지           | `/me`                                                     | 계정·모드·주요 기능 이동·로그아웃               |
-| 지도에서 위치 선택   | `/map/select-location`                                    | 현재 위치·접힌 주소 검색·역지오코딩             |
-| 매물 주변 분석       | `/properties/:propertyId/nearby`                          | 반경별 시설 개수·선택 시설 핀 상세·스크롤 목록  |
+| 화면                 | 경로                                                      | 기능                                             |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------ |
+| 공개 안내            | `/privacy`                                                | 광고 측정 동의·철회                              |
+| 매물 목록            | `/properties`                                             | 매물 목록, 단계별 진행 현황, PDF 비교 진입       |
+| 매물 비교            | `/compare`                                                | 2~5개 매물 선택과 전체 기록 PDF 다운로드         |
+| 매물 상세            | `/properties/:propertyId`                                 | 항목 줄을 눌러 하나씩 수정, 사진·메모·체크 요약  |
+| 매물 사진            | `/properties/:propertyId/photos`                          | 업로드·대표 지정·삭제                            |
+| 매물 메모            | `/properties/:propertyId/memo`                            | 자유 메모 저장                                   |
+| 매물 정보 수정       | `/properties/:propertyId/edit`                            | 위치가 없는 매물의 주소·좌표 보정                |
+| 적용 체크리스트 선택 | `/properties/:propertyId/active-checklists/:stage`        | 기본 또는 내 체크리스트 적용·교체                |
+| 매물 체크 진행       | `/properties/:propertyId/checklists/:propertyChecklistId` | 상태 즉시 저장·항목 메모 저장·진행 집계          |
+| 내 체크리스트 목록   | `/checklists`                                             | 단계별 내 체크리스트 목록                        |
+| 체크리스트 상세·수정 | `/checklists/:checklistId`                                | 체크리스트 상세·수정                             |
+| 체크리스트 생성      | `/checklists/new`                                         | 기본·선택 항목 조합 생성                         |
+| 마이페이지           | `/me`                                                     | 계정·모드·주요 기능 이동·로그아웃                |
+| 지도에서 위치 선택   | `/map/select-location`                                    | 매물 수정에서 위치 고치기, 주소 검색, 역지오코딩 |
+| 매물 주변 분석       | `/properties/:propertyId/nearby`                          | 반경별 시설 개수·선택 시설 핀 상세·스크롤 목록   |
 
 하단 메뉴는 홈·체크리스트·지도·마이를 제공합니다. 모든 보호 화면은 조회 중·저장 중·빈 결과·오류·재시도 상태를 제공하고 키보드 포커스와 명시적 label을 유지합니다.
 
@@ -126,6 +130,7 @@ JWT secret, 지도 Client Secret, S3 자격증명은 프론트에 넣지 않습�
 
 - Access Token은 메모리에만 둡니다. 앱을 열면 `POST /api/auth/login`이 HttpOnly Refresh 쿠키로 같은 익명 회원을 복원하거나 새 익명 회원을 만듭니다.
 - Access Token이 만료되거나 업무 API가 401을 주면 `POST /api/auth/refresh`로 갱신해 원래 요청을 한 번 다시 보냅니다. 갱신이 `401 REFRESH_TOKEN_INVALID`로 거절되면 새 회원을 만들지 않고 인증 Query Cache와 토큰을 지운 뒤 안내합니다.
+- 마이의 초기화는 `DELETE /api/members/me`를 Access Token으로 보내 지금 회원을 탈퇴 처리하고, 메모리의 Access Token을 비운 뒤 `POST /api/auth/login`으로 새 익명 회원의 토큰을 받고 Query Cache를 비우고 홈으로 갑니다. 진행 중인 로그인과 갱신이 끝난 뒤 보내고, 초기화 중의 갱신은 초기화를 함께 기다립니다. 탈퇴 요청이 401을 받으면 한 번 갱신해 다시 보냅니다. 탈퇴가 실패하면 기존 회원을 그대로 두고, 탈퇴 뒤 로그인이 실패하면 이전 회원으로 돌아가지 않고 다음 요청의 자동 로그인이 새 회원을 만듭니다.
 - 사진 콘텐츠는 URL을 `<img>`에 직접 주지 않고 Bearer 인증 Blob으로 조회해 Object URL을 만든 뒤 해제합니다.
 - 사진은 JPEG·PNG·WebP, 파일당 5MiB, 매물당 30장으로 선택 단계부터 검증합니다.
 - 서버 상태는 TanStack Query가 관리하고, 체크 항목 상태와 메모 저장 채널은 서로 독립적입니다.
@@ -164,6 +169,6 @@ Storybook에서는 구현 내부가 아니라 기본·로딩·에러·빈 상태
 - 데스크탑·휴대폰 화면을 나눈 페이지(홈·본 방 기록·동네 찾기·방 비교·마이)는 그 아래를 `데스크탑`·`휴대폰`·`공통`으로 나눕니다. `desktop/`·`mobile/` 폴더의 화면과 조각은 meta에 `globals: { viewport: { value: 'desktop' | 'mobile' } }`을 두어 그 화면 폭으로 엽니다. 툴바의 화면 폭은 휴대폰(390)·태블릿(820)·데스크탑(1440)입니다.
 - 값은 `args`로 넘겨 Controls 패널에서 바꿔 볼 수 있게 합니다. 콜백은 `fn()`(`storybook/test`)으로 두어 Actions 패널에 호출이 찍히게 하고, 컨트롤로 바꿀 수 없는 ReactNode·함수 props는 `argTypes`에서 `control: false`로 숨깁니다. `className`·`ref`는 전역에서 숨깁니다.
 
-`npm run build`는 번들 생성 전에 `npm run typecheck`를 실행합니다. 개발 중 타입 오류만 빠르게 확인하려면 `npm run typecheck`를 직접 실행합니다.
+`npm run build`는 번들 생성 전에 `npm run typecheck`를 실행합니다. 개발 중 타입 오류만 빠르게 확인하려면 `npm run typecheck`를 직접 실행합니다. `npm run build:bundle`은 타입 검사 없이 번들만 만듭니다. Frontend CI는 타입 검사와 번들 생성을 다른 job에서 병렬로 돌리려고 이 스크립트를 씁니다.
 
 실제 모바일 브라우저 확인은 운영 엔트리포인트를 `390x844`와 일반 모바일 폭에서 실행해 위 표의 경로와 주요 CRUD·체크·지도 흐름을 확인합니다.

@@ -55,8 +55,8 @@ class WeatherSchedulingConfigTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"dev, jachwi-sunbae-de, true", "prod, jachwi-sunbae-prod, false"})
-    void serverProfilesCollectAndCleanAndNotifyOnlyInDev(final String profile, final String projectId,
+    @CsvSource({"dev, jachwi-sunbae-de, true", "prod, jachwi-sunbae-prod, true"})
+    void serverProfilesCollectAndCleanAndNotify(final String profile, final String projectId,
             final boolean notifies) {
         profile(profile).run(context -> {
             assertThat(context).hasNotFailed().hasSingleBean(WeatherCollectionScheduler.class)

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { type ComponentProps, useState } from 'react';
 import { fn } from 'storybook/test';
 
-import type { MapAddress, MapCategory } from '@/features/map/model/Map';
+import type { MapAddress } from '@/features/map/model/Map';
 import { propertyQueryKeys } from '@/features/property/api/propertyQueryKeys';
 import type { PropertyChecklistProgress, PropertyPage, PropertySummary } from '@/features/property/model/Property';
 
@@ -65,17 +65,15 @@ const properties = [
 type PreviewArgs = {
   /** 처음부터 골라 둘 기록 번호. 고르면 아래쪽 바텀시트에 뜬다. */
   initialSelectedId: string | null;
-  /** 처음 켜 둘 지도 겹(시설 종류 또는 거리 메모). 비우면(null) 기록만 보인다. */
-  initialCategory: MapCategory | null;
   /** 빈 곳을 찍은 말풍선에서 매물 등록을 고르면 그 주소로 부른다. */
   onRegister: (address: MapAddress) => void;
 };
 
 /** 지도에 넘기는 기록·지도 겹 상태는 화면과 같은 Hook으로 만든다. 기록 목록은 `parameters.queryData`로 넣는다. */
-const RecordsMobileMapPreview = ({ initialSelectedId, initialCategory, onRegister }: PreviewArgs) => {
+const RecordsMobileMapPreview = ({ initialSelectedId, onRegister }: PreviewArgs) => {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const records = useRecords({ selectedId, setSelectedId });
-  const layers = useRecordsMapLayers(records, { initialCategory, onRegister });
+  const layers = useRecordsMapLayers(records, { onRegister });
   return <RecordsMobileMap records={records} layers={layers} />;
 };
 
@@ -86,10 +84,9 @@ const meta: Meta<Args> = {
   globals: { viewport: { value: 'mobile', isRotated: false } },
   component: RecordsMobileMap,
   // 처음 값은 Hook 안의 상태로만 쓰이므로, 컨트롤을 바꾸면 key로 새로 그려 바로 반영한다.
-  render: (args) => <RecordsMobileMapPreview key={`${args.initialSelectedId}-${args.initialCategory}`} {...args} />,
+  render: (args) => <RecordsMobileMapPreview key={String(args.initialSelectedId)} {...args} />,
   args: {
     initialSelectedId: null,
-    initialCategory: 'MEMO',
     onRegister: fn(),
   },
   argTypes: {
@@ -97,11 +94,6 @@ const meta: Meta<Args> = {
       control: 'select',
       options: [null, '1', '2'],
       labels: { null: '고르지 않음', 1: '1 · 삼평동 판교역 원룸', 2: '2 · 백현동 투룸' } as Record<string, string>,
-    },
-    initialCategory: {
-      control: 'select',
-      options: [null, 'MEMO', 'HOSPITAL', 'TRANSPORT', 'SCHOOL', 'CONVENIENCE', 'AGENCY'],
-      labels: { null: '없음' } as Record<string, string>,
     },
     records: { control: false, table: { disable: true } },
     layers: { control: false, table: { disable: true } },

@@ -140,7 +140,7 @@ const useChecklistDraft = ({ initialName, initialItems: sourceItems, isSubmittin
       setHasSubmitted(false);
       setAnnouncement('체크리스트를 저장했어요. 서버에서 확인한 최신 내용입니다.');
     } catch {
-      setAnnouncement('저장하지 못했어요. 작성한 내용은 그대로 유지됩니다.');
+      setAnnouncement('저장하지 못했어요. 작성한 내용은 그대로 있어요. 다시 저장해 주세요.');
     } finally {
       submissionInFlight.current = false;
     }

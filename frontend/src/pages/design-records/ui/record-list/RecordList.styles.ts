@@ -1,127 +1,4 @@
-import { css, cx, keyframes } from '@emotion/css';
-
-const recordSkeletonShimmerKeyframes = keyframes`
-  to {
-    background-position: -200% 0;
-  }
-`;
-
-/* 리스트 위 필터 줄. 아직 기능 구현 전이라 칩은 흐리게 두고 '필터 준비 중'을 붙인다. */
-export const toolbar = css`
-  label: RecordList-toolbar;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-`;
-
-export const filters = css`
-  label: RecordList-filters;
-  display: flex;
-  min-width: 0;
-  gap: 0.35rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  & button {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: 0.2rem;
-    padding: 0.45rem 0.7rem;
-    border: 1px solid #e3e5e9;
-    border-radius: 0.5rem;
-    background: #fff;
-    color: #9499a2;
-    font: inherit;
-    font-size: 0.75rem;
-    cursor: not-allowed;
-  }
-`;
-
-export const comingSoon = css`
-  label: RecordList-comingSoon;
-  flex: none;
-  padding: 0.2rem 0.45rem;
-  border-radius: 0.35rem;
-  background: #f3f4f6;
-  color: #9499a2;
-  font-size: 0.65rem;
-  font-weight: 600;
-`;
-
-/* 툴바 오른쪽의 목적지·통근 시간 버튼 묶음. */
-export const toolbarActions = css`
-  label: RecordList-toolbarActions;
-  display: flex;
-  flex: none;
-  gap: 0.35rem;
-`;
-
-/* 목적지 거리를 켰을 때 툴바 아래에 기준 목적지와 바꾸기를 둔다. */
-export const destinationRow = css`
-  label: RecordList-destinationRow;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: -0.5rem 0 0.75rem;
-  color: #6b7079;
-  font-size: 0.78rem;
-
-  & span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  & button {
-    flex: none;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--color-brand-blue-ink, #3f6fc4);
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-  }
-`;
-
-export const destinationSearch = css`
-  label: RecordList-destinationSearch;
-  display: flex;
-  margin: -0.25rem 0 1rem;
-`;
-
-/* 출퇴근 장소까지 통근 시간과 목적지 거리를 켜고 끄는 버튼. 켜면 파랗게 칠한다. */
-export const commuteToggle = css`
-  label: RecordList-commuteToggle;
-  flex: none;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid #e3e5e9;
-  border-radius: 999px;
-  background: #fff;
-  color: #41444b;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-
-  &[aria-pressed='true'] {
-    border-color: var(--color-brand-blue-ink, #3f6fc4);
-    background: var(--color-brand-blue-ink, #3f6fc4);
-    color: #fff;
-  }
-`;
-
-export const commuteError = css`
-  label: RecordList-commuteError;
-  margin: -0.5rem 0 0.75rem;
-  color: var(--color-danger, #d14d4d);
-  font-size: 0.78rem;
-`;
+import { css } from '@emotion/css';
 
 export const items = css`
   label: RecordList-items;
@@ -129,6 +6,8 @@ export const items = css`
   padding: 0;
   margin: 0;
   display: grid;
+  /* 목록 칸이 화면 폭에 따라 좁아져도 카드가 칸을 넘지 않게, 긴 주소는 줄여 보이고 오른쪽 메뉴는 칸 안에 남긴다. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
 `;
 
@@ -205,60 +84,5 @@ export const menu = css`
 
   & button:hover {
     background: #fff3f3;
-  }
-`;
-
-/* 불러오는 동안의 스켈레톤: 사진 칸과 이름·가격·주소 줄 자리를 은은하게 반짝인다. */
-// 다른 요소의 선택자에서 `.RecordList-skeleton`로 가리킨다.
-export const skeleton = cx(
-  css`
-    label: RecordList-skeleton;
-    display: block;
-    border-radius: 0.4rem;
-    background: linear-gradient(90deg, #eff1f5 25%, #e3e6eb 50%, #eff1f5 75%);
-    background-size: 200% 100%;
-    animation: ${recordSkeletonShimmerKeyframes} 1.2s ease-in-out infinite;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-  'RecordList-skeleton',
-);
-
-/* 스켈레톤 줄은 공용 매물 카드(PropertyCard)와 같은 크기로 둔다. */
-export const skeletonRoom = css`
-  label: RecordList-skeletonRoom;
-  display: grid;
-  grid-template-columns: 6.7rem minmax(0, 1fr);
-  gap: 0.875rem;
-`;
-
-export const skeletonPhoto = css`
-  label: RecordList-skeletonPhoto;
-  height: 8.5rem;
-`;
-
-export const skeletonLines = css`
-  label: RecordList-skeletonLines;
-  display: grid;
-  align-content: start;
-  gap: 0.5rem;
-  padding-top: 0.25rem;
-
-  & .RecordList-skeleton {
-    height: 0.8rem;
-  }
-
-  & .RecordList-skeleton:nth-child(1) {
-    width: 45%;
-  }
-
-  & .RecordList-skeleton:nth-child(2) {
-    width: 70%;
-  }
-
-  & .RecordList-skeleton:nth-child(3) {
-    width: 85%;
   }
 `;

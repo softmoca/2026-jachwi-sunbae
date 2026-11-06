@@ -19,17 +19,23 @@ export const useViewportFacilities = (
 ) => {
   const config = usePublicConfig();
   const combine = useCallback((results: UseQueryResult<NearbyResult>[]) => {
-    const byId = new Map<string, NearbyPlace>();
-    for (const result of results) for (const place of result.data?.places ?? []) byId.set(place.providerPlaceId, place);
     return {
-      places: [...byId.values()],
+      places: results.flatMap((result) => result.data?.places ?? []),
       isFetching: results.some((result) => result.isFetching),
       isError: results.some((result) => result.isError),
     };
   }, []);
   const combined = useQueries({
     queries: cells.map((cell) => ({
-      queryKey: ['viewport-facilities', config.apiBaseUrl, category, cell.center.latitude, cell.center.longitude],
+      // 칸 크기(반경)가 다르면 다른 요청이라 키에 넣는다.
+      queryKey: [
+        'viewport-facilities',
+        config.apiBaseUrl,
+        category,
+        cell.center.latitude,
+        cell.center.longitude,
+        cell.radius,
+      ],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         fetchNearby(
           config,
@@ -47,9 +53,12 @@ export const useViewportFacilities = (
     combine,
   });
   const { places } = combined;
-  const visiblePlaces = useMemo(
-    () => (category !== null && bounds ? places.filter((place) => isInBounds(place, bounds)) : []),
-    [category, bounds, places],
-  );
+  // 화면 안의 것만 남긴 뒤 장소 ID로 합친다. 칸이 겹쳐 같은 장소가 여러 번 와도 하나만 올린다.
+  const visiblePlaces = useMemo(() => {
+    if (category === null || !bounds) return [];
+    const byId = new Map<string, NearbyPlace>();
+    for (const place of places) if (isInBounds(place, bounds)) byId.set(place.providerPlaceId, place);
+    return [...byId.values()];
+  }, [category, bounds, places]);
   return { places: visiblePlaces, isError: combined.isError && !combined.isFetching };
 };

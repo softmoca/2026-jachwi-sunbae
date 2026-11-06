@@ -1,10 +1,12 @@
 import { css } from '@emotion/css';
+import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ALL_MAP_CATEGORIES, getMapCategoryLabel } from '@/features/map/lib/mapPresentation';
 import type { MapCategory, NearbyPlace } from '@/features/map/model/Map';
 import MapCategoryIcon from '@/features/map/ui/map-category-icon/MapCategoryIcon';
-import Icon from '@/shared/ui/icon/Icon';
+import { MY_PATH } from '@/shared/lib/navigation/appPaths';
+import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 
 type MapNearbySheetProps = {
   eyebrow?: string;
@@ -12,62 +14,65 @@ type MapNearbySheetProps = {
   counts: Record<Exclude<MapCategory, 'MEMO'>, number>;
   selectedCategories: MapCategory[];
   places: NearbyPlace[];
-  expanded: boolean;
-  onToggleExpanded: () => void;
+  /** 값이 바뀌면 시트를 제목만 보이게 내린다. 지도에서 시설을 골라 상세 카드를 띄울 때 카드를 가리지 않게 한다. */
+  peekSignal?: unknown;
   onToggleCategory: (category: MapCategory) => void;
+  /** 시트 바로 위에 함께 띄울 지도 버튼(확대, 축소). 시트와 함께 오르내려 시트에 가리지 않는다. */
+  floating?: ReactNode;
 };
 
+/**
+ * 주변 분석 지도 아래 시트. 공용 시트라 손잡이로 제목만, 처음, 크게, 페이지 높이를 오간다.
+ * 닫는 화면이 없어 끝까지 끌어 내리면 닫지 않고 제목만 보이게 내린다.
+ */
 const MapNearbySheet = ({
   eyebrow,
   heading,
   counts,
   selectedCategories,
   places,
-  expanded,
-  onToggleExpanded,
+  peekSignal,
   onToggleCategory,
-}: MapNearbySheetProps) => (
-  <section className={styles.sheet} data-expanded={expanded || undefined} aria-label={heading}>
-    <span className={styles.dragHandle} aria-hidden="true" />
-    <div className={styles.header}>
-      <div>
-        {eyebrow !== undefined && <span>{eyebrow}</span>}
-        <h1>{heading}</h1>
-      </div>
-      <button type="button" aria-expanded={expanded} aria-controls="nearby-place-list" onClick={onToggleExpanded}>
-        {expanded ? '목록 접기' : '시설 목록 보기'}
-        <Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={17} />
-      </button>
-    </div>
+  floating,
+}: MapNearbySheetProps) => {
+  // 공용 시트는 숫자가 바뀔 때 내린다. 바깥 신호가 바뀌거나 끝까지 끌어 내렸을 때 하나씩 올린다.
+  const [peekCount, setPeekCount] = useState(0);
+  const [lastPeekSignal, setLastPeekSignal] = useState(peekSignal);
+  if (lastPeekSignal !== peekSignal) {
+    setLastPeekSignal(peekSignal);
+    setPeekCount((value) => value + 1);
+  }
+  return (
+    <BottomSheet
+      title={heading}
+      subtitle={eyebrow}
+      showCloseButton={false}
+      initialHeightPercent={34}
+      peekSignal={peekCount}
+      floating={floating}
+      onClose={() => setPeekCount((value) => value + 1)}
+    >
+      <ul className={styles.summary} aria-label="주변 시설 집계와 필터">
+        {ALL_MAP_CATEGORIES.map((category) => {
+          const selected = selectedCategories.includes(category);
+          const label = getMapCategoryLabel(category);
+          return (
+            <li key={category} data-category={category}>
+              <button
+                type="button"
+                aria-pressed={selected}
+                aria-label={`${label} ${counts[category]}개 ${selected ? '숨기기' : '표시하기'}`}
+                onClick={() => onToggleCategory(category)}
+              >
+                <MapCategoryIcon category={category} />
+                {label} {counts[category]}개
+              </button>
+            </li>
+          );
+        })}
+      </ul>
 
-    <ul className={styles.summary} aria-label="주변 시설 집계와 필터">
-      {ALL_MAP_CATEGORIES.map((category) => {
-        const selected = selectedCategories.includes(category);
-        const label = getMapCategoryLabel(category);
-        return (
-          <li key={category} data-category={category}>
-            <button
-              type="button"
-              aria-pressed={selected}
-              aria-label={`${label} ${counts[category]}개 ${selected ? '숨기기' : '표시하기'}`}
-              onClick={() => onToggleCategory(category)}
-            >
-              <MapCategoryIcon category={category} />
-              {label} {counts[category]}개
-            </button>
-          </li>
-        );
-      })}
-    </ul>
-
-    {expanded && (
-      <div
-        className={styles.scrollArea}
-        id="nearby-place-list"
-        role="region"
-        aria-label="스크롤 가능한 주변 시설 목록"
-        tabIndex={0}
-      >
+      <div className={styles.list}>
         {selectedCategories.length === 0 ? (
           <p>위에서 확인할 시설을 선택해 주세요.</p>
         ) : places.length === 0 ? (
@@ -88,97 +93,13 @@ const MapNearbySheet = ({
             ))}
           </ul>
         )}
-        <Link to="/me">지도 데이터 모드와 이용 안내</Link>
+        <Link to={MY_PATH}>지도 데이터 모드와 이용 안내</Link>
       </div>
-    )}
-  </section>
-);
+    </BottomSheet>
+  );
+};
 
 const styles = {
-  sheet: css`
-    label: MapNearbySheet-sheet;
-    position: absolute;
-    z-index: 18;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: grid;
-    grid-template-rows: auto auto auto;
-    gap: 0.62rem;
-    max-height: 53%;
-    padding: 0.5rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
-    overflow: hidden;
-    border-radius: 1.2rem 1.2rem 0 0;
-    background: rgb(255 255 255 / 97%);
-    box-shadow: 0 -0.5rem 1.5rem rgb(44 50 39 / 14%);
-    backdrop-filter: blur(10px);
-    transition: height 180ms ease-out;
-
-    &[data-expanded='true'] {
-      grid-template-rows: auto auto auto minmax(0, 1fr);
-      width: 100%;
-      height: min(74%, 38rem);
-      max-height: calc(100% - 0.75rem);
-    }
-
-    @media (max-width: 340px) {
-      padding-inline: 0.8rem;
-    }
-  `,
-
-  dragHandle: css`
-    label: MapNearbySheet-dragHandle;
-    display: block;
-    width: 2.5rem;
-    height: 0.22rem;
-    margin: 0 auto;
-    border-radius: 999px;
-    background: #d4d5d0;
-  `,
-
-  header: css`
-    label: MapNearbySheet-header;
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 0.75rem;
-
-    & span {
-      display: block;
-      max-width: 12rem;
-      overflow: hidden;
-      color: var(--color-primary-dark);
-      font-size: 0.58rem;
-      font-weight: 850;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    & h1 {
-      margin: 0;
-      font-size: 1rem;
-      line-height: 1.3;
-    }
-
-    & span + h1 {
-      margin-top: 0.15rem;
-    }
-
-    & > button {
-      display: inline-flex;
-      flex: 0 0 auto;
-      align-items: center;
-      gap: 0.2rem;
-      padding: 0.35rem 0;
-      border: 0;
-      background: transparent;
-      color: var(--color-primary-dark);
-      font-size: 0.62rem;
-      font-weight: 850;
-      cursor: pointer;
-    }
-  `,
-
   summary: css`
     label: MapNearbySheet-summary;
     display: flex;
@@ -223,20 +144,9 @@ const styles = {
     }
   `,
 
-  scrollArea: css`
-    label: MapNearbySheet-scrollArea;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: -2px;
-    }
+  list: css`
+    label: MapNearbySheet-list;
+    margin-top: 0.62rem;
 
     & > p {
       margin: 0.5rem 0;

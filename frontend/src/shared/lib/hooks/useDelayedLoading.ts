@@ -5,7 +5,7 @@ type DelayedLoadingOptions = {
   minimumVisibleMs?: number;
 };
 
-const DEFAULT_DELAY_MS = 500;
+const DEFAULT_DELAY_MS = 300;
 const DEFAULT_MINIMUM_VISIBLE_MS = 250;
 
 /**

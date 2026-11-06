@@ -248,8 +248,8 @@ class AnonymousAuthenticationAcceptanceTest {
         jdbcTemplate.update("UPDATE members SET deleted_at = NOW(6) WHERE id = ?", memberId);
 
         mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
     }
 
     @Test

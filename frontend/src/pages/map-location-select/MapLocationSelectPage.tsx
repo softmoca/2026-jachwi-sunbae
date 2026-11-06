@@ -1,10 +1,9 @@
 import { css } from '@emotion/css';
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 import type { MapAddress } from '@/features/map/model/Map';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
-import type { PropertyInputDto } from '@/features/property/api/dtos/PropertyDto';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
@@ -15,19 +14,23 @@ import LocationAddressSheet from './ui/location-address-sheet/LocationAddressShe
 import LocationMapControls from './ui/location-map-controls/LocationMapControls';
 import MapAddressSearchPanel from './ui/map-address-search-panel/MapAddressSearchPanel';
 
-type RouteState = { returnTo?: string; initialLocation?: MapAddress; registrationDraft?: PropertyInputDto };
+type RouteState = { returnTo?: string; initialLocation?: MapAddress };
 
+/**
+ * 매물 수정에서 지도로 위치를 고친다. 돌아갈 수정 화면(`returnTo`) 없이 들어오면 고칠 매물이 없으므로 본 방 기록으로 보낸다.
+ * 매물 등록은 본 방 기록 지도에서 하므로 이 화면은 위치만 골라 수정 화면에 돌려준다.
+ */
 const MapLocationSelectPage = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const routeState = (location.state as RouteState | null) ?? {};
-  const returnTo = routeState.returnTo ?? '/properties/new';
-  const launchedFromForm = routeState.returnTo !== undefined;
-  const { registrationDraft, initialLocation } = routeState;
+  const routeState = (useLocation().state as RouteState | null) ?? {};
+  if (routeState.returnTo === undefined) return <Navigate to={RECORDS_PATH} replace />;
+  return <MapLocationSelect returnTo={routeState.returnTo} initialLocation={routeState.initialLocation} />;
+};
+
+const MapLocationSelect = ({ returnTo, initialLocation }: { returnTo: string; initialLocation?: MapAddress }) => {
   const knownLocationLevel = initialLocation === undefined ? 5 : 3;
   const [searchOpen, setSearchOpen] = useState(false);
   const selection = useLocationSelection(initialLocation);
-  const { confirm, isCreating, hasCreateError } = useLocationConfirm({ returnTo, registrationDraft });
+  const confirm = useLocationConfirm(returnTo);
   const propertyMarkers = usePropertyMarkers();
 
   const moveToCurrentLocation = async () => {
@@ -40,9 +43,7 @@ const MapLocationSelectPage = () => {
       <TopNavigation
         className={styles.mapNavigation}
         title="지도에서 위치 확인"
-        {...(registrationDraft === undefined
-          ? { backTo: launchedFromForm ? returnTo : RECORDS_PATH }
-          : { onBack: () => navigate(returnTo, { replace: true, state: { registrationDraft } }) })}
+        backTo={returnTo}
         backLabel="이전 화면으로 돌아가기"
         meta="13-2"
       />
@@ -69,9 +70,6 @@ const MapLocationSelectPage = () => {
         <LocationAddressSheet
           selected={selection.selected}
           status={selection.status}
-          isEditing={returnTo.endsWith('/edit')}
-          isCreating={isCreating}
-          hasCreateError={hasCreateError}
           onOpenSearch={() => setSearchOpen(true)}
           onConfirm={() => confirm(selection.selected)}
         />

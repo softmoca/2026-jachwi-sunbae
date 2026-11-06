@@ -1,40 +1,68 @@
 import { css, keyframes } from '@emotion/css';
 
+import { Button } from '@/shared/ui/button/Button';
 import Icon from '@/shared/ui/icon/Icon';
 import IconBase from '@/shared/ui/icon/IconBase';
 
 import { forecastHour, weatherLabel, weatherValue } from '../../lib/weatherPresentation';
 import { useWeatherSubscription } from '../../model/useWeatherSubscription';
+import { useWeatherTestPush } from '../../model/useWeatherTestPush';
 import NotificationToggle from '../notification-toggle/NotificationToggle';
 import WeatherSymbol from '../weather-symbol/WeatherSymbol';
+import WeatherTestPushButton from '../weather-test-push-button/WeatherTestPushButton';
 
 const BELL = 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0';
 const BELL_OFF = 'M6 8a6 6 0 0 1 8.5-5.45M18 11c.4 4 3 6 3 6H3s3-2 3-9m4.3 13a1.94 1.94 0 0 0 3.4 0M16 3l5 5m0-5-5 5';
 
 const WeatherSummaryCard = () => {
-  const { platform, isEnabled, isLoading, isUpdating, hasUpdateFailed, location, placeName, forecast, toggle } =
-    useWeatherSubscription();
+  const {
+    platform,
+    isEnabled,
+    isLoading,
+    isUpdating,
+    isLocating,
+    hasUpdateFailed,
+    location,
+    placeName,
+    forecast,
+    toggle,
+    pushMessage,
+    canRetry,
+    retry,
+    canOpenSettings,
+    openSettings,
+  } = useWeatherSubscription();
+  const testPush = useWeatherTestPush(isEnabled);
   const hour = forecast.data?.hourly[Number(forecastHour(new Date().toISOString()))];
   const showsWeather = isEnabled && hour !== undefined && hour.tmp !== null;
+  // 알림은 켰지만 위치 확인에 실패했고 마지막 위치도 없어 날씨를 그릴 수 없다. 공통 알림이라 배달 할인 알림은 계속 받는다.
+  const hasNoLocation =
+    isEnabled && location.coordinate === null && (location.status === 'denied' || location.status === 'unavailable');
 
   // 알림이 꺼져 있거나 날씨를 아직 못 그릴 때 대표 줄에 보일 안내
   const state = !isEnabled
-    ? { icon: BELL_OFF, title: '생활 날씨 알림이 꺼져 있어요', detail: '켜면 오늘 날씨를 여기에 보여 드려요' }
-    : forecast.isError
-      ? { icon: BELL, title: '날씨를 불러오지 못했어요', detail: '잠시 후 다시 확인해 주세요' }
-      : forecast.data === undefined
-        ? { icon: BELL, title: '날씨를 불러오고 있어요', detail: '현재 위치의 예보를 확인하고 있어요' }
-        : { icon: BELL, title: '아직 예보 정보가 없어요', detail: '예보가 준비되면 보여 드릴게요' };
+    ? { icon: BELL_OFF, title: '알림이 꺼져 있어요', detail: '켜면 오늘 날씨를 여기에 보여 드려요' }
+    : hasNoLocation
+      ? { icon: BELL, title: '날씨는 위치를 확인한 뒤 알려 드려요', detail: '배달 할인 알림은 위치 없이도 받아요' }
+      : forecast.isError
+        ? { icon: BELL, title: '날씨를 불러오지 못했어요', detail: '잠시 후 다시 확인해 주세요' }
+        : forecast.data === undefined
+          ? { icon: BELL, title: '날씨를 불러오고 있어요', detail: '현재 위치의 예보를 확인하고 있어요' }
+          : { icon: BELL, title: '아직 예보 정보가 없어요', detail: '예보가 준비되면 보여 드릴게요' };
 
-  const message = hasUpdateFailed
-    ? '알림 설정을 바꾸지 못했어요. 다시 시도해 주세요.'
-    : location.status === 'denied'
-      ? location.isStale
-        ? '위치 권한이 꺼져 있어 마지막 위치로 알려드려요.'
-        : '위치 권한을 허용해야 알림을 받을 수 있어요.'
-      : platform === 'web'
-        ? '알림은 앱에서 받을 수 있어요.'
-        : null;
+  const message =
+    pushMessage ??
+    (hasUpdateFailed
+      ? '알림 설정을 바꾸지 못했어요. 다시 시도해 주세요.'
+      : location.status === 'denied'
+        ? location.isStale
+          ? '위치 권한이 꺼져 있어 마지막 위치로 알려드려요.'
+          : '위치 권한을 허용하면 날씨 알림도 받을 수 있어요.'
+        : hasNoLocation
+          ? '지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.'
+          : platform === 'web'
+            ? '알림은 앱에서 받을 수 있어요.'
+            : null);
 
   return (
     <section className={styles.card} aria-labelledby="weather-summary-heading">
@@ -81,7 +109,7 @@ const WeatherSummaryCard = () => {
               {weatherValue(forecast.data.tmx, '°')}
             </>
           ) : (
-            '비·눈·추위 같은 생활 날씨를 알림으로 알려드려요.'
+            '생활 날씨와 배달 할인 소식을 알림으로 알려드려요.'
           )}
         </p>
       </div>
@@ -89,9 +117,24 @@ const WeatherSummaryCard = () => {
         <NotificationToggle
           checked={isEnabled}
           disabled={isLoading || isUpdating}
+          isBusy={isLocating}
+          busyLabel="현재 위치를 확인하고 있어요."
           message={message}
           onToggle={toggle}
         />
+        {canOpenSettings && (
+          <Button variant="secondary" onClick={openSettings}>
+            설정 열기
+          </Button>
+        )}
+        {testPush.canSend && (
+          <WeatherTestPushButton status={testPush.status} secondsLeft={testPush.secondsLeft} onSend={testPush.send} />
+        )}
+        {canRetry && (
+          <Button variant="secondary" onClick={retry}>
+            알림 연결 다시 시도
+          </Button>
+        )}
       </div>
     </section>
   );

@@ -6,6 +6,8 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import type { PropertyCreationEntrypoint } from '../lib/propertyAnalytics';
 import { trackPropertyEvent } from '../lib/propertyAnalytics';
+import { EXAMPLE_PROPERTY_ID, isExampleProperty } from '../model/exampleProperty';
+import { rememberMovedProperty } from '../model/movedProperty';
 import type { PropertyBasicInfo, PropertyDetail, PropertyPage } from '../model/Property';
 import type {
   PropertyInputDto,
@@ -31,9 +33,14 @@ export const useCreateProperty = (entrypoint: PropertyCreationEntrypoint = 'form
       const total = client.getQueryData<InfiniteData<PropertyPage>>(propertyQueryKeys.list(''))?.pages[0]
         ?.totalElements;
       trackPropertyEvent('property_creation_submitted', { entrypoint });
-      return { firstProperty: total === undefined ? undefined : total === 0 };
+      const onlyExample =
+        client
+          .getQueryData<InfiniteData<PropertyPage>>(propertyQueryKeys.list(''))
+          ?.pages[0]?.content.every((property) => isExampleProperty(property.propertyId)) ?? false;
+      return { firstProperty: total === undefined ? undefined : total === 0 || (total === 1 && onlyExample) };
     },
     onSuccess: async (created, _request, context) => {
+      client.removeQueries({ queryKey: propertyQueryKeys.detail(EXAMPLE_PROPERTY_ID) });
       trackPropertyEvent('property_created', {
         entrypoint,
         property_id: created.propertyId,
@@ -76,7 +83,15 @@ export const useUpdateProperty = (propertyId: number) => {
   return useMutation({
     mutationFn: ({ current, changes }: { current: PropertyDetail; changes: PropertyChanges }) =>
       updateProperty(config, propertyId, toUpdatePropertyRequest(current, changes)),
-    onSuccess: async (updated: PropertyBasicInfo) => {
+    onSuccess: async (updated: PropertyBasicInfo, { current: before }) => {
+      const { latitude, longitude } = updated.location;
+      // 위치를 옮겼으면 본 방 기록 지도가 새 자리로 가서 핀을 보이게 알린다.
+      if (
+        latitude !== null &&
+        longitude !== null &&
+        (latitude !== before.location.latitude || longitude !== before.location.longitude)
+      )
+        rememberMovedProperty({ propertyId, latitude, longitude });
       queryClient.setQueryData<PropertyDetail>(propertyQueryKeys.detail(propertyId), (current) =>
         current === undefined
           ? current

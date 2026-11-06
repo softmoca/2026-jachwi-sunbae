@@ -1,16 +1,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { StrictMode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMockWeatherForecast } from '@/app/mocks/handlers/weatherHandlers';
 import AppRoutes from '@/app/router/AppRoutes';
+import { getAuthenticationSnapshot, setAuthentication } from '@/features/auth/model/authStore';
+import { WEATHER_LOCATION_DEADLINE_MS } from '@/features/weather/lib/weatherLocation';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
+import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
+import { installNativePush } from '../../helpers/nativePush';
 import { server } from '../../server';
 
 const config = { apiBaseUrl: 'http://localhost:8080', mapProviderMode: 'demo' } as const;
@@ -23,10 +27,15 @@ const useWeatherServer = ({
   failUpdate = false,
   forecast = createMockWeatherForecast('2026-10-26'),
 }: { enabled?: boolean; failUpdate?: boolean; forecast?: unknown } = {}) => {
-  const state = { enabled, savedLocations: [] as unknown[], updates: [] as boolean[] };
+  const state = { enabled, savedLocations: [] as unknown[], updates: [] as boolean[], testPushes: 0 };
   server.use(
-    http.get('*/api/members/me/weather-notification-settings', () => success({ enabled: state.enabled })),
-    http.put('*/api/members/me/weather-notification-settings', async ({ request }) => {
+    http.get('*/api/members/me/notification-settings', () => success({ enabled: state.enabled })),
+    http.put('*/api/members/me/notification-devices/current', async ({ request }) => {
+      const body = (await request.json()) as { installationId: string };
+      return success({ installationId: body.installationId });
+    }),
+    http.delete('*/api/members/me/notification-devices/current', () => new HttpResponse(null, { status: 204 })),
+    http.put('*/api/members/me/notification-settings', async ({ request }) => {
       const body = (await request.json()) as { enabled: boolean };
       state.updates.push(body.enabled);
       if (failUpdate)
@@ -38,6 +47,10 @@ const useWeatherServer = ({
       state.savedLocations.push(await request.json());
       return success({ available: true, gridX: 60, gridY: 127, updatedAt: '2026-10-26T00:00:00Z' });
     }),
+    http.post('*/api/members/me/weather-notifications/test', () => {
+      state.testPushes += 1;
+      return success({ sent: true });
+    }),
     http.get('*/api/weather/forecasts', () => success(forecast)),
     http.get('*/api/maps/reverse-geocode', () =>
       success({ roadAddress: '서울 중구 세종대로 110', jibunAddress: '서울 중구 태평로1가 31', ...SEOUL }),
@@ -47,11 +60,13 @@ const useWeatherServer = ({
 };
 
 const originalGeolocation = navigator.geolocation;
-const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable') => {
+/** silent: iOS가 위치를 잠깐 못 잡을 때(kCLErrorLocationUnknown)처럼 성공도 실패도 알리지 않는다. */
+const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable' | 'silent') => {
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: {
       getCurrentPosition: (onSuccess: PositionCallback, onError: PositionErrorCallback) => {
+        if (result === 'silent') return;
         if (result === 'allowed') {
           onSuccess({ coords: { ...SEOUL, accuracy: 10 } } as GeolocationPosition);
           return;
@@ -67,6 +82,8 @@ const mockGeolocation = (result: 'allowed' | 'denied' | 'unavailable') => {
   });
 };
 
+const CurrentPath = () => <output aria-label="현재 경로">{useLocation().pathname}</output>;
+
 const renderMyPage = () =>
   render(
     <StrictMode>
@@ -74,50 +91,55 @@ const renderMyPage = () =>
         <PublicConfigProvider config={config}>
           <MemoryRouter initialEntries={['/me']}>
             <AppRoutes />
+            <CurrentPath />
           </MemoryRouter>
         </PublicConfigProvider>
       </QueryClientProvider>
     </StrictMode>,
   );
 
-const renderWeatherCard = () =>
-  render(
+const renderWeatherCard = (cardConfig: PublicConfig = config) => {
+  // 실제 화면은 ProtectedRoute에서 인증을 마친 뒤 카드를 렌더링한다.
+  setAuthentication({ accessToken: 'fake-weather-member', tokenType: 'Bearer', memberId: 1, expiresIn: 900 });
+  return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } })
       }
     >
-      <PublicConfigProvider config={config}>
+      <PublicConfigProvider config={cardConfig}>
         <WeatherSummaryCard />
       </PublicConfigProvider>
     </QueryClientProvider>,
   );
+};
 
 beforeEach(() => {
-  window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2 };
+  installNativePush();
 });
 
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  delete window.ReactNativeWebView;
   Object.defineProperty(navigator, 'geolocation', { configurable: true, value: originalGeolocation });
 });
 
 describe('마이 화면', () => {
-  it('생활 날씨·개인정보 처리방침·계정 삭제 요청만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
+  it('생활 날씨, 개인정보 처리방침, 초기화만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
     const user = userEvent.setup();
     const weather = useWeatherServer();
     mockGeolocation('allowed');
     renderMyPage();
-    expect(await screen.findByText('생활 날씨 알림이 꺼져 있어요')).toBeInTheDocument();
+    expect(await screen.findByText('알림이 꺼져 있어요')).toBeInTheDocument();
     // 홈의 빠른 메뉴와 겹치는 기록 메뉴나 날씨 상세·설정으로 가는 길은 두지 않는다.
     expect(screen.queryByRole('navigation', { name: '내 기록' })).not.toBeInTheDocument();
     expect(screen.queryByText(/프로토타입|샘플|시연/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /개인정보 처리방침/ })).toHaveAttribute('href', '/privacy');
 
-    // 계정 삭제는 카드 → 확인 한 번으로 회원 번호가 채워진 메일을 연다.
-    await user.click(screen.getByRole('button', { name: /계정 및 데이터 삭제 요청/ }));
-    expect(screen.getByRole('dialog', { name: '계정 삭제를 요청할까요?' })).toHaveTextContent(/회원 번호 \d+/);
-    await user.keyboard('{Escape}');
+    // 마이에는 초기화만 두고, 계정과 데이터 삭제 요청은 개인정보 처리방침의 삭제 요청 안내에서 받는다.
+    expect(screen.getByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(screen.queryByText(/삭제|지우려면/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /메일/ })).not.toBeInTheDocument();
 
     const toggle = screen.getByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
@@ -133,7 +155,90 @@ describe('마이 화면', () => {
     await user.click(toggle);
     await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
     expect(weather.updates).toEqual([true, false]);
-    expect(screen.getByText('생활 날씨 알림이 꺼져 있어요')).toBeInTheDocument();
+    expect(screen.getByText('알림이 꺼져 있어요')).toBeInTheDocument();
+  });
+});
+
+describe('마이 화면의 초기화', () => {
+  /** 탈퇴 요청 수를 세고, 성공하면 이어지는 로그인에서 2번 새 회원을 돌려주는 인증 API */
+  const useResetServer = (result: 'success' | 'failure') => {
+    const state = { resetCalls: 0, isDeleted: false };
+    server.use(
+      http.delete('*/api/members/me', () => {
+        state.resetCalls += 1;
+        if (result === 'failure') {
+          return HttpResponse.json({ code: 'INTERNAL_ERROR', message: '실패', errors: [] }, { status: 500 });
+        }
+        state.isDeleted = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      // 탈퇴로 Refresh 쿠키가 만료된 뒤의 로그인만 새 회원을 만든다.
+      http.post('*/api/auth/login', () =>
+        success({
+          accessToken: state.isDeleted ? 'reset-member-token' : 'test-auto-login-token',
+          tokenType: 'Bearer',
+          expiresIn: 900,
+          newMember: state.isDeleted,
+          member: { memberId: state.isDeleted ? 2 : 1 },
+        }),
+      ),
+    );
+    return state;
+  };
+
+  const openResetDialog = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByRole('button', { name: /^초기화/ }));
+    const dialog = screen.getByRole('dialog', { name: '초기화할까요?' });
+    expect(dialog).toHaveTextContent(
+      '새 아이디로 다시 시작해요. 지금까지의 기록은 더 이상 볼 수 없고, 90일 뒤 파기돼요.',
+    );
+    return dialog;
+  };
+
+  it('확인하면 새 회원으로 바꾸고 홈으로 간다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('success');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+
+    await waitFor(() => expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent(/^\/$/));
+    expect(reset.resetCalls).toBe(1);
+    expect(getAuthenticationSnapshot().session).toMatchObject({ accessToken: 'reset-member-token', memberId: 2 });
+  });
+
+  it('실패하면 대화상자에 안내하고 지금 회원과 화면을 그대로 둔다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('failure');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '초기화하지 못했어요. 지금 아이디와 기록은 그대로예요.',
+    );
+    expect(reset.resetCalls).toBe(1);
+    expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent('/me');
+    expect(getAuthenticationSnapshot()).toMatchObject({ terminationReason: null, session: { memberId: 1 } });
+  });
+
+  it('취소하면 초기화 요청을 보내지 않는다', async () => {
+    const user = userEvent.setup();
+    useWeatherServer();
+    const reset = useResetServer('success');
+    renderMyPage();
+    const dialog = await openResetDialog(user);
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(reset.resetCalls).toBe(0);
+    expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+    expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent('/me');
   });
 });
 
@@ -147,17 +252,76 @@ describe('생활 날씨 카드의 알림 받기', () => {
     expect(weather.updates).toEqual([]);
   });
 
-  it('위치 권한을 거부하고 마지막 위치도 없으면 켜지 않고 이유를 알린다', async () => {
+  it('위치 권한을 거부하고 마지막 위치도 없어도 공통 알림은 켜고, 날씨용 위치 권한은 앱 설정에서 허용하게 한다', async () => {
     const user = userEvent.setup();
+    const native = installNativePush();
     const weather = useWeatherServer();
     mockGeolocation('denied');
     renderWeatherCard();
     const toggle = await screen.findByRole('switch', { name: '알림 받기' });
     await waitFor(() => expect(toggle).toBeEnabled());
     await user.click(toggle);
-    expect(await screen.findByText('위치 권한을 허용해야 알림을 받을 수 있어요.')).toBeInTheDocument();
-    expect(toggle).toHaveAttribute('aria-checked', 'false');
-    expect(weather.updates).toEqual([]);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(weather.updates).toEqual([true]);
+    expect(weather.savedLocations).toEqual([]);
+    expect(native.actions).toContain('enable');
+    expect(screen.getByText('날씨는 위치를 확인한 뒤 알려 드려요')).toBeInTheDocument();
+    expect(screen.getByText('배달 할인 알림은 위치 없이도 받아요')).toBeInTheDocument();
+    expect(screen.getByText('위치 권한을 허용하면 날씨 알림도 받을 수 있어요.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '설정 열기' }));
+    await waitFor(() => expect(native.actions).toContain('settings'));
+  });
+
+  it('위치를 확인하지 못하고 마지막 위치도 없어도 공통 알림은 켜고, 다음에 다시 확인한다고 알린다', async () => {
+    const user = userEvent.setup();
+    const weather = useWeatherServer();
+    mockGeolocation('unavailable');
+    renderWeatherCard();
+    const toggle = await screen.findByRole('switch', { name: '알림 받기' });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    await user.click(toggle);
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+    expect(weather.updates).toEqual([true]);
+    expect(weather.savedLocations).toEqual([]);
+    expect(await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
+  });
+
+  it('위치가 계속 답하지 않으면 확인 중 표시를 두고, 기다림이 끝나면 위치 없이 공통 알림을 켜고 이유를 알린다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      installNativePush();
+      const weather = useWeatherServer();
+      mockGeolocation('silent');
+      renderWeatherCard();
+      const toggle = await screen.findByRole('switch', { name: '알림 받기' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      await user.click(toggle);
+      expect(await screen.findByRole('progressbar', { name: '현재 위치를 확인하고 있어요.' })).toBeInTheDocument();
+      expect(toggle).toBeDisabled();
+
+      await vi.advanceTimersByTimeAsync(WEATHER_LOCATION_DEADLINE_MS);
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'true'));
+      expect(
+        await screen.findByText('지금 위치를 확인하지 못했어요. 다음에 열 때 다시 확인할게요.'),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+      expect(weather.updates).toEqual([true]);
+      expect(weather.savedLocations).toEqual([]);
+      expect(screen.queryByRole('button', { name: '설정 열기' })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('알림 받기 토글은 생활 날씨와 배달 할인 알림을 함께 받는다고 안내한다', async () => {
+    useWeatherServer();
+    renderWeatherCard();
+    await screen.findByRole('switch', { name: '알림 받기' });
+    expect(screen.getByText('생활 날씨·배달 할인')).toBeInTheDocument();
+    expect(screen.queryByText('매일 오전 7시, 오후 10시')).not.toBeInTheDocument();
   });
 
   it('현재 위치를 못 잡으면 마지막 위치로 켜고 마지막 위치 기준임을 표시한다', async () => {
@@ -202,5 +366,47 @@ describe('생활 날씨 카드의 알림 받기', () => {
     mockGeolocation('allowed');
     renderWeatherCard();
     expect(await screen.findByText('아직 예보 정보가 없어요')).toBeInTheDocument();
+  });
+});
+
+describe('생활 날씨 카드의 푸시 알림 테스트', () => {
+  const devConfig: PublicConfig = { ...config, appEnvironment: 'development' };
+  const originalVisibility = Object.getOwnPropertyDescriptor(Document.prototype, 'visibilityState');
+
+  afterEach(() => {
+    if (originalVisibility) Object.defineProperty(document, 'visibilityState', originalVisibility);
+  });
+
+  it('dev 서버의 앱에서 알림이 켜져 있으면, 기다리다 홈 화면으로 나가는 순간 테스트 알림을 보낸다', async () => {
+    const user = userEvent.setup();
+    const weather = useWeatherServer({ enabled: true });
+    mockGeolocation('allowed');
+    renderWeatherCard(devConfig);
+
+    await user.click(await screen.findByRole('button', { name: '푸시 알림 테스트' }));
+    expect(screen.getByRole('button', { name: /초 뒤 보내요$/ })).toBeDisabled();
+    expect(screen.getByText('지금 홈 화면으로 나가면 푸시 알림으로 받을 수 있어요.')).toBeInTheDocument();
+    expect(weather.testPushes).toBe(0);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(await screen.findByText('테스트 알림을 보냈어요. 기기 알림을 확인해 주세요.')).toBeInTheDocument();
+    expect(weather.testPushes).toBe(1);
+  });
+
+  it('운영 설정이나 알림이 꺼진 상태에서는 테스트 버튼을 보이지 않는다', async () => {
+    useWeatherServer({ enabled: true });
+    mockGeolocation('allowed');
+    const { unmount } = renderWeatherCard();
+    expect(await screen.findByText(/^\d{2}시 예보$/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '푸시 알림 테스트' })).not.toBeInTheDocument();
+    unmount();
+
+    useWeatherServer();
+    renderWeatherCard(devConfig);
+    const toggle = await screen.findByRole('switch', { name: '알림 받기' });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    expect(screen.queryByRole('button', { name: '푸시 알림 테스트' })).not.toBeInTheDocument();
   });
 });

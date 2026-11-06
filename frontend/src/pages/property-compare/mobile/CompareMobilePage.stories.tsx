@@ -72,7 +72,7 @@ const listData = (content: PropertySummary[]): { pages: PropertyPage[]; pagePara
 const properties = [
   property(1, '역삼역 햇살 원룸', 10_000_000, 650_000, '직방', '서울 강남구 역삼동 823-12', [8, 12]),
   property(2, '홍대 투룸 복층', 20_000_000, 850_000, '네이버 부동산', '서울 마포구 서교동 395-7', [12, 12], [3, 10]),
-  property(3, '신림 전세 오피스텔', 150_000_000, 0, '', '서울 관악구 신림동 1422-5', null),
+  property(3, '신림 오피스텔', 10_000_000, 650_000, '', '서울 관악구 신림동 1422-5', null),
   property(4, '판교역 신축 원룸', 10_000_000, 900_000, 'https://www.dabangapp.com/room/123', null, [2, 12]),
   property(5, '건대입구 반지하 원룸', 3_000_000, 400_000, '지인 소개', '서울 광진구 화양동 5-12', null),
   property(6, '왕십리 오피스텔', 5_000_000, 700_000, '다방', '서울 성동구 행당동 192-1', [12, 12], [10, 10]),
@@ -97,9 +97,16 @@ type Story = StoryObj<typeof meta>;
 /** 비교할 매물이 여러 개 있다. */
 export const Default: Story = {};
 
-/** 매물이 하나뿐이라 비교할 수 없다. */
+/** 매물이 하나뿐이라 그 매물을 보이고, 하나 더 등록하면 비교할 수 있다고 안내한다. */
 export const NotEnough: Story = {
   parameters: {
     queryData: [[propertyQueryKeys.list(''), listData(properties.slice(0, 1))]],
+  },
+};
+
+/** 등록한 매물이 없어 빈 화면 안내를 보인다. */
+export const Empty: Story = {
+  parameters: {
+    queryData: [[propertyQueryKeys.list(''), listData([])]],
   },
 };

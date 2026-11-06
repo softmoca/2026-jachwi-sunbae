@@ -6,12 +6,15 @@ import { usePropertyDetail } from '@/features/property/api/useProperties';
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
 import { cameFromPropertyDetail } from '@/features/property/lib/propertyNavigation';
 import PropertyPhotoManager from '@/features/property/ui/property-photo-manager/PropertyPhotoManager';
+import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
-const backToList = <Link to="/">홈으로 돌아가기</Link>;
+import PropertyPhotosSkeleton from './PropertyPhotosSkeleton';
+
+const backToList = <Link to={HOME_PATH}>홈으로 돌아가기</Link>;
 const describeError = describePropertyLoadError('사진 목록을 불러오지 못했어요.');
 
 const PropertyPhotosPage = () => {
@@ -25,13 +28,14 @@ const ResolvedPropertyPhotosPage = ({ propertyId }: { propertyId: number }) => {
   // 상세에서 들어왔으면 이전 기록(상세)으로 돌아가 상세가 들어온 곳을 잃지 않는다. 주소로 바로 열었으면 상세로 바꿔 이동한다.
   const goBack = useReturnNavigation({
     cameFromTarget: cameFromPropertyDetail(useLocation().state),
-    fallback: `/properties/${propertyId}`,
+    fallback: propertyDetailPath(propertyId),
   });
 
   return (
     <QueryState
       query={property}
       loadingTitle="사진 정보를 불러오는 중이에요."
+      skeleton={<PropertyPhotosSkeleton />}
       describeError={describeError}
       errorAction={backToList}
     >

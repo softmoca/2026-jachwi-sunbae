@@ -27,6 +27,7 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
                     resultSet.getLong("member_id"),
                     resultSet.getBigDecimal("latitude"),
                     resultSet.getBigDecimal("longitude"),
+                    resultSet.getString("admin_dong_code"),
                     resultSet.getString("memo"),
                     StreetMemoPreference.fromCode(resultSet.getString("preference")),
                     resultSet.getTimestamp("created_at").toLocalDateTime(),
@@ -50,8 +51,9 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
             throw new IllegalArgumentException("새 거리 메모만 저장할 수 있습니다.");
         }
         String sql = """
-                INSERT INTO street_memos (member_id, latitude, longitude, memo, preference, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO street_memos (member_id, latitude, longitude, admin_dong_code, memo, preference,
+                    created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -59,10 +61,11 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
             statement.setLong(1, streetMemo.getMemberId());
             statement.setBigDecimal(2, streetMemo.getLatitude());
             statement.setBigDecimal(3, streetMemo.getLongitude());
-            statement.setString(4, streetMemo.getMemo());
-            statement.setString(5, streetMemo.getPreference().name());
-            statement.setObject(6, streetMemo.getCreatedAt());
-            statement.setObject(7, streetMemo.getUpdatedAt());
+            statement.setString(4, streetMemo.getAdminDongCode());
+            statement.setString(5, streetMemo.getMemo());
+            statement.setString(6, streetMemo.getPreference().name());
+            statement.setObject(7, streetMemo.getCreatedAt());
+            statement.setObject(8, streetMemo.getUpdatedAt());
             return statement;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -70,7 +73,8 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
             throw new IllegalStateException("거리 메모 저장 후 생성된 ID를 확인할 수 없습니다.");
         }
         return jdbcTemplate.queryForObject("""
-                SELECT id, member_id, latitude, longitude, memo, preference, created_at, updated_at, deleted_at
+                SELECT id, member_id, latitude, longitude, admin_dong_code, memo, preference, created_at,
+                       updated_at, deleted_at
                 FROM street_memos WHERE id = ?
                 """, ROW_MAPPER, key.longValue());
     }
@@ -79,7 +83,8 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
     public List<StreetMemo> findAllWithin(final BigDecimal minLatitude, final BigDecimal maxLatitude,
                                          final BigDecimal minLongitude, final BigDecimal maxLongitude) {
         return jdbcTemplate.query("""
-                        SELECT id, member_id, latitude, longitude, memo, preference, created_at, updated_at, deleted_at
+                        SELECT id, member_id, latitude, longitude, admin_dong_code, memo, preference, created_at,
+                               updated_at, deleted_at
                         FROM street_memos
                         WHERE deleted_at IS NULL
                           AND latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?
@@ -89,7 +94,8 @@ public class JdbcStreetMemoRepository implements StreetMemoRepository {
     @Override
     public Optional<StreetMemo> findByIdForUpdate(final long id) {
         return jdbcTemplate.query("""
-                SELECT id, member_id, latitude, longitude, memo, preference, created_at, updated_at, deleted_at
+                SELECT id, member_id, latitude, longitude, admin_dong_code, memo, preference, created_at,
+                       updated_at, deleted_at
                 FROM street_memos
                 WHERE id = ? AND deleted_at IS NULL
                 FOR UPDATE

@@ -85,7 +85,6 @@ it('토큰이 없으면 자동 로그인한 뒤 동네 좌표로 정류장과 �
     '/explore/nearby?latitude=37.5006&longitude=127.0364&name=%EC%97%AD%EC%82%BC1%EB%8F%99&backTo=%2Fexplore%2Fcommute',
   );
   expect(await screen.findByRole('region', { name: '역삼1동 주변 2km' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: /시설 목록 보기/ }));
   const list = screen.getByRole('list', { name: '주변 시설 목록' });
   expect(list).toHaveTextContent('역삼역');
   expect(list).toHaveTextContent('역삼공인중개사');
@@ -107,4 +106,14 @@ it('좌표 없이 들어오면 동네 지도로 돌아가는 안내를 보여준
   show('/explore/nearby');
   expect(screen.getByText('동네 위치를 찾지 못했어요')).toBeInTheDocument();
   expect(requests).toHaveLength(0);
+});
+
+it('동네 주변 분석 지도에도 확대, 축소 버튼을 둔다', async () => {
+  show(
+    '/explore/nearby?latitude=37.5006&longitude=127.0364&name=%EC%97%AD%EC%82%BC1%EB%8F%99&backTo=%2Fexplore%2Fcommute',
+  );
+  expect(await screen.findByRole('region', { name: '역삼1동 주변 2km' })).toBeInTheDocument();
+  const zoom = screen.getByRole('group', { name: '지도 확대·축소' });
+  expect(zoom).toContainElement(screen.getByRole('button', { name: '지도 확대' }));
+  expect(screen.getByRole('button', { name: '지도 축소' })).toBeEnabled();
 });

@@ -237,9 +237,9 @@ class StreetMemoAcceptanceTest {
         jdbc.update("UPDATE members SET deleted_at = CURRENT_TIMESTAMP(6) WHERE id = ?", author.memberId());
         mvc.perform(authorized(post("/api/street-memos"), author).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validBody())))
-                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
         mvc.perform(authorized(delete("/api/street-memos/{streetMemoId}", id), author))
-                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM street_memos WHERE deleted_at IS NULL", Long.class))
                 .isEqualTo(1L);
     }
@@ -294,7 +294,8 @@ class StreetMemoAcceptanceTest {
     private void assertPublicFields(final JsonNode memo) {
         List<String> fields = new ArrayList<>();
         memo.fieldNames().forEachRemaining(fields::add);
-        assertThat(fields).containsExactlyInAnyOrder("streetMemoId", "latitude", "longitude", "memo", "preference", "isMine");
+        assertThat(fields).containsExactlyInAnyOrder("streetMemoId", "latitude", "longitude", "memo", "adminDongCode",
+                "preference", "isMine");
     }
 
     private record MemberSession(long memberId, String accessToken) {

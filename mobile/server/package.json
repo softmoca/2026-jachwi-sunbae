@@ -1,0 +1,16 @@
+{
+  "name": "jachwi-push-sender",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs",
+    "send": "node send.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0"
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  }
+}

@@ -11,6 +11,7 @@ type Options = {
 /**
  * 본 방 기록 지도에서 고른 위치로 등록 화면 없이 바로 매물을 만든다.
  * 이름은 `새 매물`, 보증금과 월세는 0으로 만들고 나머지는 상세에서 채운다.
+ * 새 매물 상세는 기본 정보 탭으로 열린다.
  */
 const useQuickCreateProperty = ({ onCreated, onError }: Options) => {
   const createProperty = useCreateProperty('map');
@@ -19,7 +20,9 @@ const useQuickCreateProperty = ({ onCreated, onError }: Options) => {
     if (createProperty.isPending) return;
     createProperty
       .mutateAsync(toQuickPropertyInput(location))
-      .then((created) => onCreated(created.propertyId, location))
+      .then((created) => {
+        onCreated(created.propertyId, location);
+      })
       .catch(onError);
   };
 

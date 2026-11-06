@@ -10,11 +10,19 @@ import { formatAmountForInput } from '@/features/property/lib/propertyForm';
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
 import type { PropertyDetail } from '@/features/property/model/Property';
 import PropertyForm from '@/features/property/ui/property-form/PropertyForm';
+import {
+  HOME_PATH,
+  MAP_SELECT_LOCATION_PATH,
+  propertyDetailPath,
+  propertyEditPath,
+} from '@/shared/lib/navigation/appPaths';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
-const backToList = <Link to="/">홈으로 돌아가기</Link>;
+import EditPropertySkeleton from './EditPropertySkeleton';
+
+const backToList = <Link to={HOME_PATH}>홈으로 돌아가기</Link>;
 const describeError = describePropertyLoadError('매물 정보를 불러오지 못했어요.');
 
 const EditPropertyPage = () => {
@@ -30,6 +38,7 @@ const ResolvedEditPropertyPage = ({ propertyId }: { propertyId: number }) => {
     <QueryState
       query={property}
       loadingTitle="매물 정보를 불러오는 중이에요."
+      skeleton={<EditPropertySkeleton />}
       describeError={describeError}
       errorAction={backToList}
     >
@@ -59,7 +68,7 @@ const EditPropertyView = ({ propertyId, initial }: EditPropertyViewProps) => {
       <div className={styles.container}>
         <TopNavigation
           title="매물 정보 수정"
-          backTo={`/properties/${propertyId}`}
+          backTo={propertyDetailPath(propertyId)}
           backLabel="매물 정보 수정 닫기"
           navigationIcon="close"
         />
@@ -80,9 +89,9 @@ const EditPropertyView = ({ propertyId, initial }: EditPropertyViewProps) => {
           formNotice={formNotice}
           variant="detail"
           onSelectLocation={() =>
-            navigate('/map/select-location', {
+            navigate(MAP_SELECT_LOCATION_PATH, {
               state: {
-                returnTo: `/properties/${propertyId}/edit`,
+                returnTo: propertyEditPath(propertyId),
                 initialLocation:
                   initial.location.latitude === null || initial.location.longitude === null
                     ? undefined
@@ -103,7 +112,7 @@ const EditPropertyView = ({ propertyId, initial }: EditPropertyViewProps) => {
                 current: initial,
                 changes: { name, depositAmount, monthlyRentAmount, discoverySource, address, latitude, longitude },
               })
-              .then(() => navigate(`/properties/${propertyId}`, { replace: true }))
+              .then(() => navigate(propertyDetailPath(propertyId), { replace: true }))
               .catch(() => undefined);
           }}
         />

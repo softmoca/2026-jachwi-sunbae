@@ -1,6 +1,6 @@
 # 자취선배
 
-Spring Boot 백엔드와 프론트엔드를 함께 관리하는 모노레포다.
+Spring Boot 백엔드, 프론트엔드, React Native 앱 셸을 함께 관리하는 모노레포다.
 
 - `develop`에서 작업 브랜치를 분기한다. `main`과 `develop`에 직접 작업하거나 푸시하지 않는다.
 - 커밋 메시지는 `<type>: 변경 내용` 형식의 한국어 Conventional Commits를 사용한다.

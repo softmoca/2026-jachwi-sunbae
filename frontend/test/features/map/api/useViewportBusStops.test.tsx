@@ -5,7 +5,7 @@ import { expect, it, vi } from 'vitest';
 
 import { fetchBusStops } from '@/features/map/api/busStopApi';
 import { useViewportBusStops } from '@/features/map/api/useViewportBusStops';
-import { viewportTiles } from '@/features/map/lib/mapViewportQuery';
+import { facilityCells, isInBounds } from '@/features/map/lib/mapViewportQuery';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
 vi.mock('@/features/map/api/busStopApi', () => ({ fetchBusStops: vi.fn() }));
@@ -35,9 +35,12 @@ it('네 칸에서 받은 정류장을 하나로 합치고 겹치는 정류장은
       </PublicConfigProvider>
     </QueryClientProvider>
   );
-  const { result } = renderHook(() => useViewportBusStops(viewportTiles(bounds), bounds), { wrapper });
-  await waitFor(() => expect(result.current.busStops).toHaveLength(5));
-  expect(fetchBusStops).toHaveBeenCalledTimes(4);
+  const cells = facilityCells(bounds);
+  const { result } = renderHook(() => useViewportBusStops(cells, bounds), { wrapper });
+  // 칸 가운데가 화면 밖이면 그 칸의 정류장은 빠지므로, 화면 안 칸 가운데 수와 화면 가운데 정류장 하나를 센다.
+  const inside = cells.filter((cell) => isInBounds(cell.center, bounds)).length;
+  await waitFor(() => expect(result.current.busStops).toHaveLength(inside + 1));
+  expect(fetchBusStops).toHaveBeenCalledTimes(cells.length);
   expect(result.current.busStops.filter((busStop) => busStop.nodeId === 'middle')).toHaveLength(1);
   expect(result.current.busStops.some((busStop) => busStop.nodeId === 'far')).toBe(false);
 });

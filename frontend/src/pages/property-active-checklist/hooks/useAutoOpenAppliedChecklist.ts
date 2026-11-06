@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { useAssignActiveChecklist } from '@/features/checklist/api/useChecklistMutations';
 import { clearLastSelectedChecklist, readLastSelectedChecklist } from '@/features/checklist/model/lastChecklistStore';
+import { propertyChecklistPath } from '@/shared/lib/navigation/appPaths';
 
 type AssignMutation = ReturnType<typeof useAssignActiveChecklist>;
 
@@ -36,7 +37,7 @@ const useAutoOpenAppliedChecklist = ({
 
   useEffect(() => {
     if (fromPropertyDetail && !isReplacing && appliedPropertyChecklistId !== null)
-      navigate(`/properties/${propertyId}/checklists/${appliedPropertyChecklistId}`, {
+      navigate(propertyChecklistPath(propertyId, appliedPropertyChecklistId), {
         replace: true,
         state: { from: 'property-detail' },
       });
@@ -46,7 +47,7 @@ const useAutoOpenAppliedChecklist = ({
     if (isReplacing || !isOverviewReady || isApplied || defaultAssignmentStarted.current) return;
     defaultAssignmentStarted.current = true;
     const openApplied = (applied: { propertyChecklistId: number }) =>
-      navigate(`/properties/${propertyId}/checklists/${applied.propertyChecklistId}`, {
+      navigate(propertyChecklistPath(propertyId, applied.propertyChecklistId), {
         replace: true,
         ...(fromPropertyDetail ? { state: { from: 'property-detail' } } : {}),
       });

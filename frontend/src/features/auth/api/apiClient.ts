@@ -4,6 +4,7 @@ import {
   capturePostHogException,
   type PostHogErrorCategory,
   type PostHogErrorSeverity,
+  resetPostHogIdentity,
   trackPostHogEvent,
 } from '@/shared/lib/analytics/posthog';
 
@@ -56,6 +57,8 @@ type ApiRequestOptions<T> = {
   formData?: FormData;
   signal?: AbortSignal;
   requiresAuthentication?: boolean;
+  /** 비동기 기기 권한 확인 중 회원이 바뀌면 새 회원에게 이전 동의를 적용하지 않는다. */
+  expectedMemberId?: number;
   parseData: (value: unknown) => T;
 };
 
@@ -166,6 +169,7 @@ type ExecuteRequestOptions = {
   body?: BodyInit;
   signal?: AbortSignal;
   requiresAuthentication: boolean;
+  expectedMemberId?: number;
 };
 
 const sendRequest = async (
@@ -187,27 +191,32 @@ const sendRequest = async (
 
 const LOGIN_PATH = '/api/auth/login';
 const REFRESH_PATH = '/api/auth/refresh';
+// 초기화의 첫 단계. 지금 회원을 탈퇴 처리(논리 삭제)하고 Refresh Token을 폐기한다. 새 회원은 이어서 로그인으로 받는다.
+const MEMBER_PATH = '/api/members/me';
 
-type AuthenticationPath = typeof LOGIN_PATH | typeof REFRESH_PATH;
+type TokenPath = typeof LOGIN_PATH | typeof REFRESH_PATH;
 
 /**
- * Refresh 쿠키로 같은 회원의 Access Token을 받는다. 로그인은 쿠키로 복원하지 못하면 서버가 새 익명 회원을 만들고,
- * 갱신은 새 회원 없이 401 REFRESH_TOKEN_INVALID로 거절한다.
- * 서버가 401로 복원을 거절하면 인증을 끝내고, 통신 장애는 인증 상태를 바꾸지 않는다.
+ * 인증 요청을 보낸다. 로그인과 갱신은 Refresh 쿠키(Path=/api/auth)로, 탈퇴는 Access Token으로 회원을 확인한다.
+ * 다른 출처의 응답이 Refresh 쿠키를 저장하거나 만료시킬 수 있도록 모두 쿠키를 함께 보낸다.
  */
-const requestToken = async (config: PublicConfig, path: AuthenticationPath): Promise<string> => {
-  let response: Response;
+const sendAuthenticationRequest = async (
+  config: PublicConfig,
+  path: TokenPath | typeof MEMBER_PATH,
+  method: 'POST' | 'DELETE',
+  accessToken?: string,
+): Promise<Response> => {
+  const headers = new Headers({ Accept: 'application/json' });
+  if (accessToken !== undefined) headers.set('Authorization', `Bearer ${accessToken}`);
   try {
-    response = await fetch(createApiUrl(config, path), {
-      method: 'POST',
-      headers: new Headers({ Accept: 'application/json' }),
-      credentials: 'include',
-    });
+    return await fetch(createApiUrl(config, path), { method, headers, credentials: 'include' });
   } catch {
     throw new ApiError({ kind: 'network' });
   }
+};
 
-  if (response.status === 401) clearAuthentication('unauthorized');
+/** LoginResponse를 읽어 세션을 정하고 Access Token을 돌려준다. 다른 회원이면 인증 저장소가 이전 회원 캐시를 지운다. */
+const acceptTokenResponse = async (response: Response, path: TokenPath): Promise<string> => {
   if (!response.ok) return throwResponseError(response);
 
   const payload = await readJson(response);
@@ -220,7 +229,7 @@ const requestToken = async (config: PublicConfig, path: AuthenticationPath): Pro
     throw new ApiError({ kind: 'invalid-response', status: response.status });
   }
 
-  // 같은 화면에서 이어지는 토큰 갱신은 빼고, 페이지를 열고 처음 회원을 정할 때만 기록한다.
+  // 같은 화면에서 이어지는 토큰 갱신은 빼고, 세션 없이 회원을 정할 때만 기록한다.
   const isFirstLogin = getAuthenticationSnapshot().session === null;
   setAuthentication({
     accessToken: login.accessToken,
@@ -234,38 +243,115 @@ const requestToken = async (config: PublicConfig, path: AuthenticationPath): Pro
   return login.accessToken;
 };
 
-// 로그인과 갱신은 둘 다 같은 Refresh 쿠키로 토큰을 받으므로, 진행 중인 요청 하나를 함께 기다린다.
-let pendingAuthentication: Promise<string> | null = null;
-
-/** 앱 시작과 사용자의 다시 시도에 쓴다. 동시에 여러 요청이 불러도 로그인 요청은 한 번만 보낸다. */
-export const authenticate = (config: PublicConfig): Promise<string> => {
-  pendingAuthentication ??= requestToken(config, LOGIN_PATH)
-    .catch((error: unknown) => {
-      captureUnexpectedApiError({ error, path: LOGIN_PATH, method: 'POST' });
-      trackPostHogEvent('login_failed', {
-        login_method: 'anonymous',
-        error_kind: error instanceof ApiError ? error.kind : 'unknown',
-        error_code: error instanceof ApiError ? error.code : null,
-      });
-      throw error;
-    })
-    .finally(() => {
-      pendingAuthentication = null;
-    });
-  return pendingAuthentication;
+/**
+ * Refresh 쿠키로 같은 회원의 Access Token을 받는다. 로그인은 쿠키로 복원하지 못하면 서버가 새 익명 회원을 만들고,
+ * 갱신은 새 회원 없이 401 REFRESH_TOKEN_INVALID로 거절한다.
+ * 서버가 401로 복원을 거절하면 인증을 끝내고, 통신 장애는 인증 상태를 바꾸지 않는다.
+ */
+const requestToken = async (config: PublicConfig, path: TokenPath): Promise<string> => {
+  const response = await sendAuthenticationRequest(config, path, 'POST');
+  if (response.status === 401) clearAuthentication('unauthorized');
+  return acceptTokenResponse(response, path);
 };
 
+const trackLoginFailure = (error: unknown) => {
+  captureUnexpectedApiError({ error, path: LOGIN_PATH, method: 'POST' });
+  trackPostHogEvent('login_failed', {
+    login_method: 'anonymous',
+    error_kind: error instanceof ApiError ? error.kind : 'unknown',
+    error_code: error instanceof ApiError ? error.code : null,
+  });
+};
+
+// 로그인, 갱신, 초기화는 모두 같은 Refresh 쿠키를 읽거나 바꾸므로, 진행 중인 요청 하나를 함께 기다린다.
+let pendingAuthentication: Promise<string> | null = null;
+
+/** 진행 중인 인증 요청으로 등록한다. 끝나면 자기 자신일 때만 지워, 뒤이어 등록된 요청을 지우지 않는다. */
+const sharePendingAuthentication = (request: Promise<string>): Promise<string> => {
+  const shared = request.finally(() => {
+    if (pendingAuthentication === shared) pendingAuthentication = null;
+  });
+  pendingAuthentication = shared;
+  return shared;
+};
+
+/** 앱 시작과 사용자의 다시 시도에 쓴다. 동시에 여러 요청이 불러도 로그인 요청은 한 번만 보낸다. */
+export const authenticate = (config: PublicConfig): Promise<string> =>
+  pendingAuthentication ??
+  sharePendingAuthentication(
+    requestToken(config, LOGIN_PATH).catch((error: unknown) => {
+      trackLoginFailure(error);
+      throw error;
+    }),
+  );
+
 /** Access Token이 만료됐을 때 쓴다. 복원하지 못해도 새 회원을 만들지 않고 인증을 끝낸다. */
-const refreshAuthentication = (config: PublicConfig): Promise<string> => {
-  pendingAuthentication ??= requestToken(config, REFRESH_PATH)
-    .catch((error: unknown) => {
+const refreshAuthentication = (config: PublicConfig): Promise<string> =>
+  pendingAuthentication ??
+  sharePendingAuthentication(
+    requestToken(config, REFRESH_PATH).catch((error: unknown) => {
       captureUnexpectedApiError({ error, path: REFRESH_PATH, method: 'POST' });
       throw error;
-    })
-    .finally(() => {
-      pendingAuthentication = null;
-    });
-  return pendingAuthentication;
+    }),
+  );
+
+/**
+ * 지금 회원의 Access Token으로 탈퇴를 요청한다. 토큰이 만료됐거나 401을 받으면 같은 회원으로 한 번 갱신해 다시 보낸다.
+ * 초기화가 진행 중인 인증으로 등록돼 있어 공용 갱신은 초기화 자신을 기다리게 되므로, 여기서는 갱신을 직접 보낸다.
+ */
+const requestMemberDeletion = async (config: PublicConfig): Promise<void> => {
+  const { session, terminationReason } = getAuthenticationSnapshot();
+  if (session === null || terminationReason !== null) throw new ApiError({ kind: 'authentication-ended' });
+
+  const accessToken = getAccessToken() ?? (await requestToken(config, REFRESH_PATH));
+  let response = await sendAuthenticationRequest(config, MEMBER_PATH, 'DELETE', accessToken);
+  if (response.status === 401) {
+    const refreshedToken = await requestToken(config, REFRESH_PATH);
+    response = await sendAuthenticationRequest(config, MEMBER_PATH, 'DELETE', refreshedToken);
+  }
+  // 탈퇴가 거절되면 지금 회원은 그대로 둔다.
+  if (!response.ok) await throwResponseError(response);
+};
+
+/**
+ * 초기화. 지금 회원을 탈퇴 처리한 뒤, Refresh 쿠키 없이 로그인해 새 익명 회원을 받는다.
+ * 진행 중인 로그인이나 갱신이 끝난 뒤에 보내고, 탈퇴가 끝날 때까지 뒤이은 로그인과 갱신은 초기화를 함께 기다린다.
+ * 탈퇴가 실패하면 지금 회원과 화면 상태를 그대로 두고 오류를 던진다.
+ * 탈퇴 뒤 로그인이 실패해도 세션은 이미 비었으므로, 다음 요청의 자동 로그인이 새 회원을 받는다.
+ */
+export const resetAuthentication = async (config: PublicConfig): Promise<void> => {
+  const previous = pendingAuthentication;
+  let isMemberDeleted = false;
+  let reset: Promise<string> | null = null;
+  reset = sharePendingAuthentication(
+    (async () => {
+      if (previous !== null) await previous.catch(() => undefined);
+      try {
+        await requestMemberDeletion(config);
+      } catch (error) {
+        captureUnexpectedApiError({ error, path: MEMBER_PATH, method: 'DELETE' });
+        trackPostHogEvent('account_reset_failed', {
+          error_kind: error instanceof ApiError ? error.kind : 'unknown',
+          error_code: error instanceof ApiError ? error.code : null,
+        });
+        throw error;
+      }
+      isMemberDeleted = true;
+      // 인증을 끝내지 않고 세션과 회원 캐시만 비운다. 'unauthorized'를 넘기면 오류 화면이 뜬다.
+      clearAuthentication(null);
+      // 성공 이벤트는 이전 회원으로 남기고, 새 회원은 회원 조회가 끝나면 다시 식별한다.
+      trackPostHogEvent('account_reset_succeeded');
+      resetPostHogIdentity();
+      // 탈퇴가 끝났으니 초기화 대기를 풀고, 공용 자동 로그인으로 새 회원을 받는다. 기다리던 요청은 그 토큰을 받는다.
+      if (pendingAuthentication === reset) pendingAuthentication = null;
+      return authenticate(config);
+    })(),
+  );
+  try {
+    await reset;
+  } catch (error) {
+    if (!isMemberDeleted) throw error;
+  }
 };
 
 /**
@@ -285,10 +371,22 @@ const getOrStartAuthentication = (config: PublicConfig): Promise<string> => {
 const executeRequest = async (options: ExecuteRequestOptions): Promise<Response> => {
   if (!options.requiresAuthentication) return sendRequest(options, null);
 
+  const assertMember = () => {
+    if (
+      options.expectedMemberId !== undefined &&
+      getAuthenticationSnapshot().session?.memberId !== options.expectedMemberId
+    ) {
+      throw new ApiError({ kind: 'authentication-ended' });
+    }
+  };
+  assertMember();
+
   const accessToken = await getOrStartAuthentication(options.config);
+  assertMember();
   // 요청 도중 다른 회원으로 바뀌거나 인증이 끝나면 늦게 온 응답을 버린다. 같은 회원의 토큰 갱신은 버리지 않는다.
   const authenticationRevision = getAuthenticationRevision();
   const throwIfAuthenticationEnded = () => {
+    assertMember();
     if (authenticationRevision !== getAuthenticationRevision()) throw new ApiError({ kind: 'authentication-ended' });
   };
 
@@ -342,6 +440,7 @@ const apiRequestInternal = async <T>({
   formData,
   signal,
   requiresAuthentication = true,
+  expectedMemberId,
   parseData,
 }: ApiRequestOptions<T>): Promise<T> => {
   if (body !== undefined && formData !== undefined) {
@@ -362,6 +461,7 @@ const apiRequestInternal = async <T>({
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
     signal,
     requiresAuthentication,
+    expectedMemberId,
   });
 
   if (response.status === 204 && response.ok) {
@@ -464,7 +564,7 @@ export const apiBlobRequest = async (options: Parameters<typeof apiBlobRequestIn
 
 export const getSafeApiErrorMessage = (error: unknown): string => {
   if (!(error instanceof ApiError)) {
-    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
   }
 
   if (error.kind === 'network') {
@@ -472,10 +572,10 @@ export const getSafeApiErrorMessage = (error: unknown): string => {
   }
 
   if (error.status === 401) {
-    return '인증이 만료되었습니다. 다시 로그인해 주세요.';
+    return '접속이 만료됐어요. 화면을 새로 고쳐 주세요.';
   }
 
-  return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 };
 
 export const isApiErrorCode = (error: unknown, code: string): error is ApiError =>
