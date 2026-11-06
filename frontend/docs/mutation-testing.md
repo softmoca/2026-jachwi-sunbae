@@ -52,7 +52,7 @@ npm run test:mutation
 
 ## 4. CI 동작
 
-`frontend-ci.yml`의 `mutation` 잡은 PR에서 `src/**/{api,lib,model,hooks}` 아래 `.ts` 파일이 바뀐 경우에만 실행됩니다.
+`frontend-mutation.yml`은 PR마다 돌지 않습니다. PR에 `mutation` 라벨을 붙이거나 Actions에서 수동 실행(`scope`: `changed`, `full`)하면 돌고, 매주 월요일 09:30(KST)에 develop 전체를 돌려 점수를 workflow summary에 남깁니다. 아래는 PR과 `changed` 실행의 `changed` 잡 동작입니다.
 
 - 대상 판정은 `scripts/mutation-changed.mjs --list`로 의존성 설치 전에 합니다. 대상이 없으면 `npm ci`도 건너뜁니다.
 - 바뀐 파일만 대상으로 `scripts/mutation-changed.mjs`를 실행합니다.
