@@ -59,6 +59,32 @@ describe.each([
   ['휴대폰', CompareMobilePage],
   ['데스크탑', CompareDesktopPage],
 ])('%s 비교 화면의 매물 수별 모습', (_, Page) => {
+  it('체크 진행은 단계 이름 없이 적용된 전체 항목 수로 합산한다', () => {
+    const room = property(1, '합산 확인 매물');
+    room.stages = [
+      {
+        stage: 'ON_SITE',
+        applied: true,
+        propertyChecklistId: 1,
+        checklistName: '현장',
+        sourceChecklistId: null,
+        progress: { ...progress, totalCount: 12, completedCount: 4 },
+      },
+      {
+        stage: 'PRE_CONTRACT',
+        applied: true,
+        propertyChecklistId: 2,
+        checklistName: '계약',
+        sourceChecklistId: null,
+        progress: { ...progress, totalCount: 3, completedCount: 1 },
+      },
+    ];
+    withProperties([room]);
+    renderPage(Page);
+    expect(screen.getByLabelText('전체 15개 중 5개 확인')).toHaveTextContent('5/15');
+    expect(screen.queryByText(/단계/)).not.toBeInTheDocument();
+  });
+
   it('매물이 없으면 빈 화면 안내만 보이고 아래 바는 없다', () => {
     withProperties([]);
     renderPage(Page);
