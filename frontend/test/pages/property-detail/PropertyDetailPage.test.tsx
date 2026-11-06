@@ -1,11 +1,14 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { errorEnvelope } from '@/app/mocks/fixtures/propertyFixtures';
 import { propertyChecklistHandlers } from '@/app/mocks/handlers/propertyChecklistHandlers';
 import { propertyHandlers } from '@/app/mocks/handlers/propertyHandlers';
+import { resetMockStore } from '@/app/mocks/mockStore';
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
 import { resetAuthenticationForTests, setAuthentication } from '@/features/auth/model/authStore';
 import { queryClient } from '@/shared/api/queryClient';
@@ -14,6 +17,7 @@ import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import { server } from '../../server';
 
 beforeEach(() => {
+  resetMockStore();
   setAuthentication({ accessToken: 'valid-token', tokenType: 'Bearer', expiresIn: 60 });
   server.use(...propertyHandlers, ...propertyChecklistHandlers);
 });
@@ -84,17 +88,59 @@ it('항목을 평가해도 포커스가 누른 버튼에 남고, 바뀐 평가 �
   expect(screen.getByRole('status')).toHaveTextContent('3개 중 3개 평가');
 });
 
-it('메모를 저장하면 포커스를 그 항목의 메모 버튼으로 돌린다', async () => {
+it('항목 바로 아래 메모를 입력하고 벗어나면 저장하며 다시 열어도 유지한다', async () => {
   const user = userEvent.setup();
   renderDetail('?tab=checklist');
-  await user.click(await screen.findByRole('button', { name: '주차가 가능한가요? 메모 추가' }));
-  await user.type(screen.getByRole('textbox', { name: '주차가 가능한가요? 메모' }), '기계식 주차 1대');
-  await user.click(screen.getByRole('button', { name: '저장' }));
-
-  expect(await screen.findByRole('button', { name: '주차가 가능한가요? 메모 편집' })).toHaveFocus();
+  const memo = await screen.findByRole('textbox', { name: '주차가 가능한가요? 메모' });
+  expect(memo).toHaveAttribute('placeholder', '메모 추가');
+  await user.type(memo, '기계식 주차 1대');
+  await user.tab();
+  await waitFor(() => expect(memo).not.toHaveAttribute('readonly'));
+  cleanup();
+  renderDetail('?tab=checklist');
+  expect(await screen.findByRole('textbox', { name: '주차가 가능한가요? 메모' })).toHaveValue('기계식 주차 1대');
 });
 
 it('정보 탭의 값 버튼은 라벨과 화면에 보이는 값을 함께 읽는다', async () => {
   renderDetail('?tab=info');
   expect(await screen.findByRole('button', { name: '매물 이름 신림역 원룸, 수정' })).toBeInTheDocument();
+});
+
+it('메모 저장 실패 시 입력을 유지하고 다시 저장하면 다음 조회에도 반영한다', async () => {
+  server.use(
+    http.patch('*/api/properties/10/checklists/:checklistId/items/:itemId/memo', () =>
+      HttpResponse.json(errorEnvelope('INTERNAL_SERVER_ERROR'), { status: 500 }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderDetail('?tab=checklist');
+  const memo = await screen.findByRole('textbox', { name: '주차가 가능한가요? 메모' });
+  await user.type(memo, '주차 자리 재확인');
+  await user.tab();
+  const retry = await screen.findByRole('button', { name: '메모 다시 저장' });
+  expect(memo).toHaveValue('주차 자리 재확인');
+  server.use(...propertyChecklistHandlers);
+  await user.click(retry);
+  await waitFor(() => expect(screen.queryByRole('button', { name: '메모 다시 저장' })).not.toBeInTheDocument());
+  cleanup();
+  renderDetail('?tab=checklist');
+  expect(await screen.findByRole('textbox', { name: '주차가 가능한가요? 메모' })).toHaveValue('주차 자리 재확인');
+});
+
+it('작성 중 Escape를 누르면 기존 메모로 돌아가며 저장 요청을 보내지 않는다', async () => {
+  let saveCount = 0;
+  server.use(
+    http.patch('*/api/properties/10/checklists/:checklistId/items/:itemId/memo', () => {
+      saveCount += 1;
+      return HttpResponse.json(errorEnvelope('INTERNAL_SERVER_ERROR'), { status: 500 });
+    }),
+  );
+  const user = userEvent.setup();
+  renderDetail('?tab=checklist');
+  const memo = await screen.findByRole('textbox', { name: '주차가 가능한가요? 메모' });
+  await user.type(memo, '취소할 메모');
+  await user.keyboard('{Escape}');
+  await user.tab();
+  expect(memo).toHaveValue('');
+  expect(saveCount).toBe(0);
 });

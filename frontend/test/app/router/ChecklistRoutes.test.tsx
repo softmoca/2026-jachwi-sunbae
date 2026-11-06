@@ -617,17 +617,13 @@ describe('매물 체크리스트 연결과 자동 저장', () => {
 
     await user.click(screen.getAllByRole('button', { name: '주의' })[0]);
     await waitFor(() => expect(statusRequest).toEqual({ status: 'CAUTION' }));
-    // 주의를 골라도 메모 칸은 저절로 열리지 않는다.
-    expect(screen.queryByRole('textbox', { name: '수압이 충분한가요? 메모' })).not.toBeInTheDocument();
-    // 메모 버튼으로 연 칸에 바로 포커스가 가고, 다른 항목의 메모는 잠긴다.
-    await user.click(screen.getByRole('button', { name: '수압이 충분한가요? 메모 추가' }));
     const memo = screen.getByRole('textbox', { name: '수압이 충분한가요? 메모' });
-    expect(memo).toHaveFocus();
-    expect(screen.getByRole('button', { name: '채광이 충분한가요? 메모 추가' })).toBeDisabled();
+    expect(memo).toHaveAttribute('placeholder', '메모 추가');
+    expect(screen.getByRole('textbox', { name: '채광이 충분한가요? 메모' })).toBeEnabled();
     await user.type(memo, '수압은 괜찮지만 온수 확인 필요');
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.tab();
     await waitFor(() => expect(memoRequest).toEqual({ memo: '수압은 괜찮지만 온수 확인 필요' }));
-    expect(screen.queryByRole('textbox', { name: '수압이 충분한가요? 메모' })).not.toBeInTheDocument();
-    expect(screen.getByText('수압은 괜찮지만 온수 확인 필요')).toBeInTheDocument();
+    expect(memo).toHaveValue('수압은 괜찮지만 온수 확인 필요');
+    expect(screen.getByRole('heading', { name: '사용자 체크리스트' })).toBeInTheDocument();
   });
 });
