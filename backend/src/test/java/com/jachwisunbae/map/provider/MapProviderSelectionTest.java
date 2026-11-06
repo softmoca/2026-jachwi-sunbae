@@ -2,6 +2,7 @@ package com.jachwisunbae.map.provider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jachwisunbae.map.provider.demo.DemoAddressProvider;
 import com.jachwisunbae.map.provider.demo.DemoAgencyProvider;
 import com.jachwisunbae.map.provider.demo.DemoNearbyPlaceProvider;
 import com.jachwisunbae.map.provider.kakao.KakaoAgencyProvider;
@@ -25,25 +26,16 @@ class MapProviderSelectionTest {
             .withInitializer(context -> context.getEnvironment().getPropertySources()
                     .remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))
             .withBean(Clock.class, Clock::systemUTC)
-            .withUserConfiguration(DemoNearbyPlaceProvider.class,
+            .withUserConfiguration(DemoAddressProvider.class, DemoNearbyPlaceProvider.class,
                     JusoAddressClient.class, SgisAuthClient.class, SgisTokenProvider.class, SgisAddressClient.class,
                     PublicDataAddressProvider.class, KakaoPlaceClient.class, KakaoNearbyPlaceProvider.class,
                     DemoAgencyProvider.class, KakaoAgencyProvider.class);
 
     @Test
-    @DisplayName("demo 주소 모드로는 가짜 주소 공급자가 등록되지 않는다")
-    void doesNotRegisterDemoAddressProvider() {
-        contextRunner.withPropertyValues("map.provider.mode=demo").run(context -> {
-            assertThat(context).doesNotHaveBean(AddressProvider.class);
-        });
-    }
-
-    @Test
-    @DisplayName("주소 모드 설정이 없으면 실제 주소 공급자를 사용한다")
-    void usesPublicAddressProviderWhenModeIsMissing() {
-        contextRunner.withPropertyValues("map.juso.confirm-key=juso-key",
-                "map.sgis.consumer-key=sgis-key", "map.sgis.consumer-secret=sgis-secret").run(context -> {
-            assertThat(context).getBean(AddressProvider.class).isInstanceOf(PublicDataAddressProvider.class);
+    @DisplayName("설정이 없으면 주소와 주변 시설 모두 demo 공급자를 사용한다")
+    void usesDemoProvidersWhenModeIsMissing() {
+        contextRunner.run(context -> {
+            assertThat(context).getBean(AddressProvider.class).isInstanceOf(DemoAddressProvider.class);
             assertThat(context).getBean(NearbyPlaceProvider.class).isInstanceOf(DemoNearbyPlaceProvider.class);
             assertThat(context).getBean(AgencyProvider.class).isInstanceOf(DemoAgencyProvider.class);
         });

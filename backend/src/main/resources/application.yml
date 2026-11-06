@@ -39,7 +39,7 @@ photo:
 
 map:
   provider:
-    mode: ${MAP_PROVIDER_MODE:public}
+    mode: ${MAP_PROVIDER_MODE:demo}
   nearby:
     provider: ${MAP_NEARBY_PROVIDER:demo}
   juso:

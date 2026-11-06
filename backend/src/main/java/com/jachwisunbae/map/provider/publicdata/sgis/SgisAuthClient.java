@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClientException;
 
 // SGIS 인증 API를 호출해 consumer key와 secret으로 access token을 발급받는다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public", matchIfMissing = true)
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
 public class SgisAuthClient {
 
     private static final String BASE_URL = "https://sgisapi.mods.go.kr";
