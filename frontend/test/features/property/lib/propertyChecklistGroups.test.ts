@@ -33,3 +33,14 @@ it('계약 전 항목은 현장 카테고리로 분류하지 않는다', () => {
     { name: '계약 전 확인', icon: 'checklist', items },
   ]);
 });
+
+it('새 제공 항목은 ID와 관계없이 서버 카테고리를 기준으로 분류한다', () => {
+  const items: PropertyChecklistItem[] = [
+    { ...item(1001, 1), category: 'SECURITY' },
+    { ...item(101, 2), category: 'WINDOW_LIGHT' },
+    { ...item(107, 3), category: 'OTHER' },
+  ];
+  const groups = groupPropertyChecklistItems(items, 'ON_SITE');
+  expect(groups.map((group) => group.name)).toEqual(['보안', '창문·채광', '기타']);
+  expect(groups.map((group) => group.items[0]?.itemId)).toEqual([1, 2, 3]);
+});
