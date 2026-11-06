@@ -1,6 +1,7 @@
 export { default as ArrowLeftIcon } from './ArrowLeftIcon';
 export { default as ArrowRightIcon } from './ArrowRightIcon';
 export { default as ChecklistIcon } from './ChecklistIcon';
+export { BedIcon, DropletIcon, LockIcon, WindowIcon } from './ChecklistCategoryIcons';
 export { default as ChevronDownIcon } from './ChevronDownIcon';
 export { default as ChevronLeftIcon } from './ChevronLeftIcon';
 export { default as ChevronRightIcon } from './ChevronRightIcon';

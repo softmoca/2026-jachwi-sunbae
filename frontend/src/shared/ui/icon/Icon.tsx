@@ -3,12 +3,14 @@ import type { ComponentType } from 'react';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  BedIcon,
   ChecklistIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronUpIcon,
   CloseIcon,
+  DropletIcon,
   EditIcon,
   ExternalLinkIcon,
   HomeIcon,
@@ -17,6 +19,7 @@ import {
   InfoIcon,
   LinkIcon,
   LocateIcon,
+  LockIcon,
   MapIcon,
   MinusIcon,
   MoreVerticalIcon,
@@ -26,9 +29,14 @@ import {
   TargetIcon,
   TrashIcon,
   UserIcon,
+  WindowIcon,
 } from './icons';
 
 export type IconName =
+  | 'bed'
+  | 'droplet'
+  | 'lock'
+  | 'window'
   | 'arrow-left'
   | 'arrow-right'
   | 'checklist'
@@ -64,6 +72,10 @@ export type IconProps = {
 type IconComponentProps = Omit<IconProps, 'name'>;
 
 const iconComponents: Record<IconName, ComponentType<IconComponentProps>> = {
+  bed: BedIcon,
+  droplet: DropletIcon,
+  lock: LockIcon,
+  window: WindowIcon,
   'arrow-left': ArrowLeftIcon,
   'arrow-right': ArrowRightIcon,
   checklist: ChecklistIcon,
