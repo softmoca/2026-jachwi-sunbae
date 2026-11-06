@@ -27,6 +27,7 @@ vi.mock('@/features/map/ui/map-canvas/MapCanvas', () => ({
     onBoundsChange,
     onCenterChange,
     coordinateMenu,
+    interactive = false,
   }: MapCanvasProps) => (
     <div aria-label="예시 지도">
       <output aria-label="지도 중심">{`${center.latitude},${center.longitude}`}</output>
@@ -39,7 +40,7 @@ vi.mock('@/features/map/ui/map-canvas/MapCanvas', () => ({
       <button type="button" onClick={() => onCenterChange?.(37.5662, 126.9785)}>
         지도 이동
       </button>
-      <button type="button" onClick={() => onSelectLocation?.(37.5662, 126.9785)}>
+      <button type="button" disabled={!interactive} onClick={() => onSelectLocation?.(37.5662, 126.9785)}>
         빈 곳 찍기
       </button>
       <button
@@ -731,5 +732,15 @@ it('데스크탑 옆 칸 상세에서 사진 관리를 누르면 화면을 옮�
     expect(detail.getByRole('tablist', { name: '매물 상세 메뉴' })).toBeInTheDocument();
   } finally {
     matchMedia.mockRestore();
+  }
+});
+
+it('배포 환경에서는 로컬 확인용 지도 클릭을 켜지 않는다', async () => {
+  vi.stubEnv('NODE_ENV', 'production');
+  try {
+    renderRecords();
+    expect(await screen.findByRole('button', { name: '빈 곳 찍기' })).toBeDisabled();
+  } finally {
+    vi.unstubAllEnvs();
   }
 });
