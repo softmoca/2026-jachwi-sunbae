@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -22,32 +21,34 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "naver")
 public class NaverGeocodeClient {
 
     private static final String BASE_URL = "https://maps.apigw.ntruss.com";
     private static final int COUNT = 5;
 
     private final RestClient client;
+    private final boolean configured;
 
     @Autowired
-    public NaverGeocodeClient(@Value("${map.naver.client-id}") String clientId,
-                              @Value("${map.naver.client-secret}") String clientSecret,
+    public NaverGeocodeClient(@Value("${map.naver.client-id:}") String clientId,
+                              @Value("${map.naver.client-secret:}") String clientSecret,
                               @Value("${map.connect-timeout-millis:2000}") long connectTimeoutMillis,
                               @Value("${map.read-timeout-millis:5000}") long readTimeoutMillis) {
-        this(createClient(requireKey(clientId, "NAVER_MAP_CLIENT_ID"),
-                requireKey(clientSecret, "NAVER_MAP_CLIENT_SECRET"), connectTimeoutMillis, readTimeoutMillis));
+        this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis),
+                hasText(clientId) && hasText(clientSecret));
     }
 
     protected NaverGeocodeClient(RestClient client) {
-        this.client = client;
+        this(client, true);
     }
 
-    private static String requireKey(String value, String name) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("naver 주소 모드에는 " + name + "가 필요합니다.");
-        }
-        return value;
+    private NaverGeocodeClient(RestClient client, boolean configured) {
+        this.client = client;
+        this.configured = configured;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static RestClient createClient(String clientId, String clientSecret,
@@ -89,6 +90,9 @@ public class NaverGeocodeClient {
     }
 
     private JsonNode request(String query) {
+        if (!configured) {
+            throw new UpstreamServiceException(ErrorCode.MAP_PROVIDER_UNAVAILABLE, "네이버 검색 키가 설정되지 않았습니다.");
+        }
         try {
             JsonNode root = client.get().uri(uri -> uri.path("/map-geocode/v2/geocode")
                             .queryParam("query", query)

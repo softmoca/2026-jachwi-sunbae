@@ -34,6 +34,14 @@ public class MapController {
         return ApiResponse.of(mapService.geocode(query).stream().map(MapAddressResponse::from).toList());
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "주소와 건물명 검색", description = "네이버 지오코딩으로 주소를 먼저 찾고, "
+            + "결과가 없으면 네이버 지역 검색으로 건물명이나 장소 이름을 찾아 그 주소와 WGS84 좌표를 돌려줍니다. "
+            + "동네 찾기와 동네 검색에서 씁니다.")
+    public ApiResponse<List<MapAddressResponse>> search(@RequestParam String query) {
+        return ApiResponse.of(mapService.searchWithNaver(query).stream().map(MapAddressResponse::from).toList());
+    }
+
     @GetMapping("/reverse-geocode")
     @Operation(summary = "역지오코딩", description = "WGS84 좌표의 도로명주소를 조회합니다. 도로명주소가 없는 좌표는 404 MAP_ADDRESS_NOT_FOUND로 응답합니다."
     )

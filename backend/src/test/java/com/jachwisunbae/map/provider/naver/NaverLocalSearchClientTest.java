@@ -81,4 +81,14 @@ class NaverLocalSearchClientTest {
                 .isInstanceOfSatisfying(UpstreamServiceException.class, exception ->
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.MAP_PROVIDER_UNAVAILABLE));
     }
+
+    @Test
+    @DisplayName("네이버 키가 없어도 애플리케이션은 시작하고, 검색할 때 지도 공급자 오류로 응답한다")
+    void failsSearchWithoutKeys() {
+        NaverLocalSearchClient unconfigured = new NaverLocalSearchClient("", "", 2000, 5000);
+
+        assertThatThrownBy(() -> unconfigured.search("판교"))
+                .isInstanceOfSatisfying(UpstreamServiceException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.MAP_PROVIDER_UNAVAILABLE));
+    }
 }

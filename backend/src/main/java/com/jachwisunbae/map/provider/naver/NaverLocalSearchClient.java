@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -23,7 +22,6 @@ import org.springframework.web.client.RestClientException;
 
 // 회사·가게 같은 장소 이름은 지오코딩으로 찾지 못해 NAVER API HUB 지역 검색으로 찾는다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "naver")
 public class NaverLocalSearchClient {
 
     private static final String BASE_URL = "https://naverapihub.apigw.ntruss.com";
@@ -31,18 +29,29 @@ public class NaverLocalSearchClient {
     private static final BigDecimal MICRO_DEGREE = new BigDecimal("10000000");
 
     private final RestClient client;
+    private final boolean configured;
 
     @Autowired
-    public NaverLocalSearchClient(@Value("${map.naver.search.client-id:${map.naver.client-id}}") String clientId,
-                                  @Value("${map.naver.search.client-secret:${map.naver.client-secret}}")
+    public NaverLocalSearchClient(@Value("${map.naver.search.client-id:${map.naver.client-id:}}") String clientId,
+                                  @Value("${map.naver.search.client-secret:${map.naver.client-secret:}}")
                                   String clientSecret,
                                   @Value("${map.connect-timeout-millis:2000}") long connectTimeoutMillis,
                                   @Value("${map.read-timeout-millis:5000}") long readTimeoutMillis) {
-        this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis));
+        this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis),
+                hasText(clientId) && hasText(clientSecret));
     }
 
     protected NaverLocalSearchClient(RestClient client) {
+        this(client, true);
+    }
+
+    private NaverLocalSearchClient(RestClient client, boolean configured) {
         this.client = client;
+        this.configured = configured;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static RestClient createClient(String clientId, String clientSecret,
@@ -76,6 +85,9 @@ public class NaverLocalSearchClient {
     }
 
     private JsonNode request(String query) {
+        if (!configured) {
+            throw new UpstreamServiceException(ErrorCode.MAP_PROVIDER_UNAVAILABLE, "네이버 검색 키가 설정되지 않았습니다.");
+        }
         try {
             JsonNode root = client.get().uri(uri -> uri.path("/search/v1/local")
                             .queryParam("query", query)

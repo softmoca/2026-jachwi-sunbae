@@ -99,6 +99,7 @@ class MapServiceTest {
         MapService service = service((latitude, longitude, radius, categories) -> List.of(hospital));
 
         assertInvalidQuery(() -> service.geocode(" "));
+        assertInvalidQuery(() -> service.searchWithNaver(" "));
         assertInvalidQuery(() -> service.reverseGeocode(new BigDecimal("91"), LONGITUDE));
         assertInvalidQuery(() -> service.nearby(LATITUDE, LONGITUDE, 700, EnumSet.allOf(MapCategory.class)));
     }
@@ -110,7 +111,7 @@ class MapServiceTest {
     }
 
     private MapService service(NearbyPlaceProvider nearbyPlaceProvider) {
-        return new MapService(new DemoAddressProvider(), nearbyPlaceProvider);
+        return new MapService(new DemoAddressProvider(), nearbyPlaceProvider, null);
     }
 
     private static NearbyPlace place(String id, String name, MapCategory category) {
