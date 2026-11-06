@@ -1,8 +1,9 @@
 import { css } from '@emotion/css';
+import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { describeChecklistLoadError, getChecklistErrorMessage } from '@/features/checklist/api/checklistErrorMessages';
-import { useUpdateChecklist } from '@/features/checklist/api/useChecklistMutations';
+import { useRemoveChecklist, useUpdateChecklist } from '@/features/checklist/api/useChecklistMutations';
 import { useChecklistDetail } from '@/features/checklist/api/useChecklists';
 import type { ChecklistDetail } from '@/features/checklist/model/checklistTypes';
 import { writeLastSelectedChecklist } from '@/features/checklist/model/lastChecklistStore';
@@ -15,7 +16,8 @@ import ChecklistEditorSkeleton from '@/features/checklist/ui/checklist-editor-fr
 import { parsePositiveId } from '@/features/property/lib/propertyFormat';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import { CHECKLISTS_PATH } from '@/shared/lib/navigation/appPaths';
-import { ButtonLink } from '@/shared/ui/button/Button';
+import { Button, ButtonLink } from '@/shared/ui/button/Button';
+import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
@@ -53,6 +55,9 @@ const ResolvedChecklistDetailPage = ({ checklistId }: { checklistId: number }) =
 
 const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
   const update = useUpdateChecklist(checklist.checklistId);
+  const remove = useRemoveChecklist(checklist.checklistId);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const deleteRef = useRef<HTMLButtonElement>(null);
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
   const goBack = () => navigate(CHECKLISTS_PATH, { replace: true });
@@ -97,11 +102,36 @@ const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
     <ChecklistEditorFrame isDesktop={isDesktop} className={styles.page}>
       <TopNavigation
         className={styles.topNavigation}
+        endSlot={
+          <Button
+            ref={deleteRef}
+            variant="text"
+            aria-label="체크리스트 삭제"
+            onClick={() => {
+              remove.reset();
+              setIsDeleteOpen(true);
+            }}
+          >
+            삭제
+          </Button>
+        }
         title="체크리스트 편집"
         backLabel="체크리스트 관리로 돌아가기"
         navigationIcon={isDesktop ? 'close' : 'arrow-left'}
         onBack={goBack}
       />
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        title="체크리스트를 삭제할까요?"
+        description="저장된 사용자 체크리스트를 삭제해요. 이미 매물에 적용된 체크 기록은 유지돼요."
+        confirmLabel="삭제"
+        isConfirming={remove.isPending}
+        returnFocusRef={deleteRef}
+        onCancel={() => setIsDeleteOpen(false)}
+        onConfirm={() => remove.mutate(undefined, { onSuccess: goBack })}
+      >
+        {remove.isError && <p role="alert">{getChecklistErrorMessage(remove.error)}</p>}
+      </ConfirmDialog>
       <ChecklistEditor
         stage={checklist.stage}
         draft={draft}

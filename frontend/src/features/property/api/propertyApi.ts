@@ -1,7 +1,17 @@
-import { apiBlobRequest, apiRequest } from '@/features/auth/api/apiClient';
+import { apiBlobRequest, ApiError, apiRequest } from '@/features/auth/api/apiClient';
 import { readInteger, readRecord, readString } from '@/shared/api/responseParsers';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
+import {
+  dismissExampleProperty,
+  exampleDetail,
+  exampleOverview,
+  getExampleProperty,
+  isExampleProperty,
+  updateExampleCheck,
+  updateExampleProperty,
+  withExampleProperty,
+} from '../model/exampleProperty';
 import type {
   CreatedProperty,
   PropertyBasicInfo,
@@ -43,10 +53,11 @@ export const fetchProperties = (
 ): Promise<PropertyPage> => {
   const trimmedQuery = query.trim();
   return apiRequest({ config, path: '/api/properties', signal, parseData: parsePropertyPage }).then((result) => {
-    if (trimmedQuery.length === 0) return result;
-    const content = result.content.filter((property) => property.name.includes(trimmedQuery));
+    const page = withExampleProperty(config, result);
+    if (trimmedQuery.length === 0) return page;
+    const content = page.content.filter((property) => property.name.includes(trimmedQuery));
     return {
-      ...result,
+      ...page,
       content,
       size: Math.max(1, content.length),
       totalElements: content.length,
@@ -79,14 +90,16 @@ export const fetchPropertyComparisonPdf = (
   propertyIds: number[],
   signal?: AbortSignal,
 ): Promise<Blob> =>
-  apiBlobRequest({
-    config,
-    path: '/api/properties/export.pdf',
-    method: 'POST',
-    body: { propertyIds },
-    acceptedContentTypes: ['application/pdf'],
-    signal,
-  });
+  propertyIds.some(isExampleProperty)
+    ? Promise.reject(new ApiError({ kind: 'server', status: 400, code: 'INVALID_REQUEST' }))
+    : apiBlobRequest({
+        config,
+        path: '/api/properties/export.pdf',
+        method: 'POST',
+        body: { propertyIds },
+        acceptedContentTypes: ['application/pdf'],
+        signal,
+      });
 
 export const recordPropertyComparisonView = (config: PublicConfig): Promise<undefined> =>
   apiRequest({
@@ -103,6 +116,9 @@ export const createProperty = (config: PublicConfig, request: PropertyInputDto):
     method: 'POST',
     body: request,
     parseData: parseCreatedProperty,
+  }).then((created) => {
+    dismissExampleProperty(config);
+    return created;
   });
 
 export const fetchPropertyDetail = (
@@ -110,57 +126,67 @@ export const fetchPropertyDetail = (
   propertyId: number,
   signal?: AbortSignal,
 ): Promise<PropertyDetail> =>
-  apiRequest({ config, path: `/api/properties/${propertyId}`, signal, parseData: parsePropertyDetail });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => exampleDetail(config))
+    : apiRequest({ config, path: `/api/properties/${propertyId}`, signal, parseData: parsePropertyDetail });
 
 export const updateProperty = (
   config: PublicConfig,
   propertyId: number,
   request: UpdatePropertyRequestDto,
 ): Promise<PropertyBasicInfo> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}`,
-    method: 'PUT',
-    body: request,
-    parseData: parsePropertyBasicInfo,
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => updateExampleProperty(config, request))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}`,
+        method: 'PUT',
+        body: request,
+        parseData: parsePropertyBasicInfo,
+      });
 
 export const fetchPropertyMemo = (
   config: PublicConfig,
   propertyId: number,
   signal?: AbortSignal,
 ): Promise<PropertyMemoDocument> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/memo`,
-    signal,
-    parseData: parsePropertyMemoDocument,
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => ({ propertyId, freeMemo: getExampleProperty(config).memo }))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/memo`,
+        signal,
+        parseData: parsePropertyMemoDocument,
+      });
 
 export const savePropertyMemoDocument = (
   config: PublicConfig,
   propertyId: number,
   request: SavePropertyMemoDocumentRequestDto,
 ): Promise<PropertyMemoDocument> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/memo`,
-    method: 'PUT',
-    body: request,
-    parseData: parsePropertyMemoDocument,
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => ({ propertyId, freeMemo: (getExampleProperty(config).memo = request.freeMemo) }))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/memo`,
+        method: 'PUT',
+        body: request,
+        parseData: parsePropertyMemoDocument,
+      });
 
 export const fetchPropertyChecklistOverview = (
   config: PublicConfig,
   propertyId: number,
   signal?: AbortSignal,
 ): Promise<PropertyChecklistOverview> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/checklists`,
-    signal,
-    parseData: parsePropertyChecklistOverview,
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => exampleOverview(config))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/checklists`,
+        signal,
+        parseData: parsePropertyChecklistOverview,
+      });
 
 export const fetchPropertyChecklistDetail = (
   config: PublicConfig,
@@ -168,18 +194,20 @@ export const fetchPropertyChecklistDetail = (
   propertyChecklistId: number,
   signal?: AbortSignal,
 ): Promise<PropertyChecklistDetail> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}`,
-    signal,
-    parseData: (value) => {
-      const result = parsePropertyChecklistDetail(value);
-      if (result.propertyId !== propertyId || result.propertyChecklistId !== propertyChecklistId) {
-        throw new Error('매물 체크리스트 응답이 요청과 다릅니다.');
-      }
-      return result;
-    },
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => structuredClone(getExampleProperty(config).checklist))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}`,
+        signal,
+        parseData: (value) => {
+          const result = parsePropertyChecklistDetail(value);
+          if (result.propertyId !== propertyId || result.propertyChecklistId !== propertyChecklistId) {
+            throw new Error('매물 체크리스트 응답이 요청과 다릅니다.');
+          }
+          return result;
+        },
+      });
 
 export const updatePropertyChecklistItemStatus = (
   config: PublicConfig,
@@ -188,21 +216,23 @@ export const updatePropertyChecklistItemStatus = (
   itemId: number,
   status: PropertyChecklistItemStatus,
 ): Promise<{ itemId: number; status: PropertyChecklistItemStatus }> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}/items/${itemId}/status`,
-    method: 'PATCH',
-    body: { status },
-    parseData: (value) => {
-      const record = readRecord(value);
-      const item = readRecord(record.item);
-      const resultStatus = readString(item, 'status');
-      if (resultStatus !== 'UNCONFIRMED' && resultStatus !== 'GOOD' && resultStatus !== 'CAUTION') {
-        throw new Error('체크리스트 항목 상태 응답이 올바르지 않습니다.');
-      }
-      return { itemId: readInteger(item, 'id', 1), status: resultStatus };
-    },
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => ({ itemId, status: updateExampleCheck(config, itemId, { status }).status }))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}/items/${itemId}/status`,
+        method: 'PATCH',
+        body: { status },
+        parseData: (value) => {
+          const record = readRecord(value);
+          const item = readRecord(record.item);
+          const resultStatus = readString(item, 'status');
+          if (resultStatus !== 'UNCONFIRMED' && resultStatus !== 'GOOD' && resultStatus !== 'CAUTION') {
+            throw new Error('체크리스트 항목 상태 응답이 올바르지 않습니다.');
+          }
+          return { itemId: readInteger(item, 'id', 1), status: resultStatus };
+        },
+      });
 
 export const updatePropertyChecklistItemMemo = (
   config: PublicConfig,
@@ -211,25 +241,32 @@ export const updatePropertyChecklistItemMemo = (
   itemId: number,
   memo: string,
 ): Promise<{ itemId: number; memo: string }> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}/items/${itemId}/memo`,
-    method: 'PATCH',
-    body: { memo },
-    parseData: (value) => {
-      const record = readRecord(value);
-      const item = readRecord(record.item);
-      return {
-        itemId: readInteger(item, 'id', 1),
-        memo: readString(item, 'memo', { allowEmpty: true, maximumCodePoints: 500 }),
-      };
-    },
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => ({ itemId, memo: updateExampleCheck(config, itemId, { memo }).memo }))
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}/checklists/${propertyChecklistId}/items/${itemId}/memo`,
+        method: 'PATCH',
+        body: { memo },
+        parseData: (value) => {
+          const record = readRecord(value);
+          const item = readRecord(record.item);
+          return {
+            itemId: readInteger(item, 'id', 1),
+            memo: readString(item, 'memo', { allowEmpty: true, maximumCodePoints: 500 }),
+          };
+        },
+      });
 
 export const removeProperty = (config: PublicConfig, propertyId: number): Promise<undefined> =>
-  apiRequest({
-    config,
-    path: `/api/properties/${propertyId}`,
-    method: 'DELETE',
-    parseData: parseNoContent,
-  });
+  isExampleProperty(propertyId)
+    ? Promise.resolve().then(() => {
+        dismissExampleProperty(config);
+        return undefined;
+      })
+    : apiRequest({
+        config,
+        path: `/api/properties/${propertyId}`,
+        method: 'DELETE',
+        parseData: parseNoContent,
+      });

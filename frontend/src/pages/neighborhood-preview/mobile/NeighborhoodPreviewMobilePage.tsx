@@ -150,29 +150,6 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
           <>
             <header className={shared.searchHeader}>
               <NeighborhoodMapSearch preview={preview} />
-              {!preview.hasChosenMapPoint && (
-                <>
-                  {preview.isSearching && (
-                    <p className={shared.mapSearchResult} role="status">
-                      주소를 찾고 있어요.
-                    </p>
-                  )}
-                  {preview.searchError && (
-                    <p className={shared.mapSearchResult} role="alert">
-                      {preview.searchError}
-                    </p>
-                  )}
-                  {preview.addressResults.map((address) => (
-                    <button
-                      className={shared.mapSearchResult}
-                      key={`${address.latitude}-${address.longitude}`}
-                      onClick={() => preview.selectAddress(address)}
-                    >
-                      {address.roadAddress ?? address.jibunAddress ?? address.address}
-                    </button>
-                  ))}
-                </>
-              )}
             </header>
             <LocationControls
               preview={preview}
@@ -209,9 +186,9 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
         {isResultMap && (
           <>
             <header className={`${shared.resultHeader} ${styles.resultHeader}`}>
-              {/* 첫 줄: 들어온 곳(보통 홈)으로 나가는 집 버튼, 조건 요약 한 줄, 출퇴근 장소부터 다시 고르는 아이콘 버튼. */}
+              {/* 첫 줄: 홈으로 나가는 집 버튼, 조건 요약 한 줄, 출퇴근 장소부터 다시 고르는 아이콘 버튼. */}
               <div className={styles.headerRow}>
-                <button type="button" className={shared.mapBack} aria-label="동네 찾기 나가기" onClick={preview.leave}>
+                <button type="button" className={shared.mapBack} aria-label="홈으로 돌아가기" onClick={preview.leave}>
                   <Icon name="home" size={22} />
                 </button>
                 <p className={styles.criteriaSummary} aria-label="선택한 탐색 조건">

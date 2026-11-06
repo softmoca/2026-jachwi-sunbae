@@ -33,6 +33,11 @@ const meta = {
   args: {
     leave: fn(),
     query: '',
+    hasChosenMapPoint: false,
+    addressResults: [],
+    isSearching: false,
+    searchError: null,
+    selectAddress: fn(),
     changeQuery: fn(),
     searchDestination: fn(() => Promise.resolve()),
     shouldFocusMapSearch: false,

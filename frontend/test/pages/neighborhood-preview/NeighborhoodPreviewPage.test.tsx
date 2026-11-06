@@ -13,8 +13,10 @@ import { createStreetMemoHandlers } from '@/app/mocks/handlers/streetMemoHandler
 import { routeFocusView } from '@/pages/neighborhood-preview/model/resultMapView';
 import NeighborhoodPreviewPage from '@/pages/neighborhood-preview/NeighborhoodPreviewPage';
 import NeighborhoodRoutePage from '@/pages/neighborhood-preview/NeighborhoodRoutePage';
+import { setAuthentication } from '@/features/auth/model/authStore';
 import { MapLocationError, readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import type { MapCanvasProps } from '@/features/map/model/MapCanvas';
+import { dismissExampleProperty } from '@/features/property/model/exampleProperty';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
@@ -285,13 +287,18 @@ it('탐색 기준 선택 화면 없이 바로 지도에서 통근·환승·월�
   expect(sheet.getByLabelText('탐색 조건')).toBeInTheDocument();
   expect(sheet.getByRole('button', { name: '지도에서 출퇴근 장소를 골라 주세요' })).toBeDisabled();
 });
-it('검색창 뒤로가기는 들어온 화면으로 돌아가고, 주소로 바로 들어왔으면 홈으로 간다', async () => {
-  const view = show(false, ['/guide', '/neighborhoods']);
-  await userEvent.click(screen.getByRole('button', { name: '뒤로 가기' }));
-  expect(await screen.findByRole('heading', { name: '사용 방법' })).toBeInTheDocument();
-  view.unmount();
+it.each([
+  [false, ['/guide', '/neighborhoods']],
+  [false, ['/', '/neighborhoods', '/neighborhoods/areas/1168064000']],
+  [true, ['/', '/explore', '/explore/areas/1168064000']],
+])('홈 버튼은 진입 이력이나 내부 동네 이동과 관계없이 홈으로 간다 (%s, %s)', async (isPublic, entries) => {
+  show(isPublic, entries);
+  await userEvent.click(screen.getByRole('button', { name: '홈으로 돌아가기' }));
+  expect(await screen.findByRole('heading', { name: '홈' })).toBeInTheDocument();
+});
+it('주소로 바로 들어와도 홈 버튼으로 홈에 간다', async () => {
   show(true);
-  await userEvent.click(screen.getByRole('button', { name: '뒤로 가기' }));
+  await userEvent.click(screen.getByRole('button', { name: '홈으로 돌아가기' }));
   expect(await screen.findByRole('heading', { name: '홈' })).toBeInTheDocument();
 });
 const useDesktopViewport = () =>
@@ -532,6 +539,9 @@ it('데스크탑도 장소를 고르는 지도에 확대, 축소 버튼을 둔�
   }
 });
 it('기록한 매물이 없거나 로그인 전(공개 동네 찾기)이면 My를 눌렀을 때 시트에 안내를 보이고, 공개 동네 찾기는 매물을 부르지 않는다', async () => {
+  // 이미 예시를 사용한 회원이 자신의 기록을 모두 지운 상황이다.
+  setAuthentication({ memberId: 1, accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
+  dismissExampleProperty({ apiBaseUrl: 'http://localhost:8080' });
   let propertyRequests = 0;
   const track = ({ request }: { request: Request }) => {
     if (new URL(request.url).pathname.startsWith('/api/properties')) propertyRequests += 1;

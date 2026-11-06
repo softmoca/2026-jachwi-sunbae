@@ -132,8 +132,8 @@ describe('내 체크리스트 편집', () => {
     await userEvent.setup().click(screen.getByRole('link', { name: /직방 매물 문의 목록/ }));
     expect(await screen.findByRole('heading', { name: '체크리스트 편집', level: 1 })).toBeInTheDocument();
     expect(await screen.findByText('두 번째 번들 항목')).toBeInTheDocument();
-    expect(screen.queryByLabelText('체크리스트 이름')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /삭제$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '체크리스트 이름' })).toHaveValue('직방 매물 문의 목록');
+    expect(screen.getByRole('button', { name: '체크리스트 삭제' })).toBeInTheDocument();
   });
 
   it('빈 관리 화면에서 만들기를 눌러 편집하고 닫으면 관리로 돌아온다', async () => {
@@ -830,4 +830,47 @@ it('데스크탑은 목록과 지도를 유지한 채 상세 패널 안에서 �
   } finally {
     viewport.mockRestore();
   }
+});
+
+it('체크리스트 이름을 수정한 뒤 저장 API로 전달한다', async () => {
+  const saved = vi.fn();
+  server.use(
+    http.get('*/api/checklists/7', () => HttpResponse.json(successEnvelope(finalChecklistDetail()))),
+    http.get('*/api/properties', () => HttpResponse.json(successEnvelope({ items: [], totalCount: 0 }))),
+    http.put('*/api/checklists/7', async ({ request }) => {
+      const body = await request.json();
+      saved(body);
+      return HttpResponse.json(successEnvelope(finalChecklistDetail({ name: '새 체크리스트 이름' })));
+    }),
+  );
+  const user = userEvent.setup();
+  renderAuthenticated('/checklists/7');
+  const input = await screen.findByRole('textbox', { name: '체크리스트 이름' });
+  await user.clear(input);
+  await user.type(input, '새 체크리스트 이름');
+  await user.click(screen.getByRole('button', { name: '변경 내용 저장' }));
+  await waitFor(() => expect(saved).toHaveBeenCalledWith(expect.objectContaining({ name: '새 체크리스트 이름' })));
+  expect(await screen.findByRole('heading', { name: '체크리스트 관리' })).toBeInTheDocument();
+});
+
+it('체크리스트 삭제는 취소할 수 있고 확인한 경우에만 삭제한다', async () => {
+  const removed = vi.fn();
+  server.use(
+    http.get('*/api/checklists/7', () => HttpResponse.json(successEnvelope(finalChecklistDetail()))),
+    http.delete('*/api/checklists/7', () => {
+      removed();
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  const user = userEvent.setup();
+  renderAuthenticated('/checklists/7');
+  await user.click(await screen.findByRole('button', { name: '체크리스트 삭제' }));
+  let dialog = within(screen.getByRole('dialog', { name: '체크리스트를 삭제할까요?' }));
+  await user.click(dialog.getByRole('button', { name: '취소' }));
+  expect(removed).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: '체크리스트 삭제' }));
+  dialog = within(screen.getByRole('dialog', { name: '체크리스트를 삭제할까요?' }));
+  await user.click(dialog.getByRole('button', { name: /^삭제$/ }));
+  await waitFor(() => expect(removed).toHaveBeenCalledOnce());
+  expect(await screen.findByRole('heading', { name: '체크리스트 관리' })).toBeInTheDocument();
 });

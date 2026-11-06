@@ -112,7 +112,7 @@ it('휴대폰은 지도와 리스트 보기 모두 기록하기 버튼 없이 �
   expect(screen.queryByRole('button', { name: /기록하기/ })).not.toBeInTheDocument();
 });
 
-it('리스트 헤더의 삭제 버튼으로 삭제 모드를 켜고, 카드의 삭제는 실제 매물 삭제 API를 호출한다', async () => {
+it('필터 없이 각 매물 더보기 메뉴에서 해당 매물을 삭제한다', async () => {
   const user = userEvent.setup();
   const removed = vi.fn();
   server.use(
@@ -124,41 +124,27 @@ it('리스트 헤더의 삭제 버튼으로 삭제 모드를 켜고, 카드의 �
   renderRecords();
   await screen.findByText('신림역 원룸');
   await user.click(screen.getByRole('button', { name: /리스트/ }));
-  // 카드에는 더보기 메뉴가 없고, 삭제 모드를 켜기 전에는 카드 삭제 버튼도 없다.
-  expect(screen.queryByRole('button', { name: '망원동 투룸 메뉴' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '망원동 투룸 삭제' })).not.toBeInTheDocument();
-
-  const toggle = screen.getByRole('button', { name: '기록 삭제' });
-  await user.click(toggle);
-  expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.queryByRole('group', { name: '기록 필터 (준비 중)' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '기록 삭제' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '망원동 투룸 메뉴' }));
   await user.click(screen.getByRole('button', { name: '망원동 투룸 삭제' }));
   expect(await screen.findByText('기록을 삭제했어요.')).toBeInTheDocument();
-  expect(removed.mock.calls).toEqual([[expect.any(String)]]);
-  // 하나를 지워도 삭제 모드는 이어져 다른 기록을 바로 지울 수 있다.
-  expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  expect(removed).toHaveBeenCalledOnce();
 });
 
-it('삭제 모드는 헤더 버튼을 다시 누르거나 바깥을 누르거나 Esc를 누르면 풀린다', async () => {
+it('매물 더보기 메뉴는 바깥 클릭과 Escape로 닫힌다', async () => {
   const user = userEvent.setup();
   renderRecords();
   await screen.findByText('신림역 원룸');
   await user.click(screen.getByRole('button', { name: /리스트/ }));
-  const toggle = screen.getByRole('button', { name: '기록 삭제' });
-
+  const toggle = screen.getByRole('button', { name: '신림역 원룸 메뉴' });
   await user.click(toggle);
-  expect(screen.getByRole('button', { name: '신림역 원룸 삭제' })).toBeInTheDocument();
-  await user.click(toggle);
-  expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  expect(screen.queryByRole('button', { name: '신림역 원룸 삭제' })).not.toBeInTheDocument();
-
-  await user.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await user.click(screen.getByRole('heading', { name: '모든 기록' }));
-  expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  expect(screen.queryByRole('button', { name: '신림역 원룸 삭제' })).not.toBeInTheDocument();
-
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await user.click(toggle);
   await user.keyboard('{Escape}');
-  expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect(toggle).toHaveFocus();
 });
 
@@ -182,8 +168,8 @@ it('리스트 위에는 통근 시간 버튼을 두지 않고, 동네 찾기에�
     expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '바꾸기' })).not.toBeInTheDocument();
     expect(screen.queryByText(/까지 대중교통/)).not.toBeInTheDocument();
-    // 리스트 위 필터 줄은 그대로 둔다.
-    expect(screen.getByRole('group', { name: '기록 필터 (준비 중)' })).toBeInTheDocument();
+    // 미구현 필터 줄은 노출하지 않는다.
+    expect(screen.queryByRole('group', { name: '기록 필터 (준비 중)' })).not.toBeInTheDocument();
     expect(requested).not.toHaveBeenCalled();
   } finally {
     localStorage.removeItem('jachwi-sunbae:commute-destination');
@@ -248,7 +234,7 @@ it('데스크탑 리스트에도 출퇴근 장소와 상관없이 통근 시간 
     renderRecords();
     await screen.findByRole('heading', { name: '모든 기록' });
     expect(screen.queryByRole('button', { name: '통근 시간' })).not.toBeInTheDocument();
-    expect(screen.getByRole('group', { name: '기록 필터 (준비 중)' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: '기록 필터 (준비 중)' })).not.toBeInTheDocument();
   } finally {
     localStorage.removeItem('jachwi-sunbae:commute-destination');
     matchMedia.mockRestore();
@@ -810,4 +796,26 @@ it('배포 환경에서는 로컬 확인용 지도 클릭을 켜지 않는다', 
   } finally {
     vi.unstubAllEnvs();
   }
+});
+
+it('주소가 없는 매물은 목록에 유지하고 주소 미등록 동네 배지를 만들지 않는다', async () => {
+  const rooms = getMockProperties();
+  server.use(
+    http.get('*/api/properties', () =>
+      success({
+        totalCount: rooms.length,
+        items: rooms.map((room) => ({
+          ...propertyListItemResponse(room),
+          address: null,
+        })),
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderRecords();
+  await user.click(await screen.findByRole('button', { name: /리스트/ }));
+  await screen.findByText('신림역 원룸');
+  const districts = within(screen.getByRole('navigation', { name: '기록한 동네' }));
+  expect(districts.queryByRole('button', { name: '주소 미등록' })).not.toBeInTheDocument();
+  expect(districts.getByRole('button', { name: '전체' })).toBeInTheDocument();
 });
