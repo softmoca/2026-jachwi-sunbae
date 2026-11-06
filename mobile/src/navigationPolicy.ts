@@ -1,4 +1,4 @@
-import { PRODUCTION_WEB_APP_URL } from './config';
+import { WEB_APP_URL } from './config';
 
 const WEB_APP_HOSTS = new Set(['jachwi-sunbae.kr', 'www.jachwi-sunbae.kr', 'dev.jachwi-sunbae.kr']);
 
@@ -13,14 +13,20 @@ export const isAllowedWebAppUrl = (value: string): boolean => {
   }
 };
 
-/** `jachwisunbae://properties/10`을 운영 웹의 같은 경로로 변환한다. */
-export const toWebAppUrl = (value: string): string | null => {
+/** `jachwisunbae://properties/10`을 지금 환경 웹(dev 또는 운영)의 같은 경로로 변환한다. */
+export const toWebAppUrl = (
+  value: string,
+  baseUrl: string = WEB_APP_URL,
+): string | null => {
   try {
     const url = new URL(value);
     if (url.protocol !== 'jachwisunbae:') return null;
 
     const route = `/${url.hostname}${url.pathname}`.replace(/\/{2,}/g, '/');
-    const destination = new URL(`${route || '/'}${url.search}${url.hash}`, PRODUCTION_WEB_APP_URL);
+    const destination = new URL(
+      `${route || '/'}${url.search}${url.hash}`,
+      baseUrl,
+    );
     return destination.toString();
   } catch {
     return null;

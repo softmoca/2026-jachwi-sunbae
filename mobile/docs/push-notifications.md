@@ -5,7 +5,7 @@
 - 개인 저장소로 분리했던 앱 코드를 팀 저장소 `mobile/`로 다시 옮겼다.
 - 앱 ID는 iOS `kr.jachwisunbae.app`, Android `com.jachwisunbae`를 유지한다.
 - 양쪽 앱은 `2.1.1`, 빌드 `8`이다. iOS는 심사를 통과해 배포 준비됨 상태이고, Android 프로덕션 트랙에서 활성 상태다.
-- Firebase 프로젝트는 팀 프로젝트 `jachwi-sunbae-de`다. `2.1.0(6)`까지는 이전 프로젝트 `jachwi-sunbae`로 빌드했다. Firebase Analytics SDK는 설치하지 않았다.
+- Firebase 프로젝트는 dev 환경(Debug, Staging) `jachwi-sunbae-de`, prod 환경(Release) `jachwi-sunbae-prod`다. `2.1.0(6)`까지는 이전 프로젝트 `jachwi-sunbae`로 빌드했다. Firebase Analytics SDK는 설치하지 않았다.
 - 첫 정상 웹 로드 후 안내에서 사용자가 알림 받기를 선택하면 OS 권한을 요청한다. 나중에를 선택해도 서비스 이용은 그대로 가능하다.
 - 동의 전에는 FCM 토큰 자동 발급과 iOS 원격 알림 자동 등록을 끈다.
 - OS 권한과 앱 선택이 유효한 경우에만 토큰을 발급하고 공개 서비스 안내 토픽에 구독한다. 토큰 변경 및 앱 재진입 때 상태를 복구한다.
@@ -14,10 +14,10 @@
 ## 계정 설정과 파일
 
 1. [Firebase 프로젝트](https://console.firebase.google.com/project/jachwi-sunbae/overview)에서 두 앱을 등록한다.
-2. iOS 설정 파일을 `ios/JachwiSunbaeMobile/GoogleService-Info.plist`, Android 파일을 `android/app/google-services.json`에 둔다. 두 파일은 Git에서 제외한다.
+2. iOS 설정 파일을 `ios/firebase/<dev|prod>/GoogleService-Info.plist`, Android 파일을 `android/app/src/<debug|staging|release>/google-services.json`에 둔다. iOS는 빌드 때 구성에 맞는 파일을 앱에 복사한다. 파일은 Git에서 제외한다.
 3. Apple Developer에서 기존 App ID의 Push Notifications capability를 활성화한다. Firebase 프로젝트 설정 → Cloud Messaging → iOS 앱에 해당 팀의 APNs 인증 키를 등록한다. 키 생성/권한 부여는 소유자 확인 후 진행한다.
 4. APNs `.p8`은 Firebase 설정과 안전한 키 보관소에만 둔다. 저장소·앱 번들·PostHog에 넣지 않는다. 팀 ID와 키 ID가 일치해야 한다.
-5. `npm run check:firebase`, `npm run check:versions` 후 `cd ios && pod install`을 실행한다. iOS 서명 프로파일에도 `aps-environment`가 포함되어야 한다. 배포 서명 시 APNs 환경이 production으로 변환됐는지 확인한다.
+5. `npm run check:firebase`(환경별로 `-- dev`, `-- prod`), `npm run check:versions` 후 `cd ios && pod install`을 실행한다. iOS 서명 프로파일에도 `aps-environment`가 포함되어야 한다. 배포 서명 시 APNs 환경이 production으로 변환됐는지 확인한다.
 6. 실기기에서 권한 허용/거절, 설정에서 철회, 토큰 갱신, 종료 상태 클릭 이동, 개발/운영 분리를 확인한다. 계정 등록이나 정적 테스트 통과만으로 실제 수신 성공이라 판단하지 않는다.
 
 ## 서버 발송

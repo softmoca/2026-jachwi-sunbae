@@ -34,4 +34,4 @@ npm run dev:mock
 - 앱의 회원 화면 전체에서 로그인·재진입·네트워크 복구·토큰 갱신을 동기화한다. 새 회원의 동의는 이전하지 않으며 비동기 작업 중 회원이 바뀌면 이전 요청을 거절한다.
 - OFF는 서버 동의를 먼저 끈 뒤 기기를 해제한다. 정리 실패는 OFF를 유지하며 재시도를 안내한다. OS 권한 철회도 서버 OFF로 반영한다.
 - 브리지 없는 앱과 웹에서는 새 수신 동의를 켜지 않는다. 기존 서버 동의가 ON인 경우 OFF는 가능하다. ON 요청에는 현재 위치 또는 마지막 위치가 있으면 서버에 저장한다.
-- 네이티브 코드·스토어 재제출 없이 연결한다. Debug 앱은 dev 웹, 스토어 앱은 운영 웹을 연다. 앱 토큰의 Firebase 프로젝트와 서버의 `weather.notification.firebase-project-id`가 같아야 발송된다.
+- 네이티브 코드·스토어 재제출 없이 연결한다. Debug 앱과 Staging(dev TestFlight) 앱은 dev 웹, 스토어 앱은 운영 웹을 연다. 앱 토큰의 Firebase 프로젝트와 서버의 `weather.notification.firebase-project-id`가 같아야 발송된다.

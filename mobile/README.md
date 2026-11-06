@@ -6,7 +6,7 @@
 | ------------ | --------------------- | ------------------ |
 | 앱 ID        | `kr.jachwisunbae.app` | `com.jachwisunbae` |
 | 준비 중 버전 | `2.1.1`               | `2.1.1`            |
-| 빌드 번호    | `8`                   | `8`                |
+| 빌드 번호    | `9`                   | `9`                |
 | 푸시         | FCM → APNs            | FCM                |
 
 두 앱에 같은 확대 크롭 오리 아이콘을 적용했다. 네이티브 하단 탭바는 사용하지 않고 웹 UI를 표시한다. 웹 라우팅·로그인·기존 서비스 기능은 웹 배포를 따른다.
@@ -19,19 +19,30 @@ Node.js 22.11 이상, npm, Xcode/CocoaPods 또는 Android SDK/JDK가 필요하�
 npm ci
 ```
 
-Firebase 프로젝트 `jachwi-sunbae-de`의 앱 설정 파일을 아래 위치에 넣는다. 파일과 인증 키는 Git에서 제외된다.
+Firebase 앱 설정 파일을 빌드 구성별 위치에 넣는다. 파일과 인증 키는 Git에서 제외된다.
 
-- `ios/JachwiSunbaeMobile/GoogleService-Info.plist`
-- `android/app/google-services.json`
+| 환경 | Firebase 프로젝트    | iOS                                          | Android                                                |
+| ---- | -------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| dev  | `jachwi-sunbae-de`   | `ios/firebase/dev/GoogleService-Info.plist`  | `android/app/src/{debug,staging}/google-services.json` |
+| prod | `jachwi-sunbae-prod` | `ios/firebase/prod/GoogleService-Info.plist` | `android/app/src/release/google-services.json`         |
 
 ```bash
-npm run check:firebase
+npm run check:firebase -- dev   # dev, prod, ios, android로 범위를 좁힌다. 생략하면 모두 검사한다.
 cd ios && pod install && cd ..
 npm start
 # 다른 터미널에서 npm run ios 또는 npm run android
 ```
 
-Debug는 `https://dev.jachwi-sunbae.kr`, Release는 `https://www.jachwi-sunbae.kr`을 연다. 기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 앱 시작만으로 위치 권한을 요청하지 않는다.
+빌드 구성마다 앱 환경(`JACHWI_APP_ENV`)이 정해지고, 환경에 따라 웹 주소, 푸시 토픽, Firebase 설정 파일을 고른다.
+
+| iOS 구성 / Android buildType | 환경   | 웹                             | 푸시 토픽             |
+| ---------------------------- | ------ | ------------------------------ | --------------------- |
+| Debug / debug                | `dev`  | `https://dev.jachwi-sunbae.kr` | `jachwi-service-dev`  |
+| Staging / staging            | `dev`  | `https://dev.jachwi-sunbae.kr` | `jachwi-service-dev`  |
+| Release / release            | `prod` | `https://www.jachwi-sunbae.kr` | `jachwi-service-prod` |
+
+Staging은 Release 최적화로 번들을 앱에 넣는 dev 빌드라 Metro 없이 실기기와 TestFlight에서 dev 서버를 확인할 때 쓴다. iOS는 Xcode에서 Archive의 Build Configuration을 Staging으로 바꾸거나 `xcodebuild archive -workspace ios/JachwiSunbaeMobile.xcworkspace -scheme JachwiSunbaeMobile -configuration Staging -destination generic/platform=iOS`로 만든다. Android는 `./gradlew assembleStaging` 또는 `bundleStaging`이며 release와 같은 업로드 키가 필요하다. Staging과 Release는 Firebase 설정 파일이 없으면 빌드가 실패하고, Debug는 경고 후 푸시 없이 빌드한다.
+기존 서비스 도메인 밖의 링크는 시스템 브라우저로 이동한다. 앱 시작만으로 위치 권한을 요청하지 않는다.
 
 ## 푸시 알림
 
