@@ -59,14 +59,14 @@ it('고른 탭을 들어온 화면 정보와 함께 주소에 남긴다', async 
   expect(router.state.location.search).toBe('?tab=details');
 });
 
-it('주소에 탭이 없으면 마지막으로 본 탭으로 연다', async () => {
+it('체크리스트를 마지막으로 봤어도 탭 없는 새 진입은 정보로 연다', async () => {
   const user = userEvent.setup();
   renderDetail();
   await user.click(await screen.findByRole('tab', { name: '체크리스트' }));
   cleanup();
 
   renderDetail();
-  expect(await screen.findByRole('tab', { name: '체크리스트' })).toHaveAttribute('aria-selected', 'true');
+  expect(await screen.findByRole('tab', { name: '정보' })).toHaveAttribute('aria-selected', 'true');
 });
 
 it('탭 제목에 매물 이름과 지금 탭을 담는다', async () => {
@@ -143,4 +143,13 @@ it('작성 중 Escape를 누르면 기존 메모로 돌아가며 저장 요청�
   await user.tab();
   expect(memo).toHaveValue('');
   expect(saveCount).toBe(0);
+});
+
+it('사진 아래에는 중복 이름이 없고 더보기 메뉴는 상단 헤더에 둔다', async () => {
+  renderDetail();
+  const heading = await screen.findByRole('heading', { name: '신림역 원룸', level: 1 });
+  const menu = screen.getByLabelText('매물 정보 메뉴 열기');
+  expect(heading.closest('header')).toContainElement(menu);
+  expect(screen.queryByText('신림역 원룸', { selector: 'p' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '매물 이름 신림역 원룸, 수정' })).toBeInTheDocument();
 });

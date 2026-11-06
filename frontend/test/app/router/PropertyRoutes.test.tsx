@@ -190,6 +190,8 @@ describe('FE-2 등록·수정·메모', () => {
     // 시트나 모달을 띄우지 않고 그 줄 안에 금액 두 칸을 펼친다.
     expect(screen.queryByRole('region', { name: /^보증금 \/ 월세 .+, 수정$/ })).not.toBeInTheDocument();
     const editor = within(screen.getByRole('form', { name: '보증금 / 월세 입력' }));
+    expect(editor.getByLabelText('보증금 (만원)')).toHaveValue('1,000');
+    expect(editor.getByLabelText('월세 (만원)')).toHaveValue('55');
     expect(editor.queryByRole('button', { name: '저장' })).not.toBeInTheDocument();
     expect(editor.queryByRole('region', { name: '매물 위치 선택' })).not.toBeInTheDocument();
     // 보증금에서 월세로 옮길 때는 저장하지 않는다.
@@ -211,6 +213,60 @@ describe('FE-2 등록·수정·메모', () => {
       latitude: propertyDetailFixture.location.latitude,
       longitude: propertyDetailFixture.location.longitude,
     });
+  });
+
+  it('미입력 금액은 0으로 열고 바꾸지 않은 채 바깥을 누르면 요청 없이 닫힌다', async () => {
+    let updates = 0;
+    server.use(
+      http.get(`${config.apiBaseUrl}/api/properties/10`, () =>
+        HttpResponse.json(successEnvelope({ ...detailWithoutPhotos, depositAmount: 0, monthlyRentAmount: 0 })),
+      ),
+      http.put(`${config.apiBaseUrl}/api/properties/10`, () => {
+        updates += 1;
+        return HttpResponse.json(successEnvelope(detailWithoutPhotos));
+      }),
+    );
+    const user = userEvent.setup();
+    renderAuthenticated('/properties/10');
+    await user.click(await screen.findByRole('button', { name: /^보증금 \/ 월세 .+, 수정$/ }));
+    expect(screen.getByLabelText('보증금 (만원)')).toHaveValue('0');
+    expect(screen.getByLabelText('월세 (만원)')).toHaveValue('0');
+    await user.click(screen.getByRole('heading', { name: '신림역 원룸', level: 1 }));
+    expect(screen.queryByRole('form', { name: '보증금 / 월세 입력' })).not.toBeInTheDocument();
+    expect(updates).toBe(0);
+    await user.click(screen.getByRole('button', { name: /^보증금 \/ 월세 .+, 수정$/ }));
+    await user.clear(screen.getByLabelText('보증금 (만원)'));
+    await user.clear(screen.getByLabelText('월세 (만원)'));
+    await user.click(screen.getByRole('heading', { name: '신림역 원룸', level: 1 }));
+    expect(screen.queryByRole('form', { name: '보증금 / 월세 입력' })).not.toBeInTheDocument();
+    expect(updates).toBe(0);
+  });
+
+  it('관리비 입력 안의 공과금 라벨을 눌러도 닫히지 않고 바깥을 누를 때 한 번 저장한다', async () => {
+    let body: unknown;
+    let updates = 0;
+    server.use(
+      http.get(`${config.apiBaseUrl}/api/properties/10`, () => HttpResponse.json(successEnvelope(detailWithoutPhotos))),
+      http.put(`${config.apiBaseUrl}/api/properties/10`, async ({ request }) => {
+        updates += 1;
+        body = await request.json();
+        return HttpResponse.json(successEnvelope({ id: 10, ...(body as object) }));
+      }),
+    );
+    const user = userEvent.setup();
+    renderAuthenticated('/properties/10');
+    await user.click(await screen.findByRole('button', { name: /^관리비 포함 공과금 .+, 수정$/ }));
+    await user.click(screen.getByLabelText('총 관리비'));
+    await user.click(screen.getByText('수도세', { selector: 'span' }));
+    expect(screen.getByRole('region', { name: '부가 정보 입력' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: '수도세' })).not.toBeChecked();
+    await user.click(screen.getByText('가스비', { selector: 'span' }));
+    expect(screen.getByRole('checkbox', { name: '가스비' })).toBeChecked();
+    expect(updates).toBe(0);
+    await user.click(screen.getByRole('heading', { name: '신림역 원룸', level: 1 }));
+    await waitFor(() => expect(screen.queryByRole('region', { name: '부가 정보 입력' })).not.toBeInTheDocument());
+    expect(updates).toBe(1);
+    expect(body).toMatchObject({ utilityOptions: ['INTERNET', 'GAS'] });
   });
 
   it('매물 이름은 상세 줄에서 바로 고치고, 금액이 비어 있어도 저장된다', async () => {
