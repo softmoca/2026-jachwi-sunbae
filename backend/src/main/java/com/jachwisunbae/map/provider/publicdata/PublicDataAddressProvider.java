@@ -17,7 +17,7 @@ import java.util.List;
 
 // 매물 주소와 좌표는 DB에 저장되므로 결과 저장이 허용된 공공데이터(행안부, SGIS)로 조회한다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public", matchIfMissing = true)
 public class PublicDataAddressProvider implements AddressProvider {
 
     private final JusoAddressClient jusoClient;//검색어로 도로명, 지번 주소 후보를 가져온다

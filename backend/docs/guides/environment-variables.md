@@ -31,7 +31,7 @@ Spring Boot 애플리케이션은 CORS 허용 Origin과 인증·저장소 설정
 | `PHOTO_STORAGE_SECRET_KEY`   | 로컬 전용 예시 값       | 객체 저장소 secret key. 정적 자격증명으로 접속하는 환경에서만 쓴다                       |
 | `PHOTO_STORAGE_PORT`         | `9000`                  | 로컬 MinIO API 포트                                                                      |
 | `PHOTO_STORAGE_CONSOLE_PORT` | `9001`                  | 로컬 MinIO 관리 화면 포트                                                                |
-| `MAP_PROVIDER_MODE`          | `demo`                  | `demo` 또는 `public` 주소 검색·역지오코딩 adapter 선택                                   |
+| `MAP_PROVIDER_MODE`          | `public`                | 실제 주소 검색·역지오코딩 adapter. 실행 환경의 `demo` 모드는 제거됨                      |
 | `JUSO_CONFIRM_KEY`           | 비움                    | `public` 모드의 행정안전부 도로명주소 검색 API 승인키                                    |
 | `SGIS_CONSUMER_KEY`          | 비움                    | `public` 모드의 국가데이터처 SGIS 서비스 ID                                              |
 | `SGIS_CONSUMER_SECRET`       | 비움                    | `public` 모드의 국가데이터처 SGIS 보안키. 백엔드 전용으로 관리한다                       |
@@ -80,8 +80,8 @@ DB 접속값과 `JWT_SECRET`, `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CON
 
 `JUSO_CONFIRM_KEY`는 유효기간 90일 승인키이며 2026-12-25에 만료된다.
 
-`MAP_PROVIDER_MODE`는 `demo` 또는 `public`만 사용할 수 있다. `public` 모드에 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
-동네 찾기와 동네 검색은 주소로 찾지 못하면 네이버 지역 검색으로 건물명을 찾는다. 검색 키가 없어도 애플리케이션은 시작하고, 건물명 검색까지 가야 하는 요청만 `MAP_PROVIDER_UNAVAILABLE`로 실패한다.
+`MAP_PROVIDER_MODE`는 기본값인 `public`을 사용한다. 실행 환경의 가짜 주소 검색(`demo`)은 제거했다. 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다. 기존 로컬 `.env`의 값이 `demo`라면 `public`으로 바꾸거나 해당 항목을 삭제한다. 자동 테스트의 가짜 주소 공급자는 테스트 소스에만 둔다.
+동네 찾기와 동네 검색은 `/api/maps/search`에서 네이버 지역 검색으로 건물명과 장소를 바로 찾는다. 선행 주소 검색이나 검색 결과에 따른 재요청은 하지 않는다. 검색 키를 미리 검사하는 별도 분기는 두지 않으며, 네이버 API의 인증 오류를 포함한 HTTP 오류는 `MAP_PROVIDER_UNAVAILABLE`로 변환한다.
 검색 키는 NAVER API HUB 검색(지역)을 구독한 NCP Application의 키를 넣는다.
 착한가격업소 적재 스크립트도 주소를 좌표로 바꿀 때 같은 `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 사용한다. 스크립트는 개발자 PC에서 실행하므로 서버 환경변수에는 추가하지 않는다.
 
@@ -105,6 +105,6 @@ AWS S3는 EC2 `ec2-project` instance role로 접근하므로 `PHOTO_STORAGE_ENDP
 
 새 환경변수를 도입하면 서버의 환경변수 파일도 함께 갱신한다.
 
-닉네임 인증은 외부 키가 필요 없다. 지도 기본 모드를 `demo`로 두면 외부 키 없이 전체 로컬 흐름을 실행할 수 있다.
+닉네임 인증은 외부 키가 필요 없다. 주소 검색은 기본적으로 실제 API를 사용하므로 행안부 및 SGIS 키를 설정해야 한다.
 
 실제 비밀값은 `.env.example`, 애플리케이션 설정, 문서와 Git에 커밋하지 않는다.

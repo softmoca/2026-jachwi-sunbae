@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public", matchIfMissing = true)
 public class JusoAddressClient {
 
     private static final String BASE_URL = "https://business.juso.go.kr";

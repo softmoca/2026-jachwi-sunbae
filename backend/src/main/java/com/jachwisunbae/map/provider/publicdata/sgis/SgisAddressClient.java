@@ -32,7 +32,7 @@ import java.util.function.BiFunction;
 
 // SGIS 주소 API와 통신해서 주소 ↔ 좌표 변환을 한다. 인증 토큰은 SgisTokenProvider에서 받는다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public", matchIfMissing = true)
 public class SgisAddressClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(SgisAddressClient.class);

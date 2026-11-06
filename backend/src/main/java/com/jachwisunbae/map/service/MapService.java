@@ -40,13 +40,8 @@ public class MapService {
         return addressProvider.geocode(query.trim());
     }
 
-    // 기존 주소 검색으로 먼저 찾고, 결과가 없으면 건물명이나 장소 이름을 네이버 지역 검색으로 찾는다.
-    public List<MapAddress> searchAddressOrPlace(String query) {
+    public List<MapAddress> searchPlace(String query) {
         validateQuery(query);
-        List<MapAddress> addresses = addressProvider.geocode(query.trim());
-        if (!addresses.isEmpty()) {
-            return addresses;
-        }
         return naverLocalSearchClient.search(query.trim());
     }
 

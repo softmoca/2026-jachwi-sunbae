@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 // 유효한 SGIS access token을 제공한다. 발급한 토큰을 재사용하고 만료가 가까우면 새로 발급한다.
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public", matchIfMissing = true)
 public class SgisTokenProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(SgisTokenProvider.class);

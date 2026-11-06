@@ -20,7 +20,7 @@ Gradle은 별도로 설치하지 않는다. 저장소의 Gradle Wrapper를 사�
 cp .env.example .env
 ```
 
-기본 예시는 외부 키가 필요 없는 닉네임 인증·`demo` 지도와 로컬 MinIO 값을 포함한다. `.env`는 Git에 커밋하지 않는다.
+기본 예시는 닉네임 인증과 실제 주소 검색·로컬 MinIO 값을 포함한다. `.env`는 Git에 커밋하지 않는다.
 
 ## 3. 로컬 인프라 실행
 
@@ -174,7 +174,7 @@ npm run dev
 
 실제 네이버 지도 화면을 확인할 때는 프론트엔드 `.env.local`의 `MAP_PROVIDER_MODE`를 `naver`로 바꾸고 `NAVER_MAP_CLIENT_ID`를 설정한다.
 
-실제 주소 검색과 역지오코딩을 확인할 때는 백엔드 `.env`에 `MAP_PROVIDER_MODE=public`과
+주소 검색과 역지오코딩은 기본적으로 실제 API를 사용한다. 백엔드 `.env`에
 `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 설정하고 백엔드를 다시 실행한다.
 
 동네 찾기와 동네 검색의 건물명 검색을 확인할 때는 `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET`을 설정한다.

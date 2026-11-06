@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(name = "map.provider.mode", havingValue = "demo", matchIfMissing = true)
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "demo")
 public class DemoAddressProvider implements AddressProvider {
 
     private static final BigDecimal DEFAULT_LATITUDE = new BigDecimal("37.5665000");

@@ -105,29 +105,37 @@ class MapServiceTest {
         MapService service = service((latitude, longitude, radius, categories) -> List.of(hospital));
 
         assertInvalidQuery(() -> service.geocode(" "));
-        assertInvalidQuery(() -> service.searchAddressOrPlace(" "));
+        assertInvalidQuery(() -> service.searchPlace(" "));
         assertInvalidQuery(() -> service.reverseGeocode(new BigDecimal("91"), LONGITUDE));
         assertInvalidQuery(() -> service.nearby(LATITUDE, LONGITUDE, 700, EnumSet.allOf(MapCategory.class)));
     }
 
     @Test
-    @DisplayName("주소로 찾으면 네이버 지역 검색을 하지 않고 주소 결과를 돌려준다")
-    void searchesAddressBeforePlace() {
-        FakeLocalSearchClient localSearch = new FakeLocalSearchClient(List.of(PLACE));
-        MapService service = new MapService(new DemoAddressProvider(), noNearby(), localSearch);
-
-        assertThat(service.searchAddressOrPlace("서울 시청")).extracting(MapAddress::roadAddress)
-                .containsExactly("서울 중구 세종대로 110");
-        assertThat(localSearch.searched).isFalse();
-    }
-
-    @Test
-    @DisplayName("주소로 찾지 못하면 건물명이나 장소 이름을 네이버 지역 검색으로 찾는다")
-    void fallsBackToPlaceSearch() {
+    @DisplayName("건물명 검색은 주소 공급자를 호출하지 않고 네이버 검색 결과를 반환한다")
+    void searchesPlaceWithoutGeocoding() {
+        // given
         FakeLocalSearchClient localSearch = new FakeLocalSearchClient(List.of(PLACE));
         MapService service = new MapService(new EmptyAddressProvider(), noNearby(), localSearch);
 
-        assertThat(service.searchAddressOrPlace("우아한형제들")).containsExactly(PLACE);
+        // when
+        List<MapAddress> results = service.searchPlace("  우아한형제들  ");
+
+        // then
+        assertThat(results).containsExactly(PLACE);
+        assertThat(localSearch.searched).isTrue();
+    }
+
+    @Test
+    @DisplayName("건물명 검색 결과가 없으면 빈 목록을 반환한다")
+    void returnsEmptyPlaceResults() {
+        // given
+        MapService service = new MapService(new EmptyAddressProvider(), noNearby(), new FakeLocalSearchClient(List.of()));
+
+        // when
+        List<MapAddress> results = service.searchPlace("없는 건물");
+
+        // then
+        assertThat(results).isEmpty();
     }
 
     private static NearbyPlaceProvider noNearby() {
@@ -138,7 +146,7 @@ class MapServiceTest {
 
         @Override
         public List<MapAddress> geocode(String query) {
-            return List.of();
+            throw new AssertionError("건물명 검색에서 주소 공급자를 호출하면 안 됩니다.");
         }
 
         @Override

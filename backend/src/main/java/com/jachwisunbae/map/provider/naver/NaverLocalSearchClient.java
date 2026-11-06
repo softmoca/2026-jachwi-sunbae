@@ -29,28 +29,17 @@ public class NaverLocalSearchClient {
     private static final BigDecimal MICRO_DEGREE = new BigDecimal("10000000");
 
     private final RestClient client;
-    private final boolean configured;
 
     @Autowired
     public NaverLocalSearchClient(@Value("${map.naver.search.client-id:}") String clientId,
                                   @Value("${map.naver.search.client-secret:}") String clientSecret,
                                   @Value("${map.connect-timeout-millis:2000}") long connectTimeoutMillis,
                                   @Value("${map.read-timeout-millis:5000}") long readTimeoutMillis) {
-        this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis),
-                hasText(clientId) && hasText(clientSecret));
+        this(createClient(clientId, clientSecret, connectTimeoutMillis, readTimeoutMillis));
     }
 
     protected NaverLocalSearchClient(RestClient client) {
-        this(client, true);
-    }
-
-    private NaverLocalSearchClient(RestClient client, boolean configured) {
         this.client = client;
-        this.configured = configured;
-    }
-
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 
     private static RestClient createClient(String clientId, String clientSecret,
@@ -84,9 +73,6 @@ public class NaverLocalSearchClient {
     }
 
     private JsonNode request(String query) {
-        if (!configured) {
-            throw new UpstreamServiceException(ErrorCode.MAP_PROVIDER_UNAVAILABLE, "네이버 검색 키가 설정되지 않았습니다.");
-        }
         try {
             JsonNode root = client.get().uri(uri -> uri.path("/search/v1/local")
                             .queryParam("query", query)

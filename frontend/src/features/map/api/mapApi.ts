@@ -75,7 +75,7 @@ export const searchAddress = (config: PublicConfig, query: string, signal?: Abor
     },
   });
 
-/** 동네 찾기와 동네 검색에서 쓴다. 주소로 찾지 못하면 건물명이나 장소 이름으로 다시 찾는다. */
+/** 동네 찾기와 동네 검색에서 건물명이나 장소 이름을 네이버로 바로 검색한다. */
 export const searchAddressWithNaver = (
   config: PublicConfig,
   query: string,
