@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ALL_MAP_CATEGORIES, getMapCategoryLabel } from '@/features/map/lib/mapPresentation';
@@ -17,6 +17,8 @@ type MapNearbySheetProps = {
   /** 값이 바뀌면 시트를 제목만 보이게 내린다. 지도에서 시설을 골라 상세 카드를 띄울 때 카드를 가리지 않게 한다. */
   peekSignal?: unknown;
   onToggleCategory: (category: MapCategory) => void;
+  /** 시트 바로 위에 함께 띄울 지도 버튼(확대, 축소). 시트와 함께 오르내려 시트에 가리지 않는다. */
+  floating?: ReactNode;
 };
 
 /**
@@ -31,6 +33,7 @@ const MapNearbySheet = ({
   places,
   peekSignal,
   onToggleCategory,
+  floating,
 }: MapNearbySheetProps) => {
   // 공용 시트는 숫자가 바뀔 때 내린다. 바깥 신호가 바뀌거나 끝까지 끌어 내렸을 때 하나씩 올린다.
   const [peekCount, setPeekCount] = useState(0);
@@ -46,6 +49,7 @@ const MapNearbySheet = ({
       showCloseButton={false}
       initialHeightPercent={34}
       peekSignal={peekCount}
+      floating={floating}
       onClose={() => setPeekCount((value) => value + 1)}
     >
       <ul className={styles.summary} aria-label="주변 시설 집계와 필터">

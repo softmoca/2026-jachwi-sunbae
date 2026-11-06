@@ -14,14 +14,17 @@ import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
 import useRecords from '../hooks/useRecords';
 import useRecordsMapLayers from '../hooks/useRecordsMapLayers';
+import { recordNeighbors } from '../model/recordNavigation';
 import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
 import RecordList from '../ui/record-list/RecordList';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
+import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsDesktopMap from './RecordsDesktopMap';
 
+import * as detailStyles from './RecordsDesktopDetail.styles';
 import * as styles from './RecordsDesktopPage.styles';
 
 /**
@@ -58,10 +61,9 @@ const RecordsDesktopPage = () => {
       setNotice('매물을 만들지 못했어요. 다시 시도해 주세요.');
     },
   });
-  // 휴대폰처럼 처음 들어오면 거리 메모를 켠 채로 연다.
   const layers = useRecordsMapLayers(records, {
-    initialCategory: 'MEMO',
     registeringAt: creatingAt,
+    onRegisterNotice: setNotice,
     groupAction: 'zoom',
     onRegister: (location) => {
       if (quickCreate.isCreating) return;
@@ -90,20 +92,26 @@ const RecordsDesktopPage = () => {
     />
   );
 
+  // 상세 칸 머리의 이전, 다음은 리스트 순서대로 넘기고, 지도도 그 매물 자리로 옮긴다.
+  const neighbors = selected !== undefined ? recordNeighbors(records.records, selected.id) : null;
   const detail =
     selected !== undefined ? (
       <aside
-        className={styles.detail}
+        className={detailStyles.detail}
         aria-label="선택한 매물 상세"
         data-checklist-replacement={isReplacingChecklist || undefined}
       >
-        <div className={styles.detailScroll} key={`${selected.id}:${isReplacingChecklist}`}>
+        <div className={detailStyles.detailScroll} key={`${selected.id}:${isReplacingChecklist}`}>
           {isReplacingChecklist ? (
             <PropertyActiveChecklistPage embedded />
           ) : (
             <PropertyDetailPage
               key={selected.id}
-              panel={{ propertyId: Number(selected.id), onClose: () => setSelectedId(null) }}
+              panel={{
+                propertyId: Number(selected.id),
+                onClose: () => setSelectedId(null),
+                headerEnd: neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />,
+              }}
             />
           )}
         </div>

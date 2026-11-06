@@ -1,9 +1,5 @@
-import type { MapCategory } from '@/features/map/model/Map';
-import { formatRentSummary } from '@/features/property/lib/propertyFormat';
+import { formatPropertyPrice } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
-
-/** 본 방 기록 지도 레일에서 빼는 카테고리. 중개업소는 동네 찾기 주변 분석에서 따로 본다. */
-export const RECORDS_HIDDEN_CATEGORIES: MapCategory[] = ['AGENCY'];
 
 export const propertyArea = (address: string | null) => {
   const parts = address?.split(/\s+/) ?? [];
@@ -22,7 +18,8 @@ export const recordPresentation = (property: PropertySummary) => ({
   district: propertyArea(property.location.address),
   name: property.name,
   note: property.location.address ?? '주소 미등록',
-  price: formatRentSummary(property.depositAmount, property.monthlyRentAmount),
+  /** 지도 마커에 붙는 짧은 가격. 가격을 넣기 전에도 `월세 0/0`으로 표시한다. */
+  price: formatPropertyPrice(property.depositAmount, property.monthlyRentAmount, 'summary'),
   latitude: property.location.latitude,
   longitude: property.location.longitude,
   checklist: property.stages.find((stage) => stage.stage === 'ON_SITE') ?? null,
@@ -32,11 +29,8 @@ export const recordPresentation = (property: PropertySummary) => ({
 type RecordPoint = { latitude: number | null; longitude: number | null };
 
 /** 본 방 기록 지도 아래쪽 안내. 메모·매물을 남기는 방법과 위치 없는 기록·조회 실패를 알린다. */
-export const recordsMapHint = (
-  records: RecordPoint[],
-  { facilitiesFailed, memo }: { facilitiesFailed: boolean; memo: { isFailed: boolean } },
-) => {
-  if (facilitiesFailed || memo.isFailed) return '지도 정보를 일부 불러오지 못했어요';
+export const recordsMapHint = (records: RecordPoint[], { memo }: { memo: { isFailed: boolean } }) => {
+  if (memo.isFailed) return '지도 정보를 일부 불러오지 못했어요';
   const action = '빈 곳을 눌러 메모를 남기거나 매물을 기록해요';
   const base = records.length ? action : `아직 기록한 방이 없어요 · ${action}`;
   return records.some((record) => record.latitude === null || record.longitude === null)

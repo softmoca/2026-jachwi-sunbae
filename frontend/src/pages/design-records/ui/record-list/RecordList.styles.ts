@@ -43,6 +43,7 @@ export const comingSoon = css`
   color: #9499a2;
   font-size: 0.65rem;
   font-weight: 600;
+  white-space: nowrap;
 `;
 
 /* 툴바 오른쪽 묶음. 지금은 '필터 준비 중' 표시만 둔다. */
@@ -137,5 +138,64 @@ export const menu = css`
 
   & button:hover {
     background: #fff3f3;
+  }
+`;
+
+/* 툴바 오른쪽의 삭제 모드 버튼. 켜면 빨갛게 칠하고 글자를 '완료'로 바꾼다. */
+export const deleteToggle = css`
+  label: RecordList-deleteToggle;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #e3e5e9;
+  border-radius: 999px;
+  background: #fff;
+  color: #41444b;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &[aria-pressed='true'] {
+    border-color: #c44e4e;
+    background: #c44e4e;
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #25282d;
+    outline-offset: 3px;
+  }
+`;
+
+/* 삭제 모드에서 카드 오른쪽 위에 띄우는 삭제 버튼. 더보기(⋮) 버튼과 같은 크기라 카드 글이 좁아지지 않는다. */
+export const cardDelete = css`
+  label: RecordList-cardDelete;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #f1c9c9;
+  border-radius: 50%;
+  background: #fff3f3;
+  color: #c44e4e;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #25282d;
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 360px) {
+    width: 1.6rem;
+    height: 1.6rem;
   }
 `;

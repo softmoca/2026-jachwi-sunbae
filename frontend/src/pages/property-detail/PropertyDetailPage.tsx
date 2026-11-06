@@ -1,4 +1,5 @@
 import { css } from '@emotion/css';
+import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -41,7 +42,12 @@ const describeError = describePropertyLoadError('매물 상세를 불러오지 �
 const SAVED_FEEDBACK_MS = 2400;
 
 /** 다른 화면 옆 패널로 열 때 쓴다. 보여줄 매물과 닫기(뒤로가기·삭제 뒤)를 패널을 연 화면이 정한다. */
-export type PropertyDetailPanel = { propertyId: number; onClose: () => void };
+export type PropertyDetailPanel = {
+  propertyId: number;
+  onClose: () => void;
+  /** 머리의 제목 오른쪽에 둘 것. 본 방 기록은 앞뒤 매물로 넘기는 화살표를 둔다. */
+  headerEnd?: ReactNode;
+};
 
 type PropertyDetailViewProps = {
   propertyId: number;
@@ -206,6 +212,7 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
             </Link>
           )}
           <h1 className={styles.headerTitle}>{detail.name}</h1>
+          {panel?.headerEnd}
           <TopNavigationMenu label="매물 정보 메뉴 열기">
             <button
               ref={deleteButtonRef}

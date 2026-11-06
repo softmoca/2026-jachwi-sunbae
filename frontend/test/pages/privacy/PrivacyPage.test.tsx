@@ -4,6 +4,7 @@ import { BrowserRouter, Link, MemoryRouter, Route, Routes, useLocation, useNavig
 import { afterEach, describe, expect, it } from 'vitest';
 
 import PrivacyPage from '@/pages/privacy/PrivacyPage';
+import { resetAuthenticationForTests, setAuthentication } from '@/features/auth/model/authStore';
 
 const SourcePage = () => {
   const location = useLocation();
@@ -123,5 +124,32 @@ describe('개인정보처리방침의 수집 항목', () => {
     expect(screen.getByRole('region', { name: '안전성 확보 조치' })).toHaveTextContent(
       '로그인 유지용 쿠키를 스크립트로 읽을 수 없는 HttpOnly 쿠키로 전달하고 서버에는 원문이 아닌 해시 형태로 저장',
     );
+  });
+});
+
+describe('개인정보처리방침의 삭제 요청 메일', () => {
+  const MEMBER_NUMBER_PREFIX = encodeURIComponent('회원 번호: ');
+
+  afterEach(() => resetAuthenticationForTests());
+
+  const renderPrivacy = () =>
+    render(
+      <MemoryRouter initialEntries={['/privacy']}>
+        <TestRoutes />
+      </MemoryRouter>,
+    );
+
+  it('로그인한 상태면 삭제 요청 메일에 회원 번호를 미리 적는다', () => {
+    setAuthentication({ accessToken: 'privacy-member', tokenType: 'Bearer', memberId: 7, expiresIn: 900 });
+    renderPrivacy();
+    const mail = screen.getByRole('link', { name: '계정 및 데이터 삭제 이메일 보내기' });
+    expect(mail.getAttribute('href')).toContain(`${MEMBER_NUMBER_PREFIX}7`);
+  });
+
+  it('로그인하지 않았으면 제목만 채운 메일을 연다', () => {
+    renderPrivacy();
+    const mail = screen.getByRole('link', { name: '계정 및 데이터 삭제 이메일 보내기' });
+    expect(mail.getAttribute('href')).toMatch(/^mailto:/);
+    expect(mail.getAttribute('href')).not.toContain(MEMBER_NUMBER_PREFIX);
   });
 });

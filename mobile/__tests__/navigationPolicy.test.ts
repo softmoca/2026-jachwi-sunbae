@@ -1,3 +1,4 @@
+import { DEVELOPMENT_WEB_APP_URL, PRODUCTION_WEB_APP_URL } from '../src/config';
 import { isAllowedWebAppUrl, toWebAppUrl } from '../src/navigationPolicy';
 
 describe('navigationPolicy', () => {
@@ -10,10 +11,16 @@ describe('navigationPolicy', () => {
     expect(isAllowedWebAppUrl('http://jachwi-sunbae.kr')).toBe(false);
   });
 
-  it('앱 딥 링크를 운영 웹 경로로 변환한다', () => {
-    expect(toWebAppUrl('jachwisunbae://properties/10?from=push#photo')).toBe(
-      'https://www.jachwi-sunbae.kr/properties/10?from=push#photo',
-    );
+  it('앱 딥 링크를 지금 환경 웹 경로로 변환한다', () => {
+    expect(
+      toWebAppUrl(
+        'jachwisunbae://properties/10?from=push#photo',
+        PRODUCTION_WEB_APP_URL,
+      ),
+    ).toBe('https://www.jachwi-sunbae.kr/properties/10?from=push#photo');
+    expect(
+      toWebAppUrl('jachwisunbae://properties/10', DEVELOPMENT_WEB_APP_URL),
+    ).toBe('https://dev.jachwi-sunbae.kr/properties/10');
     expect(toWebAppUrl('https://jachwi-sunbae.kr/properties/10')).toBeNull();
     expect(toWebAppUrl('not-a-url')).toBeNull();
   });

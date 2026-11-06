@@ -11,7 +11,7 @@ type BusStopResult = Awaited<ReturnType<typeof fetchBusStops>>;
 type BusStop = BusStopResult['busStops'][number];
 
 /**
- * 지도 화면 안의 버스정류장. 화면을 덮는 칸(`viewportTiles`)마다 조회해 겹치는 정류장은 하나로 합치고 화면 안의 것만 남긴다.
+ * 지도 화면 안의 버스정류장. 화면을 덮는 격자 칸(`facilityCells`)마다 조회해 겹치는 정류장은 하나로 합치고 화면 안의 것만 남긴다.
  * 지도를 옮겨 새 칸을 조회하는 동안에는 이전 정류장을 그대로 둬, 정류장이 사라졌다 나타나지 않게 한다.
  */
 export const useViewportBusStops = (tiles: ViewportQuery[], bounds: MapBounds | null, enabled = true) => {

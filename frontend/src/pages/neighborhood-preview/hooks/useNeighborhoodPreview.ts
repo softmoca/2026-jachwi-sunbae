@@ -5,12 +5,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/features/auth/api/apiClient';
 import { type CommuteArea, commuteAreaToRegion } from '@/features/map/api/commuteApi';
 import { fetchCommuteRoute } from '@/features/map/api/commuteRouteApi';
-import { reverseGeocode, searchAddress } from '@/features/map/api/mapApi';
+import { reverseGeocode, searchAddressWithNaver } from '@/features/map/api/mapApi';
 import { useCommuteAreas } from '@/features/map/api/useCommuteAreas';
 import { usePrefetchMetroBoundaries } from '@/features/map/api/usePrefetchMetroBoundaries';
 import { writeCommuteDestination } from '@/features/map/lib/commuteDestinationStore';
 import { readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import { MapLocationError } from '@/features/map/lib/mapLocation';
+import { distanceMeters } from '@/features/map/lib/mapViewportQuery';
 import type { MapAddress } from '@/features/map/model/Map';
 import { MAX_MAP_LEVEL, MIN_MAP_LEVEL } from '@/features/map/ui/map-zoom-control/MapZoomControl';
 import { completeExploration, startExploration } from '@/features/onboarding/lib/explorationJourney';
@@ -20,6 +21,7 @@ import {
   HOME_PATH,
   neighborhoodAreaDetailsPath,
   neighborhoodAreaPath,
+  type NeighborhoodBasePath,
   NEIGHBORHOODS_PATH,
 } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
@@ -71,7 +73,7 @@ const useNeighborhoodPreview = () => {
   const [addressResults, setAddressResults] = useState<MapAddress[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const mapPath = isPublicExplore ? EXPLORE_PATH : NEIGHBORHOODS_PATH;
+  const mapPath: NeighborhoodBasePath = isPublicExplore ? EXPLORE_PATH : NEIGHBORHOODS_PATH;
   // 첫 화면이 곧 지도라 돌아갈 탐색 기준 선택 화면이 없다. 들어온 화면으로 돌아가고, 직접 들어왔으면 홈으로 간다.
   const leave = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
   const [phase, setPhase] = useState<'map' | 'conditions' | 'analyzing'>(restoredSearch ? 'analyzing' : 'map');
@@ -79,6 +81,8 @@ const useNeighborhoodPreview = () => {
   const [mapCandidate, setMapCandidate] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [selectionCenter, setSelectionCenter] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [selectionLevel, setSelectionLevel] = useState(6);
+  // 장소를 고르는 지도에서 손가락이나 휠로 옮긴 시점. 다시 그리지 않고 기억만 했다가 확대·축소 버튼을 누르면 이 자리에서 옮긴다.
+  const selectionView = useRef<{ latitude: number; longitude: number; level: number } | null>(null);
   const resultView = useRef<{ latitude: number; longitude: number; level: number } | null>(null);
   // 화면(휴대폰, 데스크탑)이 알려 주는 결과 지도 칸 크기와 가리는 여백. 동네나 출발 정류장을 고를 때 시점을 그 칸에 맞춘다.
   const mapViewportReader = useRef<(() => MapViewport | null) | null>(null);
@@ -143,6 +147,15 @@ const useNeighborhoodPreview = () => {
     () =>
       allAreas?.filter((area) => maxRent === 0 || (area.rent !== null && area.rent.monthlyRentKrw <= maxRent * 10000)),
     [allAreas, maxRent],
+  );
+  const sortedAreas = useMemo(
+    () =>
+      [...(areas ?? [])].sort(
+        (left, right) =>
+          left.commuteMinutes - right.commuteMinutes ||
+          distanceMeters(destination, left.center) - distanceMeters(destination, right.center),
+      ),
+    [areas, destination],
   );
   const analytics = useNeighborhoodAnalytics({
     mock: isMockData,
@@ -264,6 +277,8 @@ const useNeighborhoodPreview = () => {
     },
     missingBoundaryCount: areas?.filter((area) => area.polygons.length === 0).length ?? 0,
     topAreas: areas?.slice(0, 5) ?? [],
+    /** 이번 검색으로 받은 동네(월세 조건까지 맞는 동네) 전체. 통근 시간 짧은 순, 같으면 출퇴근 장소에서 가까운 순이다. */
+    resultAreas: sortedAreas,
     /** 월세 조건까지 맞는 동네 수. 지도의 회색(월세 조건 밖) 동네는 세지 않는다. */
     matchedAreaCount: areas?.length ?? 0,
     selectedStation,
@@ -296,6 +311,20 @@ const useNeighborhoodPreview = () => {
     },
     selectionCenter,
     selectionLevel,
+    rememberSelectionCenter: (latitude: number, longitude: number) => {
+      selectionView.current = { latitude, longitude, level: selectionView.current?.level ?? selectionLevel };
+    },
+    rememberSelectionLevel: (level: number) => {
+      selectionView.current = { ...(selectionView.current ?? selectionCenter), level };
+    },
+    /** 장소를 고르는 지도의 확대(-1), 축소(+1) 버튼. 지금 보이는 자리를 가운데 둔 채 한 단계 옮긴다. */
+    zoomSelectionBy: (delta: -1 | 1) => {
+      const current = selectionView.current ?? { ...selectionCenter, level: selectionLevel };
+      const level = Math.max(MIN_MAP_LEVEL, Math.min(MAX_MAP_LEVEL, current.level + delta));
+      selectionView.current = { latitude: current.latitude, longitude: current.longitude, level };
+      setSelectionCenter((previous) => ({ ...previous, latitude: current.latitude, longitude: current.longitude }));
+      setSelectionLevel(level);
+    },
     rememberResultCenter: (latitude: number, longitude: number) => {
       resultView.current = { latitude, longitude, level: resultView.current?.level ?? RESULT_OVERVIEW_LEVEL };
     },
@@ -345,7 +374,7 @@ const useNeighborhoodPreview = () => {
       setIsSearching(true);
       setSearchError(null);
       try {
-        const results = await searchAddress(config, query.trim());
+        const results = await searchAddressWithNaver(config, query.trim());
         if (intent !== locationIntent.current) return;
         setAddressResults(results);
         if (!results.length) setSearchError('검색 결과가 없어요. 주소를 더 자세히 입력해 주세요.');
@@ -449,12 +478,18 @@ const useNeighborhoodPreview = () => {
     },
     regions,
     selected,
-    selectRegion: (id: string | null, options?: { openDetails?: boolean }) => {
+    selectRegion: (id: string | null, options?: { openDetails?: boolean; focus?: 'route' | 'area' }) => {
       // 회색(월세 조건 밖) 동네도 지도에서 고를 수 있어 받은 동네 전체에서 찾는다.
       const area = allAreas?.find((area) => area.adminDongCode === id);
       if (area) analytics.selectArea();
-      // 동네 경계와 첫 출발 정류장, 출퇴근 장소까지 통근 경로 전체가 한 화면에 들어오게 옮긴다.
-      if (area) resultView.current = areaRouteView(area, destination, readMapViewport());
+      // 기본은 동네 경계와 첫 출발 정류장, 출퇴근 장소까지 통근 경로 전체가 한 화면에 들어오게 옮긴다.
+      // 데스크탑 동네 목록에서 고르면(`area`) 그 행정동 경계만 화면에 들어오게 옮긴다.
+      if (area)
+        resultView.current =
+          options?.focus === 'area'
+            ? routeFocusView([area.center], area.polygons, readMapViewport())
+            : areaRouteView(area, destination, readMapViewport());
+      setResultViewVersion((version) => version + 1);
       setSelectedId(id);
       setSelectedStopId(area?.stations[0]?.stopId ?? null);
       // 데스크탑은 상세를 목록 옆에 붙여 지도를 가리지 않으므로, 동네를 고르면 바로 상세를 연다.
@@ -462,6 +497,21 @@ const useNeighborhoodPreview = () => {
       if (id) navigate(openDetails ? neighborhoodAreaDetailsPath(mapPath, id) : neighborhoodAreaPath(mapPath, id));
       // 선택을 풀면 동네 주소에서 지도 주소로 돌아가야 주소의 동네가 다시 골라지지 않는다.
       else if (routeAreaId) navigate(mapPath, { replace: true });
+    },
+    /** 지도에서 마커를 누르면 확대 단계는 그대로 두고 그 마커 자리를 가운데로 옮긴다. */
+    focusPoint: (point: { latitude: number; longitude: number }) => {
+      resultView.current = {
+        latitude: point.latitude,
+        longitude: point.longitude,
+        level: resultView.current?.level ?? resultLevel,
+      };
+      setResultViewVersion((version) => version + 1);
+    },
+    /** 점들이 가려지지 않은 지도 칸에 모두 들어오게 옮긴다(`My`를 켰을 때 내 매물 전체). 한 점이면 동네를 볼 때의 가까운 단계로 둔다. */
+    fitPoints: (points: { latitude: number; longitude: number }[]) => {
+      if (!points.length) return;
+      resultView.current = routeFocusView(points, [], readMapViewport());
+      setResultViewVersion((version) => version + 1);
     },
     /** 출발 정류장(경로)을 고르면 그 정류장부터 출퇴근 장소까지 경로 전체가 한 화면에 들어오게 옮긴다. */
     focusRoute: (station: { latitude: number; longitude: number }) => {
@@ -480,6 +530,7 @@ const useNeighborhoodPreview = () => {
       if (selected) navigate(neighborhoodAreaPath(mapPath, selected.adminDongCode), { replace: true });
     },
     openListing: analytics.openListing,
+    toggleMapCategory: analytics.toggleMapCategory,
     /** 결과 지도 칸 크기와 가리는 여백을 읽는 함수를 둔다. 화면이 지도 칸을 그린 뒤 한 번 넣는다. */
     setMapViewportReader: (reader: (() => MapViewport | null) | null) => {
       mapViewportReader.current = reader;

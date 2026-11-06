@@ -1,8 +1,8 @@
 import { css, cx } from '@emotion/css';
 
-import { formatManwon } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
 import mascotImage from '@/shared/assets/jachwi-sunbae-goose.webp';
 import mascotImage2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
 import SelectionControl from '@/shared/ui/selection-control/SelectionControl';
@@ -52,9 +52,11 @@ const ComparePropertyOption = ({ property, isSelected, isDisabled, onToggle }: C
     </span>
     <span className={styles.propertyInfo}>
       <strong>{property.name}</strong>
-      <span>
-        보증금 {formatManwon(property.depositAmount)} / 월세 {formatManwon(property.monthlyRentAmount)}
-      </span>
+      <PropertyPrice
+        depositAmount={property.depositAmount}
+        monthlyRentAmount={property.monthlyRentAmount}
+        variant="labeled"
+      />
       {property.discoverySource.value.length > 0 && <span>발견 경로 · {property.discoverySource.value}</span>}
       <StageOverview property={property} />
     </span>

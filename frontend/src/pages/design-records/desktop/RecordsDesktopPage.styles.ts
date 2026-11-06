@@ -40,17 +40,6 @@ export const list = css`
   background: white;
 `;
 
-/* 매물 등록·상세는 자체 여백을 가지므로 칸에는 스크롤만 둔다. */
-export const detail = css`
-  label: RecordsDesktopPage-detail;
-  min-height: 0;
-  overflow: hidden;
-  background: white;
-  &[data-checklist-replacement='true'] {
-    transform: translateZ(0);
-  }
-`;
-
 export const headerSearch = css`
   label: RecordsDesktopPage-headerSearch;
   max-width: 32rem;
@@ -67,10 +56,4 @@ export const notice = css`
   bottom: 1.5rem;
   left: auto;
   width: 22rem;
-`;
-
-export const detailScroll = css`
-  label: RecordsDesktopPage-detailScroll;
-  height: 100%;
-  overflow-y: auto;
 `;

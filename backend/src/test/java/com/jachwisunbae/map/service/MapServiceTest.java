@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
+import com.jachwisunbae.map.domain.MapAddress;
 import com.jachwisunbae.map.domain.NearbyPlace;
+import com.jachwisunbae.map.provider.AddressProvider;
 import com.jachwisunbae.map.provider.NearbyPlaceProvider;
 import com.jachwisunbae.map.provider.demo.DemoAddressProvider;
+import com.jachwisunbae.map.provider.naver.NaverLocalSearchClient;
 import com.jachwisunbae.map.service.dto.result.NearbyResult;
 import com.jachwisunbae.map.type.MapCategory;
 import java.math.BigDecimal;
@@ -20,11 +23,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 class MapServiceTest {
 
     private static final BigDecimal LATITUDE = new BigDecimal("37.406");
     private static final BigDecimal LONGITUDE = new BigDecimal("127.088");
+    private static final MapAddress PLACE = new MapAddress("서울특별시 송파구 위례성대로 2", "서울특별시 송파구 방이동 44-2",
+            new BigDecimal("37.5165"), new BigDecimal("127.1123"));
 
     private final NearbyPlace hospital = place("kakao:2", "판교병원", MapCategory.HOSPITAL);
     private final NearbyPlace school = place("kakao:3", "판교초등학교", MapCategory.SCHOOL);
@@ -99,8 +105,71 @@ class MapServiceTest {
         MapService service = service((latitude, longitude, radius, categories) -> List.of(hospital));
 
         assertInvalidQuery(() -> service.geocode(" "));
+        assertInvalidQuery(() -> service.searchPlace(" "));
         assertInvalidQuery(() -> service.reverseGeocode(new BigDecimal("91"), LONGITUDE));
         assertInvalidQuery(() -> service.nearby(LATITUDE, LONGITUDE, 700, EnumSet.allOf(MapCategory.class)));
+    }
+
+    @Test
+    @DisplayName("건물명 검색은 주소 공급자를 호출하지 않고 네이버 검색 결과를 반환한다")
+    void searchesPlaceWithoutGeocoding() {
+        // given
+        FakeLocalSearchClient localSearch = new FakeLocalSearchClient(List.of(PLACE));
+        MapService service = new MapService(new EmptyAddressProvider(), noNearby(), localSearch);
+
+        // when
+        List<MapAddress> results = service.searchPlace("  우아한형제들  ");
+
+        // then
+        assertThat(results).containsExactly(PLACE);
+        assertThat(localSearch.searched).isTrue();
+    }
+
+    @Test
+    @DisplayName("건물명 검색 결과가 없으면 빈 목록을 반환한다")
+    void returnsEmptyPlaceResults() {
+        // given
+        MapService service = new MapService(new EmptyAddressProvider(), noNearby(), new FakeLocalSearchClient(List.of()));
+
+        // when
+        List<MapAddress> results = service.searchPlace("없는 건물");
+
+        // then
+        assertThat(results).isEmpty();
+    }
+
+    private static NearbyPlaceProvider noNearby() {
+        return (latitude, longitude, radius, categories) -> List.of();
+    }
+
+    private static class EmptyAddressProvider implements AddressProvider {
+
+        @Override
+        public List<MapAddress> geocode(String query) {
+            throw new AssertionError("건물명 검색에서 주소 공급자를 호출하면 안 됩니다.");
+        }
+
+        @Override
+        public MapAddress reverseGeocode(BigDecimal latitude, BigDecimal longitude) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static class FakeLocalSearchClient extends NaverLocalSearchClient {
+
+        private final List<MapAddress> places;
+        private boolean searched;
+
+        FakeLocalSearchClient(List<MapAddress> places) {
+            super((RestClient) null);
+            this.places = places;
+        }
+
+        @Override
+        public List<MapAddress> search(String query) {
+            searched = true;
+            return places;
+        }
     }
 
     private static void assertInvalidQuery(ThrowingCallable call) {
@@ -110,7 +179,7 @@ class MapServiceTest {
     }
 
     private MapService service(NearbyPlaceProvider nearbyPlaceProvider) {
-        return new MapService(new DemoAddressProvider(), nearbyPlaceProvider);
+        return new MapService(new DemoAddressProvider(), nearbyPlaceProvider, null);
     }
 
     private static NearbyPlace place(String id, String name, MapCategory category) {

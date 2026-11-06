@@ -38,14 +38,14 @@ const MapZoomControl = ({ level, onChange, className }: Props) => (
 );
 
 const styles = {
-  /* 현재 위치 버튼과 같은 흰 바탕·그림자로, 가로 두 칸을 한 덩어리로 묶는다. */
+  /* 현재 위치 버튼과 같은 흰 바탕, 그림자로, 세로 두 칸을 한 덩어리로 묶는다. 지도 레일, 현재 위치 버튼과 같은 폭이다. */
   control: css`
     label: MapZoomControl-control;
     position: absolute;
     z-index: 12;
     display: grid;
-    grid-auto-flow: column;
-    align-items: center;
+    grid-auto-flow: row;
+    justify-items: center;
     overflow: hidden;
     border-radius: 1.325rem;
     background: #fff;
@@ -77,8 +77,8 @@ const styles = {
 
   divider: css`
     label: MapZoomControl-divider;
-    width: 1px;
-    height: 1.4rem;
+    width: 1.4rem;
+    height: 1px;
     background: #e6e7ea;
   `,
 };
