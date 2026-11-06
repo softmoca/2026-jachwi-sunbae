@@ -4,6 +4,7 @@ import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
 
 import { getPropertyErrorMessage } from '../../api/propertyErrorMessages';
 import { useAuthenticatedPhoto } from '../../api/useAuthenticatedPhoto';
+import { isExampleProperty } from '../../model/exampleProperty';
 
 type AuthenticatedPhotoProps = {
   propertyId: number;
@@ -14,7 +15,7 @@ type AuthenticatedPhotoProps = {
   errorMode?: 'message' | 'retry-only';
 };
 
-const AuthenticatedPhoto = ({
+const RemotePhoto = ({
   propertyId,
   photoId,
   contentUrl,
@@ -106,5 +107,12 @@ injectGlobal`
   text-decoration: none;
 }
 `;
+
+const AuthenticatedPhoto = (props: AuthenticatedPhotoProps) =>
+  isExampleProperty(props.propertyId) ? (
+    <img className={`authenticated-photo__image ${props.className ?? ''}`} src={props.contentUrl} alt={props.alt} />
+  ) : (
+    <RemotePhoto {...props} />
+  );
 
 export default AuthenticatedPhoto;
