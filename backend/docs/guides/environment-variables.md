@@ -35,10 +35,8 @@ Spring Boot 애플리케이션은 CORS 허용 Origin과 인증·저장소 설정
 | `JUSO_CONFIRM_KEY`           | 비움                    | `public` 모드의 행정안전부 도로명주소 검색 API 승인키                                    |
 | `SGIS_CONSUMER_KEY`          | 비움                    | `public` 모드의 국가데이터처 SGIS 서비스 ID                                              |
 | `SGIS_CONSUMER_SECRET`       | 비움                    | `public` 모드의 국가데이터처 SGIS 보안키. 백엔드 전용으로 관리한다                       |
-| `NAVER_MAP_CLIENT_ID`        | 비움                    | 네이버 검색(`/api/maps/search`)의 NCP Application Client ID                              |
-| `NAVER_MAP_CLIENT_SECRET`    | 비움                    | 네이버 검색의 NCP Application Client Secret. 백엔드 전용으로 관리한다                    |
-| `NAVER_SEARCH_CLIENT_ID`     | 지도 키                 | 건물명 검색용 NCP Application Client ID. 비우면 `NAVER_MAP_CLIENT_ID`를 쓴다             |
-| `NAVER_SEARCH_CLIENT_SECRET` | 지도 키                 | 건물명 검색용 Client Secret. 백엔드 전용으로 관리한다                                    |
+| `NAVER_SEARCH_CLIENT_ID`     | 비움                    | 건물명 검색(NAVER API HUB 지역 검색)용 NCP Application Client ID                         |
+| `NAVER_SEARCH_CLIENT_SECRET` | 비움                    | 건물명 검색용 Client Secret. 백엔드 전용으로 관리한다                                    |
 | `MAP_NEARBY_PROVIDER`        | `demo`                  | `demo` 또는 `kakao` 주변 시설 adapter 선택. 비우면 `demo`로 동작한다                     |
 | `KAKAO_REST_API_KEY`         | 비움                    | `kakao` 모드의 Kakao Developers REST API 키. 백엔드 전용으로 관리한다                    |
 | `MAP_CONNECT_TIMEOUT_MILLIS` | `2000`                  | 지도 외부 공급자 연결 제한 시간                                                          |
@@ -83,9 +81,8 @@ DB 접속값과 `JWT_SECRET`, `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CON
 `JUSO_CONFIRM_KEY`는 유효기간 90일 승인키이며 2026-12-25에 만료된다.
 
 `MAP_PROVIDER_MODE`는 `demo` 또는 `public`만 사용할 수 있다. `public` 모드에 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
-네이버 검색은 모드와 관계없이 동네 찾기와 동네 검색에서 쓴다. 네이버 키가 없어도 애플리케이션은 시작하고, 그 검색만 `MAP_PROVIDER_UNAVAILABLE`로 실패한다.
-NCP 콘솔의 Application 설정에서 Geocoding을 선택해 두어야 한다. 선택하지 않으면 429 응답을 받는다.
-장소 이름 검색은 NAVER API HUB 지역 검색을 호출한다. 검색 API를 구독한 Application의 키를 `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET`에 넣고, 비우면 지도 키를 그대로 쓴다.
+동네 찾기와 동네 검색은 주소로 찾지 못하면 네이버 지역 검색으로 건물명을 찾는다. 검색 키가 없어도 애플리케이션은 시작하고, 건물명 검색까지 가야 하는 요청만 `MAP_PROVIDER_UNAVAILABLE`로 실패한다.
+검색 키는 NAVER API HUB 검색(지역)을 구독한 NCP Application의 키를 넣는다.
 착한가격업소 적재 스크립트도 주소를 좌표로 바꿀 때 같은 `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 사용한다. 스크립트는 개발자 PC에서 실행하므로 서버 환경변수에는 추가하지 않는다.
 
 `MAP_NEARBY_PROVIDER`를 빠뜨리면 오류 없이 `demo` 주변 시설 (가짜 데이터)로 동작하므로 dev·prod에는 반드시 `kakao`를 넣는다.
@@ -93,7 +90,7 @@ Kakao Developers 앱에 허용 IP를 설정했다면 서버가 외부로 나가�
 
 AWS S3는 EC2 `ec2-project` instance role로 접근하므로 `PHOTO_STORAGE_ENDPOINT`, `PHOTO_STORAGE_ACCESS_KEY`,
 `PHOTO_STORAGE_SECRET_KEY`를 EC2에 두지 않는다. 이 세 값은 로컬 MinIO에만 사용한다. 프론트엔드에는 지도 화면용 공개 Naver Maps Client ID만 빌드 타임에 주입한다.
-백엔드는 동네 찾기와 동네 검색의 주소, 건물명 검색에 네이버 API를 사용한다. Client Secret은 백엔드 환경변수에만 둔다.
+백엔드는 동네 찾기와 동네 검색의 건물명 검색에만 네이버 API를 사용한다. Client Secret은 백엔드 환경변수에만 둔다.
 
 `src/main/resources/db/migration/V1__initial_schema.sql`은 기존 스키마와 시스템 체크 항목을 고정한 최초 마이그레이션이다.
 백엔드 기동 시 Flyway가 아직 적용하지 않은 버전을 실행한다. 현재 목록은 V1–V5이며 새 변경은 적용 이력과 다른 브랜치의 버전을 확인한 뒤 미사용 버전으로 추가한다.
