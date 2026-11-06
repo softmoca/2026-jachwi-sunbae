@@ -1,5 +1,5 @@
 ALTER TABLE system_check_items
-    ADD COLUMN category VARCHAR(30) NOT NULL DEFAULT 'OTHER';
+    ADD COLUMN category VARCHAR(30) NOT NULL DEFAULT 'OTHER' AFTER item_type;
 
 -- 기존 제공 항목은 참조와 기록을 보존한 채 신규 선택에서 제외한다.
 -- 계약 전 항목은 다시 등록하지 않는다. 공통 stage 컬럼과 제약조건은 유지한다.

@@ -50,6 +50,12 @@ class ChecklistCatalogMigrationIntegrationTest {
 
         var items = repository.findActiveByStage(CheckStage.ON_SITE, null);
 
+        assertThat(jdbcTemplate.queryForList("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'system_check_items'
+                ORDER BY ordinal_position
+                """, String.class)).containsExactly(
+                        "id", "stage", "item_type", "category", "question", "display_order", "created_at", "deleted_at");
         assertThat(items).extracting(SystemCheckItem::getQuestion, SystemCheckItem::getCategory).containsExactly(
                 tuple("현관문 잠금장치 잘 작동하는지", CheckItemCategory.SECURITY),
                 tuple("공동 현관 출입 통제되는지", CheckItemCategory.SECURITY),
