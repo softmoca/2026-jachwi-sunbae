@@ -157,6 +157,7 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
               <LocationControls
                 preview={preview}
                 isResult={false}
+                className={styles.railControls}
                 zoom={{ level: preview.selectionLevel, onZoom: preview.zoomSelectionBy }}
               />
               {!preview.hasChosenMapPoint && !preview.query.trim() && preview.addressResults.length === 0 && (

@@ -49,30 +49,13 @@ export const topAreaRail = css`
 
 export const locationControls = css`
   label: NeighborhoodPreviewPage-locationControls;
-
-  .NeighborhoodPreviewPage-page[data-public-explore='true'] &[data-result='true'] {
-    bottom: calc(env(safe-area-inset-bottom) + 15rem);
-  }
-
-  & {
-    position: absolute;
-    bottom: calc(var(--map-sheet-bottom, 0px) + 10.5rem);
-    right: 0.85rem;
-    z-index: 30;
-  }
-
-  &[data-result='true'] {
-    bottom: calc(var(--map-sheet-bottom, 0px) + 13rem);
-  }
-
-  /* 조건 칸 아래 피커(132px)와 그 간격만큼 카드가 높아진다. */
-  &[data-filter-open='true'] {
-    bottom: calc(var(--map-sheet-bottom, 0px) + 10.5rem + 132px + 0.75rem);
-  }
-
-  /* 바텀시트 위에 붙이면 시트가 자리를 정한다. */
+  position: absolute;
+  top: 5rem;
+  right: 0.85rem;
+  z-index: 30;
   .NeighborhoodPreviewPage-page &[data-docked='true'] {
     position: relative;
+    top: auto;
     right: auto;
     bottom: auto;
   }

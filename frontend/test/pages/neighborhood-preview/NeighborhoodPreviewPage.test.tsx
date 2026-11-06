@@ -287,13 +287,18 @@ it('탐색 기준 선택 화면 없이 바로 지도에서 통근·환승·월�
   expect(sheet.getByLabelText('탐색 조건')).toBeInTheDocument();
   expect(sheet.getByRole('button', { name: '지도에서 출퇴근 장소를 골라 주세요' })).toBeDisabled();
 });
-it('검색창 뒤로가기는 들어온 화면으로 돌아가고, 주소로 바로 들어왔으면 홈으로 간다', async () => {
-  const view = show(false, ['/guide', '/neighborhoods']);
-  await userEvent.click(screen.getByRole('button', { name: '뒤로 가기' }));
-  expect(await screen.findByRole('heading', { name: '사용 방법' })).toBeInTheDocument();
-  view.unmount();
+it.each([
+  [false, ['/guide', '/neighborhoods']],
+  [false, ['/', '/neighborhoods', '/neighborhoods/areas/1168064000']],
+  [true, ['/', '/explore', '/explore/areas/1168064000']],
+])('홈 버튼은 진입 이력이나 내부 동네 이동과 관계없이 홈으로 간다 (%s, %s)', async (isPublic, entries) => {
+  show(isPublic, entries);
+  await userEvent.click(screen.getByRole('button', { name: '홈으로 돌아가기' }));
+  expect(await screen.findByRole('heading', { name: '홈' })).toBeInTheDocument();
+});
+it('주소로 바로 들어와도 홈 버튼으로 홈에 간다', async () => {
   show(true);
-  await userEvent.click(screen.getByRole('button', { name: '뒤로 가기' }));
+  await userEvent.click(screen.getByRole('button', { name: '홈으로 돌아가기' }));
   expect(await screen.findByRole('heading', { name: '홈' })).toBeInTheDocument();
 });
 const useDesktopViewport = () =>

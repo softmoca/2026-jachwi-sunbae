@@ -24,7 +24,6 @@ import {
   type NeighborhoodBasePath,
   NEIGHBORHOODS_PATH,
 } from '@/shared/lib/navigation/appPaths';
-import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 
 import { commuteBand, commuteColor, OUT_OF_RENT_COLOR, OUT_OF_RENT_DRAW_STAGE } from '../model/commuteColors';
 import { readNeighborhoodSearch, writeNeighborhoodSearch } from '../model/neighborhoodSearchSession';
@@ -74,8 +73,8 @@ const useNeighborhoodPreview = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const mapPath: NeighborhoodBasePath = isPublicExplore ? EXPLORE_PATH : NEIGHBORHOODS_PATH;
-  // 첫 화면이 곧 지도라 돌아갈 탐색 기준 선택 화면이 없다. 들어온 화면으로 돌아가고, 직접 들어왔으면 홈으로 간다.
-  const leave = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
+  // 동네 선택도 방문 이력에 쌓이므로, 홈 아이콘은 이전 동네가 아닌 홈으로 바로 이동한다.
+  const leave = () => void navigate(HOME_PATH);
   const [phase, setPhase] = useState<'map' | 'conditions' | 'analyzing'>(restoredSearch ? 'analyzing' : 'map');
   const [destination, setDestination] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
   const [mapCandidate, setMapCandidate] = useState(restoredSearch?.destination ?? PREVIEW_DESTINATION);
