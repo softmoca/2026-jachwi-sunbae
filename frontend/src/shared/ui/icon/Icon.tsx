@@ -25,6 +25,7 @@ import {
   MoreVerticalIcon,
   PlusIcon,
   RefreshIcon,
+  ReplaceIcon,
   SearchIcon,
   TargetIcon,
   TrashIcon,
@@ -58,6 +59,7 @@ export type IconName =
   | 'more-vertical'
   | 'plus'
   | 'refresh'
+  | 'replace'
   | 'search'
   | 'target'
   | 'trash'
@@ -97,6 +99,7 @@ const iconComponents: Record<IconName, ComponentType<IconComponentProps>> = {
   'more-vertical': MoreVerticalIcon,
   plus: PlusIcon,
   refresh: RefreshIcon,
+  replace: ReplaceIcon,
   search: SearchIcon,
   target: TargetIcon,
   trash: TrashIcon,

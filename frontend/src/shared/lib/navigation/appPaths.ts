@@ -11,6 +11,11 @@ export const HOME_PATH = '/';
 /** 본 방 기록(지도·리스트) 화면. */
 export const RECORDS_PATH = '/properties';
 export const CHECKLISTS_PATH = '/checklists';
+export const CHECKLIST_CREATE_PATH = `${CHECKLISTS_PATH}/new`;
+export const CHECKLIST_PROPERTY_ID_PARAM = 'propertyId';
+export const propertyChecklistCreatePath = (propertyId: number) =>
+  `${CHECKLIST_CREATE_PATH}?${CHECKLIST_PROPERTY_ID_PARAM}=${propertyId}`;
+export const checklistDetailPath = (checklistId: number) => `${CHECKLISTS_PATH}/${checklistId}`;
 export const MY_PATH = '/me';
 export const COMPARE_PATH = '/compare';
 /** 저렴한 한 끼. 탭마다 주소가 따로 있고(`/cheap-meals/restaurant` 등), 탭 없이 들어오면 마지막으로 연 탭(처음이면 식당 탭) 주소로 바꾼다. */
@@ -42,7 +47,9 @@ export const ROUTE_PATTERNS = {
   propertyMemo: '/properties/:propertyId/memo',
   propertyNearby: '/properties/:propertyId/nearby',
   propertyActiveChecklist: '/properties/:propertyId/active-checklists/:stage',
+  propertyActiveChecklistChild: 'active-checklists/:stage',
   propertyChecklist: '/properties/:propertyId/checklists/:propertyChecklistId',
+  checklistDetail: '/checklists/:checklistId',
   legacyChecklists: '/checklists/*',
   legacyMap: '/map/:propertyId?',
   legacyExploreCommute: '/explore/commute/*',
@@ -57,6 +64,8 @@ export const ROUTE_PATTERNS = {
 type PathId = number | string;
 
 export const propertyDetailPath = (propertyId: PathId) => `${RECORDS_PATH}/${propertyId}`;
+export const propertyChecklistTabPath = (propertyId: PathId) =>
+  `${propertyDetailPath(propertyId)}?${PROPERTY_DETAIL_TAB_PARAM}=checklist`;
 export const propertyEditPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/edit`;
 export const propertyPhotosPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/photos`;
 export const propertyMemoPath = (propertyId: PathId) => `${propertyDetailPath(propertyId)}/memo`;

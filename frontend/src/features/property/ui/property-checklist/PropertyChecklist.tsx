@@ -1,6 +1,9 @@
 import { css } from '@emotion/css';
 import { useId } from 'react';
 
+import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
+import { propertyActiveChecklistPath } from '@/shared/lib/navigation/appPaths';
+import { ButtonLink } from '@/shared/ui/button/Button';
 import Icon from '@/shared/ui/icon/Icon';
 
 import { groupPropertyChecklistItems } from '../../lib/propertyChecklistGroups';
@@ -10,9 +13,16 @@ import PropertyChecklistItemControl from './PropertyChecklistItemControl';
 type PropertyChecklistProps = {
   readonly propertyId: number;
   readonly detail: PropertyChecklistDetail;
+  readonly replaceNavigation?: boolean;
+  readonly fromPropertyDetail?: boolean;
 };
 
-const PropertyChecklist = ({ propertyId, detail }: PropertyChecklistProps) => {
+const PropertyChecklist = ({
+  propertyId,
+  detail,
+  replaceNavigation = false,
+  fromPropertyDetail = true,
+}: PropertyChecklistProps) => {
   const id = useId();
   const completedCount = detail.items.filter((item) => item.status !== 'UNCONFIRMED').length;
   const groups = groupPropertyChecklistItems(detail.items, detail.stage);
@@ -20,7 +30,22 @@ const PropertyChecklist = ({ propertyId, detail }: PropertyChecklistProps) => {
   return (
     <section className={styles.checklist} aria-labelledby={`${id}-title`}>
       <header className={styles.header}>
-        <h2 id={`${id}-title`}>사용자 체크리스트</h2>
+        <div className={styles.titleRow}>
+          <h2 id={`${id}-title`}>사용자 체크리스트</h2>
+          {detail.stage === USER_CHECKLIST_STAGE && (
+            <ButtonLink
+              variant="text"
+              className={styles.replaceAction}
+              to={`${propertyActiveChecklistPath(propertyId, detail.stage)}?mode=replace`}
+              replace={replaceNavigation}
+              state={fromPropertyDetail ? { from: 'property-detail' } : undefined}
+              aria-label="사용자 체크리스트 교체"
+            >
+              <Icon name="replace" size={14} />
+              교체
+            </ButtonLink>
+          )}
+        </div>
         <span role="status">
           <span aria-hidden="true">
             {completedCount}/{detail.items.length}
@@ -68,7 +93,7 @@ const styles = {
   header: css`
     label: PropertyChecklist-header;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
     & h2 {
@@ -81,6 +106,27 @@ const styles = {
       color: var(--color-muted);
       font-size: 0.8125rem;
       font-variant-numeric: tabular-nums;
+    }
+  `,
+  titleRow: css`
+    label: PropertyChecklist-titleRow;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+  `,
+  replaceAction: css`
+    label: PropertyChecklist-replaceAction;
+    min-height: 2.75rem;
+    padding: 0 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    & > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
     }
   `,
   group: css`

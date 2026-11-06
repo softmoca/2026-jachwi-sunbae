@@ -5,6 +5,7 @@ import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 type ChecklistPageLayoutProps = {
   title: string;
+  embedded?: boolean;
   children: ReactNode;
   backTo?: string;
   onBack?: () => void;
@@ -17,6 +18,7 @@ type ChecklistPageLayoutProps = {
 
 const ChecklistPageLayout = ({
   title,
+  embedded = false,
   children,
   backTo,
   onBack,
@@ -25,21 +27,24 @@ const ChecklistPageLayout = ({
   endSlot,
   className,
   containerClassName,
-}: ChecklistPageLayoutProps) => (
-  <main className={`${styles.page} ${className ?? ''}`}>
-    <div className={`${styles.container} ${containerClassName ?? ''}`}>
-      <TopNavigation
-        title={title}
-        backTo={backTo}
-        onBack={onBack}
-        backLabel={backLabel}
-        navigationIcon={navigationIcon}
-        endSlot={endSlot}
-      />
-      {children}
-    </div>
-  </main>
-);
+}: ChecklistPageLayoutProps) => {
+  const Root = embedded ? 'div' : 'main';
+  return (
+    <Root className={`${styles.page} ${className ?? ''}`}>
+      <div className={`${styles.container} ${containerClassName ?? ''}`}>
+        <TopNavigation
+          title={title}
+          backTo={backTo}
+          onBack={onBack}
+          backLabel={backLabel}
+          navigationIcon={navigationIcon}
+          endSlot={endSlot}
+        />
+        {children}
+      </div>
+    </Root>
+  );
+};
 
 const styles = {
   page: css`

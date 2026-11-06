@@ -1,17 +1,11 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { isApiErrorCode } from '@/features/auth/api/apiClient';
-import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
 import ChecklistPageLayout from '@/features/checklist/ui/checklist-page-layout/ChecklistPageLayout';
 import { usePropertyChecklistDetail, usePropertyDetail } from '@/features/property/api/useProperties';
 import { getChecklistStageLabel, parsePositiveId } from '@/features/property/lib/propertyFormat';
 import PropertyChecklist from '@/features/property/ui/property-checklist/PropertyChecklist';
-import {
-  CHECKLISTS_PATH,
-  HOME_PATH,
-  propertyActiveChecklistPath,
-  propertyDetailPath,
-} from '@/shared/lib/navigation/appPaths';
+import { checklistDetailPath, HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ContentState from '@/shared/ui/content-state/ContentState';
 import Icon from '@/shared/ui/icon/Icon';
@@ -22,7 +16,6 @@ import PropertyChecklistSkeleton from './PropertyChecklistSkeleton';
 
 import * as styles from './PropertyChecklistPage.styles';
 
-const PROPERTY_DETAIL_STATE = { from: 'property-detail' };
 const isFromPropertyDetail = (state: unknown) =>
   typeof state === 'object' && state !== null && 'from' in state && state.from === 'property-detail';
 
@@ -100,19 +93,8 @@ const ResolvedPropertyChecklistPage = ({
       backLabel="매물 상세로 돌아가기"
       endSlot={
         <>
-          {detail.stage === USER_CHECKLIST_STAGE && (
-            <Link
-              className={styles.editAction}
-              to={`${propertyActiveChecklistPath(propertyId, detail.stage)}?mode=replace`}
-              // 교체 화면이 이 화면 기록을 대신해, 교체를 마치고 돌아가도 체크리스트가 두 번 쌓이지 않는다.
-              replace
-              state={fromPropertyDetail ? PROPERTY_DETAIL_STATE : undefined}
-            >
-              편집
-            </Link>
-          )}
           {detail.sourceChecklistId !== null && (
-            <IconButton label="체크리스트 항목 편집" to={CHECKLISTS_PATH}>
+            <IconButton label="체크리스트 항목 편집" to={checklistDetailPath(detail.sourceChecklistId)}>
               <Icon name="edit" size={16} />
             </IconButton>
           )}
@@ -125,7 +107,12 @@ const ResolvedPropertyChecklistPage = ({
           <h1>{detail.checklistName}</h1>
         </div>
       </header>
-      <PropertyChecklist propertyId={propertyId} detail={detail} />
+      <PropertyChecklist
+        propertyId={propertyId}
+        detail={detail}
+        replaceNavigation
+        fromPropertyDetail={fromPropertyDetail}
+      />
 
       <div className={styles.saveAction}>
         <Link

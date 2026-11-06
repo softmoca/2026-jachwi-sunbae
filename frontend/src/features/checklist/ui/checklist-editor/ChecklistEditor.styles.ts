@@ -43,7 +43,7 @@ export const checklistEditor = cx(
 
 export const fixedSubmitEditor = css`
   label: ChecklistEditor-fixedSubmitEditor;
-  padding-bottom: 5.8rem;
+  padding-bottom: calc(9rem + env(safe-area-inset-bottom));
 `;
 
 // 다른 요소의 선택자에서 `.ChecklistEditor-editorSection`로 가리킨다.
@@ -154,12 +154,12 @@ export const checkItemSearchResults = cx(
     margin: 0;
     padding: 0;
     list-style: none;
-    max-height: 25rem;
     margin-top: 0.6rem;
-    overflow-y: auto;
 
     & li {
       position: relative;
+      display: grid;
+      align-items: center;
       min-height: 3.65rem;
       padding: 0.72rem;
       border: 1px solid var(--color-border);
@@ -325,7 +325,7 @@ export const resultControl = css`
     display: grid;
     width: 1.7rem;
     height: 1.7rem;
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-border-strong);
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-on-primary);
@@ -397,7 +397,7 @@ export const checklistItemPickerView = css`
     flex-direction: column;
     min-height: calc(100dvh - var(--app-bar-height) - 8.5rem);
     margin-top: 0.55rem;
-    padding: 0.65rem 0 0;
+    padding: 0.65rem 0 calc(8rem + env(safe-area-inset-bottom));
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -407,13 +407,61 @@ export const checklistItemPickerView = css`
 /* 취소는 좁게, 추가는 넓게. 두 버튼의 무게를 다르게 둔다. */
 export const pickerActions = css`
   label: ChecklistEditor-pickerActions;
+  grid-auto-flow: row;
   grid-template-columns: minmax(5rem, 0.42fr) minmax(0, 1fr);
+  & > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.8rem;
+  }
 `;
 
 export const editorSaveStatus = css`
   label: ChecklistEditor-editorSaveStatus;
-  min-height: 1.5rem;
-  margin: 0.75rem 0 0;
+  margin: 0;
+  &:empty {
+    display: none;
+  }
   color: var(--color-muted);
   font-size: 0.78rem;
+`;
+
+export const fixedActions = css`
+  label: ChecklistEditor-fixedActions;
+  width: min(100%, var(--checklist-action-width, 100vw));
+`;
+
+export const editorActions = css`
+  label: ChecklistEditor-editorActions;
+  grid-auto-flow: row;
+  grid-template-columns: minmax(0, 1fr);
+`;
+
+export const addActionRow = css`
+  label: ChecklistEditor-addActionRow;
+  display: flex;
+  justify-content: flex-end;
+`;
+
+export const categoryFilters = css`
+  label: ChecklistEditor-categoryFilters;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: var(--space-md);
+  padding: 0;
+  background: transparent;
+  & button {
+    min-height: 2.75rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full, 999px);
+    background: var(--color-surface);
+  }
+  & button[aria-checked='true'] {
+    background: var(--color-surface-muted);
+    color: var(--color-ink);
+    box-shadow: none;
+  }
 `;

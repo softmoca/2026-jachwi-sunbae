@@ -1,4 +1,5 @@
 import { css } from '@emotion/css';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { describeChecklistLoadError, getChecklistErrorMessage } from '@/features/checklist/api/checklistErrorMessages';
 import { useUpdateChecklist } from '@/features/checklist/api/useChecklistMutations';
@@ -9,13 +10,13 @@ import useChecklistDraft, { type ChecklistDraftInput } from '@/features/checklis
 import useChecklistItemPickerRoute from '@/features/checklist/model/useChecklistItemPickerRoute';
 import CheckItemPicker from '@/features/checklist/ui/checklist-editor/CheckItemPicker';
 import ChecklistEditor from '@/features/checklist/ui/checklist-editor/ChecklistEditor';
-import ChecklistEditorFrame, {
-  ChecklistDesktopHeading,
-} from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorFrame';
+import ChecklistEditorFrame from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorFrame';
 import ChecklistEditorSkeleton from '@/features/checklist/ui/checklist-editor-frame/ChecklistEditorSkeleton';
+import { parsePositiveId } from '@/features/property/lib/propertyFormat';
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
-import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
-import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
+import { CHECKLISTS_PATH } from '@/shared/lib/navigation/appPaths';
+import { ButtonLink } from '@/shared/ui/button/Button';
+import ContentState from '@/shared/ui/content-state/ContentState';
 import QueryState from '@/shared/ui/query-state/QueryState';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
@@ -23,8 +24,19 @@ const describeError = describeChecklistLoadError('체크리스트를 불러오�
   CHECKLIST_NOT_FOUND: '체크리스트를 찾을 수 없어요.',
 });
 
-/** 사용자의 하나뿐인 체크리스트를 고치는 화면. `/checklists`가 열어 준다. */
-const ChecklistDetailPage = ({ checklistId }: { checklistId: number }) => {
+/** 관리 목록에서 선택한 사용자 체크리스트를 편집한다. */
+const ChecklistDetailPage = () => {
+  const checklistId = parsePositiveId(useParams().checklistId);
+  if (checklistId === null)
+    return (
+      <ContentState title="올바른 체크리스트 주소가 아니에요.">
+        <ButtonLink to={CHECKLISTS_PATH}>체크리스트 관리</ButtonLink>
+      </ContentState>
+    );
+  return <ResolvedChecklistDetailPage checklistId={checklistId} />;
+};
+
+const ResolvedChecklistDetailPage = ({ checklistId }: { checklistId: number }) => {
   const detail = useChecklistDetail(checklistId);
 
   return (
@@ -42,7 +54,8 @@ const ChecklistDetailPage = ({ checklistId }: { checklistId: number }) => {
 const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
   const update = useUpdateChecklist(checklist.checklistId);
   const isDesktop = useIsDesktop();
-  const goBack = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
+  const navigate = useNavigate();
+  const goBack = () => navigate(CHECKLISTS_PATH, { replace: true });
   const { isPickerOpen, openPicker, closePicker } = useChecklistItemPickerRoute();
   const draft = useChecklistDraft({
     initialName: checklist.name,
@@ -63,7 +76,7 @@ const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
       <ChecklistEditorFrame isDesktop={isDesktop} className={styles.page}>
         <TopNavigation
           className={styles.topNavigation}
-          title="체크 항목 편집"
+          title="체크 항목 추가"
           backLabel="체크리스트 편집으로 돌아가기"
           navigationIcon="arrow-left"
           onBack={closePicker}
@@ -82,17 +95,13 @@ const ChecklistDetailView = ({ checklist }: { checklist: ChecklistDetail }) => {
 
   return (
     <ChecklistEditorFrame isDesktop={isDesktop} className={styles.page}>
-      {isDesktop ? (
-        <ChecklistDesktopHeading />
-      ) : (
-        <TopNavigation
-          className={styles.topNavigation}
-          title="체크리스트 편집"
-          backLabel="이전 화면으로 돌아가기"
-          navigationIcon="arrow-left"
-          onBack={goBack}
-        />
-      )}
+      <TopNavigation
+        className={styles.topNavigation}
+        title="체크리스트 편집"
+        backLabel="체크리스트 관리로 돌아가기"
+        navigationIcon={isDesktop ? 'close' : 'arrow-left'}
+        onBack={goBack}
+      />
       <ChecklistEditor
         stage={checklist.stage}
         draft={draft}

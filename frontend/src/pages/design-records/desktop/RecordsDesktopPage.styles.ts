@@ -44,8 +44,11 @@ export const list = css`
 export const detail = css`
   label: RecordsDesktopPage-detail;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   background: white;
+  &[data-checklist-replacement='true'] {
+    transform: translateZ(0);
+  }
 `;
 
 export const headerSearch = css`
@@ -64,4 +67,10 @@ export const notice = css`
   bottom: 1.5rem;
   left: auto;
   width: 22rem;
+`;
+
+export const detailScroll = css`
+  label: RecordsDesktopPage-detailScroll;
+  height: 100%;
+  overflow-y: auto;
 `;
