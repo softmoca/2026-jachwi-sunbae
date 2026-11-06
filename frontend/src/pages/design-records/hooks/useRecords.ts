@@ -37,7 +37,10 @@ const useRecords = (selection?: RecordsSelection) => {
     () => properties.data?.pages.flatMap((page) => page.content).map(recordPresentation) ?? [],
     [properties.data],
   );
-  const districts = ['전체', ...new Set(allRecords.map((record) => record.district))];
+  const districts = [
+    '전체',
+    ...new Set(allRecords.filter((record) => record.summary.location.address?.trim()).map((record) => record.district)),
+  ];
   const [district, setDistrict] = useState('전체');
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const selectedId = selection ? selection.selectedId : localSelectedId;
