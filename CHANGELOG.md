@@ -6,6 +6,44 @@
 
 아직 릴리스하지 않은 변경을 기록한다.
 
+## [4.0.0] - 2026-11-06
+
+### Breaking Changes
+
+- 날씨 전용 수신 설정·기기 API를 공통 알림 API로 전환한다. `/api/members/me/weather-notification-settings`와 `/api/members/me/weather-devices/current` 대신 `/api/members/me/notification-settings`와 `/api/members/me/notification-devices/current`를 사용한다.
+- 제공 체크 항목을 현장 확인 중심의 카테고리별 목록으로 교체하고 계약 전 단계의 신규 제공을 중단한다. 기존 매물에 적용한 항목과 평가 기록은 보존한다.
+- Flyway `V10`~`V13`에서 거리 메모 행정동 컬럼·인덱스, 공통 알림 테이블 이름, 배달 할인 알림 이력, 체크 항목 카테고리를 반영한다. 이전 버전으로 되돌릴 때는 스키마와 제공 항목 변경을 함께 검토해야 한다.
+
+### Added
+
+- 카테고리별 사용자 체크리스트 생성·편집·이름 수정·삭제·교체와 항목 바로 아래 인라인 메모를 제공한다.
+- 첫 실제 매물 등록 전 브라우저에서만 수정 가능한 예시 매물을 제공하고, 등록 성공 시 숨긴다.
+- 회원 초기화·탈퇴 API와 기록 정리, 날씨·배달 할인 공통 알림 설정 및 푸시 발송 기록을 추가한다.
+- 편의점 행사상품 검색·가격순 정렬, 거리 메모의 행정동 코드, 매물별 목적지 거리 표시를 추가한다.
+- iOS·Android 셸을 모노레포에서 관리하고 앱의 dev·prod 빌드 환경 분리, Staging 구성, 실행 중 푸시 배너를 지원한다. 네이티브 앱 버전은 제품 버전과 별도로 유지한다.
+
+### Changed
+
+- 체크리스트 관리에서 번들을 선택해 편집하며 데스크탑은 목록·상세·지도를 유지한 채 교체·사진 관리 화면을 연다.
+- 본 방 기록의 매물 선택·상세 바텀시트·이전 및 다음 매물 이동을 개선하고, 삭제 메뉴를 매물별 더보기로 통일한다.
+- 동네찾기의 주소·건물명 검색 결과를 검색창 아래로 모으고 시설 분류와 지도 조작 버튼 위치를 정리한다.
+- 방 비교 PDF를 카드형 화면에 맞추고 체크 진행은 단계 구분 없이 완료 항목/전체 항목으로 표시한다.
+- 저렴한 한 끼를 탭별 경로로 나누고 선택한 동네를 복원한다. 홈·랜딩·사용 가이드·기본 이미지와 서비스 슬로건을 현재 기능에 맞춘다.
+- 백엔드·프론트엔드 제품 버전을 `4.0.0`으로 맞춘다.
+
+### Fixed
+
+- 동네찾기 홈 버튼이 내부 방문 이력으로 돌아가던 문제와 모바일 지도·시트의 크기·레이어·포커스 및 탐색 복원 문제를 수정한다.
+- 체크 평가 변경을 매물 목록 진행률에 즉시 반영하고, 매물 재진입 시 정보 탭을 먼저 표시한다.
+- 매물 주소·금액·공과금 입력, 체크리스트 교체 후 복귀, 사진 및 삭제 메뉴 동작을 수정한다. 미입력 금액은 `월세 0/0`으로 표시한다.
+- 위치 조회가 일시 실패했을 때의 알림 설정 동작과 공용 오류 안내를 개선한다.
+
+### Performance
+
+- 행정동 경계 좌표와 시도별 로딩, 지도 마커 재사용, 시트 transform 애니메이션과 확대·축소 시 렌더링을 최적화한다.
+- 네이버 지도 SDK를 미리 받고 경량 서버 렌더러·WebP 이미지·압축 영상을 사용해 초기 로딩을 줄인다.
+- 플랫폼·화면별 Web Vitals와 예외 수집, SGIS 요청·역지오코딩 관측성 및 CI 캐시·병렬 검사를 보강한다.
+
 ## [3.1.0] - 2026-10-30
 
 ### Added
@@ -202,7 +240,8 @@
 - WebView 지도 마커 위치 갱신을 `transform` 기반으로 최적화한다.
 - 매물 사진 Object URL을 재사용해 지도 확대·이동 중 불필요한 재생성을 줄인다.
 
-[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v3.1.0...HEAD
+[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.0.0
 [3.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v3.1.0
 [3.0.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v3.0.0
 [2.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v2.1.0
