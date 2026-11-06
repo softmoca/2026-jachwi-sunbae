@@ -6,13 +6,13 @@ export const formatWon = (amount: number): string => `${new Intl.NumberFormat('k
 export const formatManwon = (amount: number): string =>
   `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(amount / 10_000)}만원`;
 
-/** 지도 마커처럼 좁은 자리에 쓰는 짧은 시세 표기. 예: `1,000/55`, `전세 1억` */
+/** 지도 마커처럼 좁은 자리에 쓰는 짧은 시세 표기. 예: `월세 1,000/55`, `전세 10,000`, 미입력은 `월세 0/0` */
 export const formatRentSummary = (depositAmount: number, monthlyRentAmount: number): string => {
   const toManwon = (amount: number) =>
     new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 }).format(amount / 10_000);
-  return monthlyRentAmount === 0
+  return monthlyRentAmount === 0 && depositAmount > 0
     ? `전세 ${toManwon(depositAmount)}`
-    : `${toManwon(depositAmount)}/${toManwon(monthlyRentAmount)}`;
+    : `월세 ${toManwon(depositAmount)}/${toManwon(monthlyRentAmount)}`;
 };
 
 export const formatDateTime = (value: string): string =>

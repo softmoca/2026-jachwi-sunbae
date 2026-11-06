@@ -22,10 +22,7 @@ export const recordPresentation = (property: PropertySummary) => ({
   district: propertyArea(property.location.address),
   name: property.name,
   note: property.location.address ?? '주소 미등록',
-  price:
-    property.monthlyRentAmount > 0
-      ? `월세 ${formatRentSummary(property.depositAmount, property.monthlyRentAmount)}`
-      : formatRentSummary(property.depositAmount, property.monthlyRentAmount),
+  price: formatRentSummary(property.depositAmount, property.monthlyRentAmount),
   latitude: property.location.latitude,
   longitude: property.location.longitude,
   checklist: property.stages.find((stage) => stage.stage === 'ON_SITE') ?? null,

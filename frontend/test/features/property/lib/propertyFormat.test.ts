@@ -19,12 +19,16 @@ describe('매물 표시 형식과 경로 입력', () => {
     expect(formatManwon(12_345)).toBe('1.23만원');
   });
 
-  it('월세가 없으면 전세 형식으로, 있으면 보증금과 월세를 함께 표시한다', () => {
+  it('보증금만 있으면 전세로, 월세가 있으면 보증금과 월세를 함께 표시한다', () => {
     expect(formatRentSummary(100_000_000, 0)).toBe('전세 10,000');
-    expect(formatRentSummary(10_000_000, 550_000)).toBe('1,000/55');
+    expect(formatRentSummary(10_000_000, 550_000)).toBe('월세 1,000/55');
     // 좁은 자리라 소수 첫째 자리까지만 보여 준다.
     expect(formatRentSummary(1_234_500, 0)).toBe('전세 123.5');
-    expect(formatRentSummary(1_234_500, 335_000)).toBe('123.5/33.5');
+    expect(formatRentSummary(1_234_500, 335_000)).toBe('월세 123.5/33.5');
+  });
+
+  it('금액이 모두 미입력된 0이면 월세 0/0으로 표시한다', () => {
+    expect(formatRentSummary(0, 0)).toBe('월세 0/0');
   });
 
   it('일시는 한국어 연월일과 두 자리 시각으로 표시한다', () => {

@@ -74,7 +74,6 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
                     <div className={styles.roomInfo}>
                       <strong>{property.name}</strong>
                       <span className={styles.rent}>
-                        {property.monthlyRentAmount > 0 ? '월세 ' : ''}
                         {formatRentSummary(property.depositAmount, property.monthlyRentAmount)}
                       </span>
                       <p>{property.location.address ?? '주소 미등록'}</p>
