@@ -13,12 +13,14 @@ import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
 import useRecords from '../hooks/useRecords';
 import useRecordsMapLayers from '../hooks/useRecordsMapLayers';
+import { recordNeighbors } from '../model/recordNavigation';
 import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
 import RecordList from '../ui/record-list/RecordList';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
+import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsDesktopMap from './RecordsDesktopMap';
 
 import * as styles from './RecordsDesktopPage.styles';
@@ -88,12 +90,18 @@ const RecordsDesktopPage = () => {
     />
   );
 
+  // 상세 칸 머리의 이전, 다음은 리스트 순서대로 넘기고, 지도도 그 매물 자리로 옮긴다.
+  const neighbors = selected !== undefined ? recordNeighbors(records.records, selected.id) : null;
   const detail =
     selected !== undefined ? (
       <aside className={styles.detail} aria-label="선택한 매물 상세">
         <PropertyDetailPage
           key={selected.id}
-          panel={{ propertyId: Number(selected.id), onClose: () => setSelectedId(null) }}
+          panel={{
+            propertyId: Number(selected.id),
+            onClose: () => setSelectedId(null),
+            headerEnd: neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />,
+          }}
         />
       </aside>
     ) : undefined;

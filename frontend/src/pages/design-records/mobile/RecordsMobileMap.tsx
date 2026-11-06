@@ -9,8 +9,10 @@ import Icon from '@/shared/ui/icon/Icon';
 
 import type { RecordsState } from '../hooks/useRecords';
 import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
+import { recordNeighbors } from '../model/recordNavigation';
 import { RECORDS_HIDDEN_CATEGORIES, recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
+import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsSelectedSheet from './RecordsSelectedSheet';
 
 type Props = {
@@ -22,10 +24,13 @@ type Props = {
  * 휴대폰·태블릿 본 방 기록 지도. 위에 뜬 헤더 아래로 시설·거리 메모 카테고리 레일을 둔다.
  * 데스크탑처럼 빈 곳을 찍으면 그 자리 말풍선에서 메모를 남기거나 매물을 등록한다. 열린 것이 있으면 먼저 닫기만 한다.
  * 고른 매물은 아래 바텀시트에서 보고, 겹쳐 묶인 매물은 시트에 함께 늘어놓는다.
+ * 매물 하나를 볼 때는 시트 머리의 이전, 다음으로 목록 순서대로 넘기고, 지도와 마커 선택도 그 매물로 따라간다.
  */
 const RecordsMobileMap = ({ records, layers }: Props) => {
   const { selected } = records;
   const sheetRecords = layers.groupRecords.length > 0 ? layers.groupRecords : selected ? [selected] : [];
+  // 겹친 매물 묶음을 볼 때는 넘길 기준이 하나가 아니라 화살표를 두지 않는다.
+  const neighbors = layers.groupRecords.length === 0 && selected ? recordNeighbors(records.records, selected.id) : null;
   const hasBottomLayer = sheetRecords.length > 0 || layers.memo.mode !== null;
   return (
     <section className={styles.map} aria-label="본 방 기록 지도">
@@ -50,7 +55,12 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
       </button>
       <MapZoomControl className={styles.zoom} level={records.level} onChange={records.setLevel} />
       {!hasBottomLayer && <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>}
-      <RecordsSelectedSheet records={sheetRecords} onClose={layers.closeAll} onNotice={records.setNotice} />
+      <RecordsSelectedSheet
+        records={sheetRecords}
+        onClose={layers.closeAll}
+        stepper={neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />}
+        onNotice={records.setNotice}
+      />
       <StreetMemoSheet layer={layers.memo} onCreated={layers.showMemos} />
       <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
     </section>
