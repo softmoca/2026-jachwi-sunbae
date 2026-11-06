@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 
 import { isApiErrorCode } from '@/features/auth/api/apiClient';
@@ -6,6 +5,7 @@ import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
 import ChecklistPageLayout from '@/features/checklist/ui/checklist-page-layout/ChecklistPageLayout';
 import { usePropertyChecklistDetail, usePropertyDetail } from '@/features/property/api/useProperties';
 import { getChecklistStageLabel, parsePositiveId } from '@/features/property/lib/propertyFormat';
+import PropertyChecklist from '@/features/property/ui/property-checklist/PropertyChecklist';
 import {
   CHECKLISTS_PATH,
   HOME_PATH,
@@ -19,7 +19,6 @@ import IconButton from '@/shared/ui/icon-button/IconButton';
 import LoadingRegion from '@/shared/ui/skeleton/LoadingRegion';
 
 import PropertyChecklistSkeleton from './PropertyChecklistSkeleton';
-import PropertyChecklistItemControl from './ui/property-checklist-item-control/PropertyChecklistItemControl';
 
 import * as styles from './PropertyChecklistPage.styles';
 
@@ -58,7 +57,6 @@ const ResolvedPropertyChecklistPage = ({
 }) => {
   const checklist = usePropertyChecklistDetail(propertyId, propertyChecklistId);
   const property = usePropertyDetail(propertyId);
-  const [editingMemoItemId, setEditingMemoItemId] = useState<number | null>(null);
   const location = useLocation();
   const fromPropertyDetail = isFromPropertyDetail(location.state);
   const backToDetail = useReturnNavigation({
@@ -94,7 +92,6 @@ const ResolvedPropertyChecklistPage = ({
   }
 
   const detail = checklist.data;
-  const completedCount = detail.items.filter((item) => item.status !== 'UNCONFIRMED').length;
 
   return (
     <ChecklistPageLayout
@@ -127,26 +124,8 @@ const ResolvedPropertyChecklistPage = ({
           <span>{getChecklistStageLabel(detail.stage)}</span>
           <h1>{detail.checklistName}</h1>
         </div>
-        <div className={styles.actions}>
-          <strong>
-            {completedCount}/{detail.items.length}
-          </strong>
-        </div>
       </header>
-      <ol className={styles.items}>
-        {detail.items.map((item) => (
-          <PropertyChecklistItemControl
-            key={item.itemId}
-            propertyId={propertyId}
-            propertyChecklistId={propertyChecklistId}
-            item={item}
-            isMemoEditing={editingMemoItemId === item.itemId}
-            isMemoEditDisabled={editingMemoItemId !== null && editingMemoItemId !== item.itemId}
-            onStartMemoEdit={() => setEditingMemoItemId(item.itemId)}
-            onFinishMemoEdit={() => setEditingMemoItemId(null)}
-          />
-        ))}
-      </ol>
+      <PropertyChecklist propertyId={propertyId} detail={detail} />
 
       <div className={styles.saveAction}>
         <Link

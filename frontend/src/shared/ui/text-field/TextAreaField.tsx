@@ -9,8 +9,8 @@ type TextAreaFieldProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'chi
   helpText?: string;
   error?: string;
   fieldClassName?: string;
-  /** 기본은 밑줄. 네모 테두리가 필요한 곳만 `box`로 되돌린다. */
-  variant?: 'box' | 'underline';
+  /** 기본은 밑줄. `box`는 네모 테두리, `inline`은 숨김 라벨과 회색 본문 입력이다. */
+  variant?: 'box' | 'underline' | 'inline';
 };
 
 const TextAreaField = ({
@@ -32,7 +32,9 @@ const TextAreaField = ({
 
   return (
     <div className={`${styles.field} ${fieldClassName ?? ''}`} data-variant={variant}>
-      <label htmlFor={textareaId}>{label}</label>
+      <label htmlFor={textareaId} className={variant === 'inline' ? 'sr-only' : undefined}>
+        {label}
+      </label>
       <div className={styles.control}>
         <textarea
           {...textareaProps}

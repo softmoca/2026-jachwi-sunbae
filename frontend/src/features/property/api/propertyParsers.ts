@@ -32,6 +32,7 @@ import type {
   RoomOption,
   UtilityOption,
 } from '../model/Property';
+import { PROPERTY_CHECKLIST_CATEGORIES } from '../model/Property';
 
 const parseDiscoverySource = (value: unknown): DiscoverySource => {
   if (value === null) return { type: 'TEXT', value: '' };
@@ -318,6 +319,13 @@ const parsePropertyChecklistItemStatus = (value: unknown): PropertyChecklistItem
   return value;
 };
 
+const parsePropertyChecklistCategory = (value: unknown) => {
+  if (value === undefined) return undefined;
+  const category = PROPERTY_CHECKLIST_CATEGORIES.find((category) => category === value);
+  if (category === undefined) throw new Error('체크리스트 카테고리가 올바르지 않습니다.');
+  return category;
+};
+
 export const parsePropertyChecklistDetail = (value: unknown): PropertyChecklistDetail => {
   const record = readRecord(value);
   const stage = readString(record, 'stage');
@@ -340,6 +348,7 @@ export const parsePropertyChecklistDetail = (value: unknown): PropertyChecklistD
           displayOrder: readInteger(item, 'displayOrder', 1),
           status: parsePropertyChecklistItemStatus(item.status),
           memo: readString(item, 'memo', { allowEmpty: true, maximumCodePoints: 500 }),
+          category: parsePropertyChecklistCategory(item.category),
         };
       })
       .sort((a, b) => a.displayOrder - b.displayOrder),

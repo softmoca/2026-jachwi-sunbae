@@ -25,7 +25,7 @@ const meta = {
     disabled: { control: 'boolean' },
     variant: {
       control: 'inline-radio',
-      options: ['underline', 'box'],
+      options: ['underline', 'box', 'inline'],
     },
     helpText: { control: 'text', description: '입력칸 아래 도움말' },
     error: { control: 'text', description: '오류 문구. 주면 입력칸을 오류 상태로 표시한다.' },
@@ -77,4 +77,8 @@ export const Box: Story = {
   args: {
     variant: 'box',
   },
+};
+
+export const Inline: Story = {
+  args: { variant: 'inline', placeholder: '메모 추가', rows: 1 },
 };
