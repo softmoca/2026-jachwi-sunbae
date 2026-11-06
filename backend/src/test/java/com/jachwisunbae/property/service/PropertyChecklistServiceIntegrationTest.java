@@ -266,6 +266,39 @@ class PropertyChecklistServiceIntegrationTest {
         assertError(() -> service.findOverview(OTHER_MEMBER_ID, propertyId), ErrorCode.PROPERTY_NOT_FOUND);
     }
 
+    @Test
+    @DisplayName("제공 항목을 중단한 단계는 최근 선택이 있어도 새 매물에 자동 적용하지 않는다")
+    void skipsRetiredStageDespitePreferredChecklist() {
+        long checklistId = checklistService.create(MEMBER_ID, "이전 계약 전 양식", CheckStage.PRE_CONTRACT, List.of(4L)).getId();
+        long before = insertProperty(MEMBER_ID);
+        service.applyInitialChecklists(MEMBER_ID, before);
+        PropertyChecklistApplicationQuery applied = apply(MEMBER_ID, before, CheckStage.PRE_CONTRACT, checklistId);
+        mark(MEMBER_ID, before, applied, 4L, CheckStatus.CAUTION, "보존할 메모");
+        jdbcTemplate.update("UPDATE system_check_items SET deleted_at = NOW(6) WHERE stage = 'PRE_CONTRACT'");
+        long after = insertProperty(MEMBER_ID);
+
+        service.applyInitialChecklists(MEMBER_ID, after);
+
+        assertThat(service.findOverview(MEMBER_ID, after))
+                .extracting(PropertyChecklistProgressQuery::stage).containsExactly(CheckStage.ON_SITE);
+        assertThat(items(before, CheckStage.PRE_CONTRACT))
+                .extracting(PropertyChecklistItemQuery::status, PropertyChecklistItemQuery::memo)
+                .containsExactly(tuple(CheckStatus.CAUTION, "보존할 메모"));
+    }
+
+    @Test
+    @DisplayName("중단된 단계의 기본 양식 적용은 업무 오류로 거부하고 기존 기록을 보존한다")
+    void rejectsRetiredDefaultAndPreservesRecords() {
+        long propertyId = insertProperty(MEMBER_ID);
+        service.applyInitialChecklists(MEMBER_ID, propertyId);
+        var before = items(propertyId, CheckStage.PRE_CONTRACT);
+        jdbcTemplate.update("UPDATE system_check_items SET deleted_at = NOW(6) WHERE stage = 'PRE_CONTRACT'");
+
+        assertError(() -> service.apply(MEMBER_ID, propertyId, CheckStage.PRE_CONTRACT,
+                PropertyChecklistSourceType.SYSTEM_DEFAULT, null), ErrorCode.CHECKLIST_INACTIVE_ITEM_NOT_ALLOWED);
+        assertThat(items(propertyId, CheckStage.PRE_CONTRACT)).isEqualTo(before);
+    }
+
     private PropertyChecklistApplicationQuery apply(long memberId, long propertyId, CheckStage stage,
                                                     long checklistId) {
         return service.apply(memberId, propertyId, stage, PropertyChecklistSourceType.USER, checklistId);
