@@ -68,8 +68,10 @@
         .empty { padding: 4mm 5mm; border-radius: 4mm; background: #f9fafb; color: #868b94; }
 
         /* 진행 막대와 상태 숫자 */
-        .bar { height: 1.6mm; border-radius: 0.8mm; background: #e3e5e8; font-size: 0; line-height: 0; }
-        .bar-fill { height: 1.6mm; border-radius: 0.8mm; background: #6b9ae6; font-size: 0; line-height: 0; }
+        .bar { position: relative; overflow: hidden; height: 1.6mm; border-radius: 0.8mm; background: #e3e5e8; font-size: 0; line-height: 0; }
+        .bar-fill { position: absolute; top: 0; height: 1.6mm; font-size: 0; line-height: 0; }
+        .bar-good { left: 0; background: #6b9ae6; }
+        .bar-caution { background: #ef7a7a; }
         .progress-text { margin-top: 1.2mm; font-weight: 700; }
         .counts { margin-top: 0.6mm; font-size: 7.5pt; }
         .counts span { margin-right: 1.8mm; white-space: nowrap; }
@@ -233,7 +235,12 @@
                 <th class="label" th:text="${row.label}">단계</th>
                 <td th:each="progress : ${row.values}">
                     <div th:if="${progress.applied}">
-                        <div class="bar"><div class="bar-fill" th:style="|width: ${progress.progressRate}%|"></div></div>
+                        <div class="bar">
+                            <div class="bar-fill bar-good" th:if="${progress.goodCount > 0}"
+                                 th:style="|width: ${progress.goodPercent()}%|"></div>
+                            <div class="bar-fill bar-caution" th:if="${progress.cautionCount > 0}"
+                                 th:style="|left: ${progress.goodPercent()}%; width: ${progress.cautionPercent()}%|"></div>
+                        </div>
                         <div class="progress-text" th:text="|${progress.completedCount}/${progress.totalCount} 확인|">0/0 확인</div>
                         <div class="counts">
                             <span class="good" th:text="|괜찮음 ${progress.goodCount}|">괜찮음 0</span>
@@ -305,14 +312,18 @@
             <table>
                 <tr>
                     <td>
-                        <span class="chip" th:text="|${stage.index}단계|">1단계</span>
                         <div class="stage-title">
                             <span th:text="${stage.label}">집에서 확인</span><span class="checklist-name"
                                 th:if="${stage.applied()}" th:text="${stage.checklistName}">체크리스트</span>
                         </div>
                     </td>
                     <td class="stage-progress" th:if="${stage.applied()}">
-                        <div class="bar"><div class="bar-fill" th:style="|width: ${stage.progress.progressRate}%|"></div></div>
+                        <div class="bar">
+                            <div class="bar-fill bar-good" th:if="${stage.progress.goodCount > 0}"
+                                 th:style="|width: ${stage.progress.goodPercent()}%|"></div>
+                            <div class="bar-fill bar-caution" th:if="${stage.progress.cautionCount > 0}"
+                                 th:style="|left: ${stage.progress.goodPercent()}%; width: ${stage.progress.cautionPercent()}%|"></div>
+                        </div>
                         <div class="progress-text" th:text="|${stage.progress.completedCount}/${stage.progress.totalCount} 확인|">0/0 확인</div>
                         <div class="counts">
                             <span class="good" th:text="|괜찮음 ${stage.progress.goodCount}|">괜찮음 0</span>

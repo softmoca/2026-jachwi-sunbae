@@ -64,12 +64,8 @@ public class PropertyComparisonPdfViewMapper {
     }
 
     private List<StageOverviewRow> createStageRows(final List<PropertyComparisonRecord> records) {
-        List<StageOverviewRow> rows = new ArrayList<>();
-        for (CheckStage stage : CheckStage.values()) {
-            rows.add(new StageOverviewRow(stageLabel(stage),
-                records.stream().map(record -> stageProgress(record, stage)).toList()));
-        }
-        return List.copyOf(rows);
+        return List.of(new StageOverviewRow(stageLabel(CheckStage.ON_SITE),
+            records.stream().map(record -> stageProgress(record, CheckStage.ON_SITE)).toList()));
     }
 
     private List<PropertyView> createPropertyViews(final List<PropertyComparisonRecord> records) {
@@ -97,8 +93,9 @@ public class PropertyComparisonPdfViewMapper {
             .mapToObj(photoIndex -> createPhotoView(record.photos().get(photoIndex), photoIndex + 1))
             .toList();
 
-        List<StageView> stages = IntStream.range(0, record.stages().size())
-            .mapToObj(stageIndex -> createStageView(record.stages().get(stageIndex), stageIndex + 1))
+        List<StageView> stages = record.stages().stream()
+            .filter(stage -> stage.summary().stage() == CheckStage.ON_SITE)
+            .map(stage -> createStageView(stage, 1))
             .toList();
 
         String memo = blankToEmpty(record.property().getMemo());

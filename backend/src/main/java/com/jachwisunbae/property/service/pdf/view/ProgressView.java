@@ -6,6 +6,14 @@ package com.jachwisunbae.property.service.pdf.view;
 public record ProgressView(boolean applied, int completedCount, int totalCount, int goodCount,
                            int cautionCount, int unconfirmedCount, int progressRate) {
 
+    public double goodPercent() {
+        return totalCount == 0 ? 0 : 100.0 * goodCount / totalCount;
+    }
+
+    public double cautionPercent() {
+        return totalCount == 0 ? 0 : 100.0 * cautionCount / totalCount;
+    }
+
     public static ProgressView notApplied() {
         return new ProgressView(false, 0, 0, 0, 0, 0, 0);
     }

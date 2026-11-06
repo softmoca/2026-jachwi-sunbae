@@ -35,6 +35,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
@@ -76,9 +77,78 @@ class PropertyComparisonPdfRenderTest {
             for (int index = 0; index < count; index++) {
                 assertThat(text).contains(NAMES[index]);
             }
-            assertThat(text).doesNotContain("MVP");
+            assertThat(text).doesNotContain("MVP", "계약 전", "등기부등본", "근저당", "채권최고액");
             writePreviews(document, directory);
         }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"3,1,1", "10,2,0", "11,1,0", "0,5,0", "5,0,0", "0,0,5", "0,0,0", "1,1,1"})
+    @DisplayName("요약과 매물 상세의 막대는 괜찮음·주의·미확인 개수의 색상 비율을 그대로 그린다")
+    void rendersStatusRatios(final int good, final int caution, final int unconfirmed) throws IOException {
+        List<PropertyChecklistItemQuery> items = new ArrayList<>();
+        for (int index = 0; index < good + caution + unconfirmed; index++) {
+            CheckStatus status = index < good ? CheckStatus.GOOD
+                : index < good + caution ? CheckStatus.CAUTION : CheckStatus.UNCONFIRMED;
+            items.add(item(index + 1, "현장 확인 항목 " + (index + 1), status, ""));
+        }
+        PropertyComparisonRecord source = record(1);
+        PropertyComparisonRecord record = new PropertyComparisonRecord(source.property(), List.of(),
+            List.of(stage(CheckStage.ON_SITE, "색상 확인", items)));
+
+        byte[] pdf = renderer.render(List.of(record));
+
+        try (PDDocument document = PDDocument.load(pdf)) {
+            assertThat(document.getNumberOfPages()).isGreaterThanOrEqualTo(2);
+            PDFRenderer pdfRenderer = new PDFRenderer(document);
+            int checkedPages = 0;
+            PDFTextStripper stripper = new PDFTextStripper();
+            for (int page = 0; page < document.getNumberOfPages(); page++) {
+                stripper.setStartPage(page + 1);
+                stripper.setEndPage(page + 1);
+                String pageText = stripper.getText(document);
+                if (!pageText.contains("한눈에 비교") && !pageText.contains("색상 확인")) continue;
+                checkedPages++;
+                int[] widths = longestProgressBar(pdfRenderer.renderImageWithDPI(page, PREVIEW_DPI));
+                int width = widths[0] + widths[1] + widths[2];
+                assertThat(width).as("%s쪽 진행 막대 너비", page + 1).isGreaterThan(100);
+                int total = good + caution + unconfirmed;
+                double[] expected = total == 0 ? new double[]{0, 0, 1}
+                    : new double[]{(double) good / total, (double) caution / total, (double) unconfirmed / total};
+                for (int color = 0; color < 3; color++) {
+                    assertThat(Math.abs(widths[color] - width * expected[color]))
+                        .as("%s쪽 색상 %s의 비율", page + 1, color).isLessThanOrEqualTo(3);
+                }
+            }
+            assertThat(checkedPages).as("요약과 체크리스트 상세 페이지").isEqualTo(2);
+        }
+    }
+
+    private int[] longestProgressBar(final BufferedImage image) {
+        int[] longest = new int[3];
+        int longestWidth = 0;
+        int[] colors = {0x6B9AE6, 0xEF7A7A, 0xE3E5E8};
+        for (int y = 0; y < image.getHeight(); y++) {
+            int[] widths = new int[3];
+            for (int x = 0; x < image.getWidth(); x++) {
+                int pixel = image.getRGB(x, y) & 0xFFFFFF;
+                int color = -1;
+                for (int index = 0; index < colors.length; index++) {
+                    if (pixel == colors[index]) color = index;
+                }
+                if (color >= 0) {
+                    widths[color]++;
+                    int width = widths[0] + widths[1] + widths[2];
+                    if (width > longestWidth) {
+                        longestWidth = width;
+                        longest = widths.clone();
+                    }
+                } else {
+                    widths = new int[3];
+                }
+            }
+        }
+        return longest;
     }
 
     private void writePreviews(final PDDocument document, final Path directory) throws IOException {
@@ -135,7 +205,7 @@ class PropertyComparisonPdfRenderTest {
         int unconfirmed = count(items, CheckStatus.UNCONFIRMED);
         int completed = good + caution;
         PropertyProgress progress = new PropertyProgress(items.size(), completed, good, caution, unconfirmed,
-            completed * 100 / items.size());
+            items.isEmpty() ? 0 : completed * 100 / items.size());
         return new PropertyComparisonStage(
             new PropertyChecklistStageResponse(stage, true, 1L, name, 1L, progress),
             new PropertyChecklistApplicationQuery(1L, 1L, 1L, name, stage, items));
