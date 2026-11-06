@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.spi.LoggingEventBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +32,7 @@ import java.util.function.BiFunction;
 
 // SGIS 주소 API와 통신해서 주소 ↔ 좌표 변환을 한다. 인증 토큰은 SgisTokenProvider에서 받는다.
 @Component
-@ConditionalOnExpression("'${map.provider.mode:demo}' == 'public' or '${map.provider.mode:demo}' == 'naver'")
+@ConditionalOnProperty(name = "map.provider.mode", havingValue = "public")
 public class SgisAddressClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(SgisAddressClient.class);

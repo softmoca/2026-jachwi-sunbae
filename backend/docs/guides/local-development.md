@@ -177,8 +177,7 @@ npm run dev
 실제 주소 검색과 역지오코딩을 확인할 때는 백엔드 `.env`에 `MAP_PROVIDER_MODE=public`과
 `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 설정하고 백엔드를 다시 실행한다.
 
-네이버 주소 검색을 확인할 때는 `MAP_PROVIDER_MODE=naver`와 `NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET`, SGIS 키를 설정한다.
-역지오코딩은 이 모드에서도 SGIS를 쓴다.
+동네 찾기와 동네 검색의 네이버 검색을 확인할 때는 `NAVER_MAP_CLIENT_ID`, `NAVER_MAP_CLIENT_SECRET`을 설정한다. 건물명 검색 키가 따로 있으면 `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET`도 설정한다.
 
 실제 주변 시설을 확인할 때는 백엔드 `.env`에 `MAP_NEARBY_PROVIDER=kakao`와 `KAKAO_REST_API_KEY`를 설정하고 백엔드를 다시 실행한다.
 `MAP_NEARBY_PROVIDER`가 없으면 `demo` 주변 시설이 반환된다.  

@@ -12,40 +12,40 @@ Spring Boot 애플리케이션은 CORS 허용 Origin과 인증·저장소 설정
 
 ## 로컬 인프라용 환경변수
 
-| 환경변수                     | 로컬 기본값             | 용도                                                                                      |
-| ---------------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
-| `DB_HOST`                    | `localhost`             | MySQL 호스트                                                                              |
-| `DB_PORT`                    | `3306`                  | MySQL 포트                                                                                |
-| `DB_NAME`                    | `jachwi_sunbae`         | 데이터베이스 이름                                                                         |
-| `DB_USERNAME`                | `jachwi_sunbae`         | 애플리케이션 계정                                                                         |
-| `DB_PASSWORD`                | `local_password`        | 애플리케이션 계정 비밀번호                                                                |
-| `DB_ROOT_PASSWORD`           | `local_root_password`   | 로컬 MySQL root 비밀번호                                                                  |
-| `DB_SSL_MODE`                | `DISABLED`              | 운영 JDBC TLS 모드. 로컬 프로필은 별도 설정을 사용한다                                    |
-| `JWT_SECRET`                 | 32바이트 이상 문자열    | HS256 서명 비밀값. 문자열 그대로 키로 쓴다. 운영 값은 `openssl rand -base64 32`로 만든다  |
-| `CORS_ALLOWED_ORIGINS`       | `http://localhost:3000` | 쉼표로 구분한 프론트엔드 Origin 허용 목록                                                 |
-| `PHOTO_STORAGE_ENDPOINT`     | `http://localhost:9000` | S3 호환 객체 저장소 API endpoint. 정적 자격증명으로 접속하는 환경에서만 쓴다              |
-| `PHOTO_STORAGE_REGION`       | `us-east-1`             | S3 서명에 사용하는 region                                                                 |
-| `PHOTO_STORAGE_BUCKET`       | `jachwi-sunbae-photos`  | 로컬 MinIO 사진 객체 bucket                                                               |
-| `PHOTO_STORAGE_KEY_PREFIX`   | 비움                    | 객체 key 앞에 붙일 경로. 버킷을 다른 팀과 공유할 때 사용하며 로컬은 전용 버킷이라 비운다  |
-| `PHOTO_STORAGE_ACCESS_KEY`   | 로컬 전용 예시 값       | 객체 저장소 access key. 정적 자격증명으로 접속하는 환경에서만 쓴다                        |
-| `PHOTO_STORAGE_SECRET_KEY`   | 로컬 전용 예시 값       | 객체 저장소 secret key. 정적 자격증명으로 접속하는 환경에서만 쓴다                        |
-| `PHOTO_STORAGE_PORT`         | `9000`                  | 로컬 MinIO API 포트                                                                       |
-| `PHOTO_STORAGE_CONSOLE_PORT` | `9001`                  | 로컬 MinIO 관리 화면 포트                                                                 |
-| `MAP_PROVIDER_MODE`          | `demo`                  | `demo`, `public`, `naver` 중 주소 검색과 역지오코딩 adapter 선택                          |
-| `JUSO_CONFIRM_KEY`           | 비움                    | `public` 모드의 행정안전부 도로명주소 검색 API 승인키                                     |
-| `SGIS_CONSUMER_KEY`          | 비움                    | `public`, `naver` 모드의 SGIS 서비스 ID                                                   |
-| `SGIS_CONSUMER_SECRET`       | 비움                    | `public`, `naver` 모드의 SGIS 보안키. 백엔드 전용으로 관리한다                            |
-| `NAVER_MAP_CLIENT_ID`        | 비움                    | `naver` 모드의 NCP Application Client ID. 주소 검색과 장소 검색에 쓴다                    |
-| `NAVER_MAP_CLIENT_SECRET`    | 비움                    | `naver` 모드의 NCP Maps Application Client Secret. 백엔드 전용으로 관리한다               |
-| `NAVER_SEARCH_CLIENT_ID`     | 지도 키                 | `naver` 모드의 장소 검색용 NCP Application Client ID. 비우면 `NAVER_MAP_CLIENT_ID`를 쓴다 |
-| `NAVER_SEARCH_CLIENT_SECRET` | 지도 키                 | `naver` 모드의 장소 검색용 Client Secret. 백엔드 전용으로 관리한다                        |
-| `MAP_NEARBY_PROVIDER`        | `demo`                  | `demo` 또는 `kakao` 주변 시설 adapter 선택. 비우면 `demo`로 동작한다                      |
-| `KAKAO_REST_API_KEY`         | 비움                    | `kakao` 모드의 Kakao Developers REST API 키. 백엔드 전용으로 관리한다                     |
-| `MAP_CONNECT_TIMEOUT_MILLIS` | `2000`                  | 지도 외부 공급자 연결 제한 시간                                                           |
-| `MAP_READ_TIMEOUT_MILLIS`    | `5000`                  | 지도 외부 공급자 응답 제한 시간                                                           |
-| `DEPLOYMENT_ENVIRONMENT`     | `local`                 | 구조화 로그의 실행 환경. EC2에서는 `dev` 또는 `prod`를 사용한다                           |
-| `LOG_PATH`                   | `./logs`                | `dev`·`prod` 프로필에서 JSON 로그 파일을 저장할 디렉터리                                  |
-| `KMA_API_KEY`                | 비움                    | 기상청 API허브 키. 날씨 수집을 켜는 Dev·Prod에서 필요하다                                 |
+| 환경변수                     | 로컬 기본값             | 용도                                                                                     |
+| ---------------------------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `DB_HOST`                    | `localhost`             | MySQL 호스트                                                                             |
+| `DB_PORT`                    | `3306`                  | MySQL 포트                                                                               |
+| `DB_NAME`                    | `jachwi_sunbae`         | 데이터베이스 이름                                                                        |
+| `DB_USERNAME`                | `jachwi_sunbae`         | 애플리케이션 계정                                                                        |
+| `DB_PASSWORD`                | `local_password`        | 애플리케이션 계정 비밀번호                                                               |
+| `DB_ROOT_PASSWORD`           | `local_root_password`   | 로컬 MySQL root 비밀번호                                                                 |
+| `DB_SSL_MODE`                | `DISABLED`              | 운영 JDBC TLS 모드. 로컬 프로필은 별도 설정을 사용한다                                   |
+| `JWT_SECRET`                 | 32바이트 이상 문자열    | HS256 서명 비밀값. 문자열 그대로 키로 쓴다. 운영 값은 `openssl rand -base64 32`로 만든다 |
+| `CORS_ALLOWED_ORIGINS`       | `http://localhost:3000` | 쉼표로 구분한 프론트엔드 Origin 허용 목록                                                |
+| `PHOTO_STORAGE_ENDPOINT`     | `http://localhost:9000` | S3 호환 객체 저장소 API endpoint. 정적 자격증명으로 접속하는 환경에서만 쓴다             |
+| `PHOTO_STORAGE_REGION`       | `us-east-1`             | S3 서명에 사용하는 region                                                                |
+| `PHOTO_STORAGE_BUCKET`       | `jachwi-sunbae-photos`  | 로컬 MinIO 사진 객체 bucket                                                              |
+| `PHOTO_STORAGE_KEY_PREFIX`   | 비움                    | 객체 key 앞에 붙일 경로. 버킷을 다른 팀과 공유할 때 사용하며 로컬은 전용 버킷이라 비운다 |
+| `PHOTO_STORAGE_ACCESS_KEY`   | 로컬 전용 예시 값       | 객체 저장소 access key. 정적 자격증명으로 접속하는 환경에서만 쓴다                       |
+| `PHOTO_STORAGE_SECRET_KEY`   | 로컬 전용 예시 값       | 객체 저장소 secret key. 정적 자격증명으로 접속하는 환경에서만 쓴다                       |
+| `PHOTO_STORAGE_PORT`         | `9000`                  | 로컬 MinIO API 포트                                                                      |
+| `PHOTO_STORAGE_CONSOLE_PORT` | `9001`                  | 로컬 MinIO 관리 화면 포트                                                                |
+| `MAP_PROVIDER_MODE`          | `demo`                  | `demo` 또는 `public` 주소 검색·역지오코딩 adapter 선택                                   |
+| `JUSO_CONFIRM_KEY`           | 비움                    | `public` 모드의 행정안전부 도로명주소 검색 API 승인키                                    |
+| `SGIS_CONSUMER_KEY`          | 비움                    | `public` 모드의 국가데이터처 SGIS 서비스 ID                                              |
+| `SGIS_CONSUMER_SECRET`       | 비움                    | `public` 모드의 국가데이터처 SGIS 보안키. 백엔드 전용으로 관리한다                       |
+| `NAVER_MAP_CLIENT_ID`        | 비움                    | 네이버 검색(`/api/maps/search`)의 NCP Application Client ID                              |
+| `NAVER_MAP_CLIENT_SECRET`    | 비움                    | 네이버 검색의 NCP Application Client Secret. 백엔드 전용으로 관리한다                    |
+| `NAVER_SEARCH_CLIENT_ID`     | 지도 키                 | 건물명 검색용 NCP Application Client ID. 비우면 `NAVER_MAP_CLIENT_ID`를 쓴다             |
+| `NAVER_SEARCH_CLIENT_SECRET` | 지도 키                 | 건물명 검색용 Client Secret. 백엔드 전용으로 관리한다                                    |
+| `MAP_NEARBY_PROVIDER`        | `demo`                  | `demo` 또는 `kakao` 주변 시설 adapter 선택. 비우면 `demo`로 동작한다                     |
+| `KAKAO_REST_API_KEY`         | 비움                    | `kakao` 모드의 Kakao Developers REST API 키. 백엔드 전용으로 관리한다                    |
+| `MAP_CONNECT_TIMEOUT_MILLIS` | `2000`                  | 지도 외부 공급자 연결 제한 시간                                                          |
+| `MAP_READ_TIMEOUT_MILLIS`    | `5000`                  | 지도 외부 공급자 응답 제한 시간                                                          |
+| `DEPLOYMENT_ENVIRONMENT`     | `local`                 | 구조화 로그의 실행 환경. EC2에서는 `dev` 또는 `prod`를 사용한다                          |
+| `LOG_PATH`                   | `./logs`                | `dev`·`prod` 프로필에서 JSON 로그 파일을 저장할 디렉터리                                 |
+| `KMA_API_KEY`                | 비움                    | 기상청 API허브 키. 날씨 수집을 켜는 Dev·Prod에서 필요하다                                |
 
 ## 사용 방법
 
@@ -82,8 +82,8 @@ DB 접속값과 `JWT_SECRET`, `JUSO_CONFIRM_KEY`, `SGIS_CONSUMER_KEY`, `SGIS_CON
 
 `JUSO_CONFIRM_KEY`는 유효기간 90일 승인키이며 2026-12-25에 만료된다.
 
-`MAP_PROVIDER_MODE`는 `demo`, `public`, `naver`만 사용할 수 있다. `public` 모드에 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
-`naver` 모드는 주소 검색만 NCP Maps Geocoding으로 하고 역지오코딩은 SGIS를 그대로 쓴다. 네이버 키와 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
+`MAP_PROVIDER_MODE`는 `demo` 또는 `public`만 사용할 수 있다. `public` 모드에 행안부 및 SGIS 키가 없으면 애플리케이션이 시작되지 않는다.
+네이버 검색은 모드와 관계없이 동네 찾기와 동네 검색에서 쓴다. 네이버 키가 없어도 애플리케이션은 시작하고, 그 검색만 `MAP_PROVIDER_UNAVAILABLE`로 실패한다.
 NCP 콘솔의 Application 설정에서 Geocoding을 선택해 두어야 한다. 선택하지 않으면 429 응답을 받는다.
 장소 이름 검색은 NAVER API HUB 지역 검색을 호출한다. 검색 API를 구독한 Application의 키를 `NAVER_SEARCH_CLIENT_ID`, `NAVER_SEARCH_CLIENT_SECRET`에 넣고, 비우면 지도 키를 그대로 쓴다.
 착한가격업소 적재 스크립트도 주소를 좌표로 바꿀 때 같은 `SGIS_CONSUMER_KEY`, `SGIS_CONSUMER_SECRET`을 사용한다. 스크립트는 개발자 PC에서 실행하므로 서버 환경변수에는 추가하지 않는다.
@@ -93,7 +93,7 @@ Kakao Developers 앱에 허용 IP를 설정했다면 서버가 외부로 나가�
 
 AWS S3는 EC2 `ec2-project` instance role로 접근하므로 `PHOTO_STORAGE_ENDPOINT`, `PHOTO_STORAGE_ACCESS_KEY`,
 `PHOTO_STORAGE_SECRET_KEY`를 EC2에 두지 않는다. 이 세 값은 로컬 MinIO에만 사용한다. 프론트엔드에는 지도 화면용 공개 Naver Maps Client ID만 빌드 타임에 주입한다.
-백엔드는 `naver` 모드에서만 네이버 주소 검색 API를 사용한다. 이때 Client Secret은 백엔드 환경변수에만 둔다.
+백엔드는 동네 찾기와 동네 검색의 주소, 건물명 검색에 네이버 API를 사용한다. Client Secret은 백엔드 환경변수에만 둔다.
 
 `src/main/resources/db/migration/V1__initial_schema.sql`은 기존 스키마와 시스템 체크 항목을 고정한 최초 마이그레이션이다.
 백엔드 기동 시 Flyway가 아직 적용하지 않은 버전을 실행한다. 현재 목록은 V1–V5이며 새 변경은 적용 이력과 다른 브랜치의 버전을 확인한 뒤 미사용 버전으로 추가한다.
