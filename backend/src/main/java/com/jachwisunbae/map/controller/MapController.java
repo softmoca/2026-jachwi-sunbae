@@ -35,11 +35,12 @@ public class MapController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "주소와 건물명 검색", description = "네이버 지오코딩으로 주소를 먼저 찾고, "
+    @Operation(summary = "주소와 건물명 검색", description = "주소 검색과 같은 방식으로 주소를 먼저 찾고, "
             + "결과가 없으면 네이버 지역 검색으로 건물명이나 장소 이름을 찾아 그 주소와 WGS84 좌표를 돌려줍니다. "
             + "동네 찾기와 동네 검색에서 씁니다.")
     public ApiResponse<List<MapAddressResponse>> search(@RequestParam String query) {
-        return ApiResponse.of(mapService.searchWithNaver(query).stream().map(MapAddressResponse::from).toList());
+        return ApiResponse.of(mapService.searchAddressOrPlace(query).stream()
+                .map(MapAddressResponse::from).toList());
     }
 
     @GetMapping("/reverse-geocode")
