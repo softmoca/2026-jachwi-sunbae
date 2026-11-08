@@ -9,7 +9,7 @@ type NotifeeModule = typeof import('@notifee/react-native');
  */
 export const PUSH_CHANNEL = { id: 'default', name: '알림' } as const;
 
-export type PushOpen = { id: string | undefined; url: unknown };
+export type PushOpen = { id: string | undefined; data: unknown };
 
 /**
  * 앱이 켜져 있을 때 받은 푸시를 시스템 알림으로 띄우고, 그 알림을 누른 것을 알려 준다.
@@ -25,7 +25,7 @@ export type ForegroundNotifier = {
 };
 
 const toOpen = (notification: Notification | undefined): PushOpen | null =>
-  notification ? { id: notification.id, url: notification.data?.url } : null;
+  notification ? { id: notification.id, data: notification.data } : null;
 
 const pressedOpen = (
   { type, detail }: Event,

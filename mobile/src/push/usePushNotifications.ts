@@ -18,7 +18,7 @@ import { createNativePush, getConfiguredMessaging } from './service';
 import {
   createPushReplyScript,
   parsePushRequest,
-  resolvePushUrl,
+  resolvePushOpenUrl,
 } from './policy';
 
 const ORIGIN = new URL(WEB_APP_URL).origin;
@@ -76,13 +76,15 @@ export const usePushNotifications = (
     const messaging = getConfiguredMessaging();
     if (!messaging || !push) return undefined;
     let active = true;
-    const openUrl = (value: unknown) => {
-      const url = resolvePushUrl(value, WEB_APP_URL);
+    const openData = (data: unknown) => {
+      const url = resolvePushOpenUrl(data, WEB_APP_URL);
       if (active && url) navigate(url);
     };
-    const open = (message: RemoteMessage | null) => openUrl(message?.data?.url);
+    const open = (message: RemoteMessage | null) => {
+      if (message) openData(message.data);
+    };
     const openPressed = (pressed: PushOpen | null) => {
-      if (pressed) openUrl(pressed.url);
+      if (pressed) openData(pressed.data);
     };
     const takeOpened = () => {
       notifier
