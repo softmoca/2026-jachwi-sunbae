@@ -6,8 +6,10 @@ import type { AddressSearchStatus } from '../model/AddressSearch';
 import type { MapAddress } from '../model/Map';
 import { searchAddress } from './mapApi';
 
+type SearchAddress = typeof searchAddress;
+
 /** 검색 요청과 화면 표현을 분리한다. 입력 변경·닫기 이후의 오래된 응답은 반영하지 않는다. */
-const useAddressSearch = () => {
+const useAddressSearch = (search: SearchAddress = searchAddress) => {
   const config = usePublicConfig();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MapAddress[]>([]);
@@ -42,7 +44,7 @@ const useAddressSearch = () => {
     setResults([]);
     setStatus('loading');
     try {
-      const found = await searchAddress(config, query.trim(), controller.signal);
+      const found = await search(config, query.trim(), controller.signal);
       if (requestId !== requestRef.current) return;
       setResults(found);
       setStatus('success');
@@ -52,7 +54,7 @@ const useAddressSearch = () => {
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null;
     }
-  }, [cancelRequest, config, query]);
+  }, [cancelRequest, config, query, search]);
   return { query, results, status, changeQuery, clear, submit };
 };
 

@@ -9,6 +9,7 @@ import {
 } from '@/features/map/lib/mapLocation';
 import type { MapMarker } from '@/features/map/model/Map';
 import { usePropertyList } from '@/features/property/api/useProperties';
+import { takeMovedProperty } from '@/features/property/model/movedProperty';
 
 import { recordPresentation } from '../model/recordPresentation';
 
@@ -36,7 +37,10 @@ const useRecords = (selection?: RecordsSelection) => {
     () => properties.data?.pages.flatMap((page) => page.content).map(recordPresentation) ?? [],
     [properties.data],
   );
-  const districts = ['전체', ...new Set(allRecords.map((record) => record.district))];
+  const districts = [
+    '전체',
+    ...new Set(allRecords.filter((record) => record.summary.location.address?.trim()).map((record) => record.district)),
+  ];
   const [district, setDistrict] = useState('전체');
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const selectedId = selection ? selection.selectedId : localSelectedId;
@@ -52,9 +56,22 @@ const useRecords = (selection?: RecordsSelection) => {
   );
   const selected = records.find((record) => record.id === selectedId);
 
+  // 상세에서 위치를 바꿔 저장한 매물이 새 좌표로 목록에 들어오면, 그 자리로 지도를 옮기고 매물을 골라 새 핀을 보인다.
+  // 처음 그릴 때(휴대폰은 상세에서 돌아오며 새로 그린다)도 첫 기록 대신 그 매물로 간다.
+  const hasCentered = useRef(false);
+  useEffect(() => {
+    const moved = takeMovedProperty((propertyId) => allRecords.find((record) => record.id === String(propertyId)));
+    if (moved === null) return;
+    const movedId = String(moved.propertyId);
+    hasCentered.current = true;
+    setDistrict('전체');
+    if (selectedId !== movedId) setSelectedId(movedId);
+    setCenter({ latitude: moved.latitude, longitude: moved.longitude });
+    setLevel((current) => Math.min(current, 4));
+  }, [allRecords, selectedId, setSelectedId]);
+
   // 기록을 처음 받았을 때만 첫 기록 자리로 지도를 옮긴다. 매물을 만들거나 지워 목록을 다시 받을 때마다 옮기면
   // 방금 만든 매물로 다가간 지도가 다른 자리로 튄다.
-  const hasCentered = useRef(false);
   useEffect(() => {
     if (hasCentered.current) return;
     const first = allRecords.find((record) => record.latitude !== null && record.longitude !== null);

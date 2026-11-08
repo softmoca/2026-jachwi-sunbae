@@ -20,14 +20,14 @@ const SOURCES: Record<StateIllustrationName, [string, string]> = {
 
 type Props = {
   name: StateIllustrationName;
-  /** 그리는 폭(rem). 그림은 정사각형이다. */
+  /** 그리는 폭(rem). 그림의 원본 비율을 유지한다. */
   size?: number;
   className?: string;
 };
 
 /**
  * 오류, 빈 목록, 검색 결과 없음, 없는 페이지에서 안내 글 위에 두는 오리 그림. 장식이라 화면 낭독기는 읽지 않는다.
- * 128px과 2배 256px WebP를 두어 화면 배율에 맞게 고른다.
+ * 기본 크기와 2배 WebP를 두어 화면 배율에 맞게 고른다.
  */
 const StateIllustration = ({ name, size = 7, className }: Props) => {
   const [src, src2x] = SOURCES[name];
@@ -37,8 +37,8 @@ const StateIllustration = ({ name, size = 7, className }: Props) => {
       style={{ width: `${size}rem` }}
       src={src}
       srcSet={`${src} 1x, ${src2x} 2x`}
-      width={128}
-      height={128}
+      width={name === 'error' ? 160 : 128}
+      height={name === 'error' ? 107 : 128}
       alt=""
       aria-hidden="true"
     />

@@ -1,4 +1,5 @@
 import { css, cx, keyframes } from '@emotion/css';
+import type { ReactNode } from 'react';
 
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import ActionCard from '@/shared/ui/action-card/ActionCard';
@@ -7,12 +8,21 @@ import recordHouse from '../assets/record-house.webp';
 import recordNotebook from '../assets/record-notebook.webp';
 import recordPencil from '../assets/record-pencil.webp';
 
-/** 홈의 대표 카드. 노트·연필·집을 카드 가장자리에 걸쳐 두고, 처음 그려질 때와 마우스를 올릴 때 조금씩 움직인다. */
-const RecordCard = ({ className }: { className?: string }) => (
+type RecordCardProps = {
+  /** 줄을 나누는 자리처럼 놓이는 곳에 따라 다르게 그릴 수 있게 받는다. */
+  title?: ReactNode;
+  className?: string;
+};
+
+/**
+ * 홈의 방 기록 카드. 노트·연필·집을 카드 가장자리에 걸쳐 두고, 처음 그려질 때와 마우스를 올릴 때 조금씩 움직인다.
+ * 글자 크기와 위치는 옆 동네 카드와 같게 두려고 대표 카드 크기(`large`)를 쓰지 않는다.
+ */
+const RecordCard = ({ title = '방을 기록해요', className }: RecordCardProps) => (
   <ActionCard
     tone="brand"
-    size="large"
-    title="본 방을 기록해요"
+    title={title}
+    aria-label="방을 기록해요"
     description="가격, 사진, 체크리스트를 한곳에 모아요"
     to={RECORDS_PATH}
     className={`${styles.record} ${className ?? ''}`.trim()}

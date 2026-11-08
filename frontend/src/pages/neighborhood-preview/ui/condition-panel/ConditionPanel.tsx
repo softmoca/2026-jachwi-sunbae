@@ -44,22 +44,6 @@ const ConditionPanel = ({ preview, disabled, onSubmit }: ConditionPanelProps) =>
           <p>위에서 학교·회사를 검색하거나 지도에서 위치를 골라주세요.</p>
         )}
       </section>
-      {!preview.hasChosenMapPoint &&
-        (preview.isSearching || preview.searchError || preview.addressResults.length > 0) && (
-          <div className={styles.addresses}>
-            {preview.isSearching && <p role="status">주소를 찾고 있어요.</p>}
-            {preview.searchError && <p role="alert">{preview.searchError}</p>}
-            {preview.addressResults.map((address) => (
-              <button
-                type="button"
-                key={`${address.latitude}-${address.longitude}`}
-                onClick={() => preview.selectAddress(address)}
-              >
-                {address.roadAddress ?? address.jibunAddress ?? address.address}
-              </button>
-            ))}
-          </div>
-        )}
       <fieldset className={styles.field} disabled={disabled}>
         <legend>통근 시간</legend>
         <SegmentedControl
@@ -140,33 +124,6 @@ const styles = {
       color: var(--color-ink-soft);
       font-size: 0.85rem;
       line-height: 1.5;
-    }
-  `,
-
-  addresses: css`
-    label: ConditionPanel-addresses;
-    display: grid;
-    gap: 0.4rem;
-
-    & p {
-      margin: 0;
-      color: var(--color-ink-soft);
-      font-size: 0.85rem;
-    }
-
-    & button {
-      padding: 0.8rem 0.9rem;
-      border: 1px solid var(--color-border);
-      border-radius: 0.6rem;
-      background: white;
-      color: var(--color-ink);
-      font-size: 0.85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    & button:hover {
-      background: var(--color-surface-muted);
     }
   `,
 

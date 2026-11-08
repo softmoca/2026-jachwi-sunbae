@@ -27,7 +27,15 @@ export const useViewportFacilities = (
   }, []);
   const combined = useQueries({
     queries: cells.map((cell) => ({
-      queryKey: ['viewport-facilities', config.apiBaseUrl, category, cell.center.latitude, cell.center.longitude],
+      // 칸 크기(반경)가 다르면 다른 요청이라 키에 넣는다.
+      queryKey: [
+        'viewport-facilities',
+        config.apiBaseUrl,
+        category,
+        cell.center.latitude,
+        cell.center.longitude,
+        cell.radius,
+      ],
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         fetchNearby(
           config,

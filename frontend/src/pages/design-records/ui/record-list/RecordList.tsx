@@ -1,7 +1,6 @@
 import PropertyCard from '@/features/property/ui/property-card/PropertyCard';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import EmptyState from '@/shared/ui/empty-state/EmptyState';
-import Icon from '@/shared/ui/icon/Icon';
 
 import type { RecordsState } from '../../hooks/useRecords';
 import RecordCardMenu from './RecordCardMenu';
@@ -17,50 +16,34 @@ type RecordListProps = {
   className?: string;
 };
 
-/** 기록 리스트. 인프라 지도 매물 목록과 같은 공용 PropertyCard에 더보기(삭제) 메뉴를 붙인다. */
-const RecordList = ({ records, district, onOpen, onNotice, className }: RecordListProps) => (
-  <section className={className} aria-labelledby="record-list-heading">
-    <h2 id="record-list-heading" className="sr-only">
-      {district === '전체' ? '모든 기록' : `${district} 기록`}
-    </h2>
-    {/* 리스트 필터는 아직 기능 구현 전이라 모양만 두고 누를 수 없게 막는다. */}
-    <div className={styles.toolbar}>
-      <div className={styles.filters} role="group" aria-label="기록 필터 (준비 중)">
-        <button type="button" disabled>
-          최근순 <Icon name="chevron-down" size={14} />
-        </button>
-        <button type="button" disabled>
-          월세 <Icon name="chevron-down" size={14} />
-        </button>
-        <button type="button" disabled>
-          체크 진행 <Icon name="chevron-down" size={14} />
-        </button>
-      </div>
-      <div className={styles.toolbarActions}>
-        <span className={styles.comingSoon}>필터 준비 중</span>
-      </div>
-    </div>
-    {records.length === 0 && (
-      <EmptyState
-        variant="plain"
-        illustration="empty-properties"
-        title={district === '전체' ? '아직 기록한 방이 없어요' : `${district}에 기록한 방이 없어요`}
-        description="집을 보러 가면 사진과 체크한 내용을 남겨 두세요. 여기에 모여요."
-      />
-    )}
-    <ul className={styles.items}>
-      {records.map((record) => (
-        <li key={record.id}>
-          <PropertyCard
-            property={record.summary}
-            returnTo={RECORDS_PATH}
-            onOpen={onOpen === undefined ? undefined : () => onOpen(record.id)}
-            actions={<RecordCardMenu propertyId={Number(record.id)} propertyName={record.name} onDone={onNotice} />}
-          />
-        </li>
-      ))}
-    </ul>
-  </section>
-);
+const RecordList = ({ records, district, onOpen, onNotice, className }: RecordListProps) => {
+  return (
+    <section className={className} aria-labelledby="record-list-heading">
+      <h2 id="record-list-heading" className="sr-only">
+        {district === '전체' ? '모든 기록' : `${district} 기록`}
+      </h2>
+      {records.length === 0 && (
+        <EmptyState
+          variant="plain"
+          illustration="empty-properties"
+          title={district === '전체' ? '아직 기록한 방이 없어요' : `${district}에 기록한 방이 없어요`}
+          description="집을 보러 가면 사진과 체크한 내용을 남겨 두세요. 여기에 모여요."
+        />
+      )}
+      <ul className={styles.items}>
+        {records.map((record) => (
+          <li key={record.id}>
+            <PropertyCard
+              property={record.summary}
+              returnTo={RECORDS_PATH}
+              onOpen={onOpen === undefined ? undefined : () => onOpen(record.id)}
+              actions={<RecordCardMenu propertyId={Number(record.id)} propertyName={record.name} onDone={onNotice} />}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
 
 export default RecordList;

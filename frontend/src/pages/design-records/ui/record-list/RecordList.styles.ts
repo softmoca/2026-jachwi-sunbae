@@ -1,58 +1,5 @@
 import { css } from '@emotion/css';
 
-/* 리스트 위 필터 줄. 아직 기능 구현 전이라 칩은 흐리게 두고 '필터 준비 중'을 붙인다. */
-export const toolbar = css`
-  label: RecordList-toolbar;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-`;
-
-export const filters = css`
-  label: RecordList-filters;
-  display: flex;
-  min-width: 0;
-  gap: 0.35rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  & button {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    gap: 0.2rem;
-    padding: 0.45rem 0.7rem;
-    border: 1px solid #e3e5e9;
-    border-radius: 0.5rem;
-    background: #fff;
-    color: #9499a2;
-    font: inherit;
-    font-size: 0.75rem;
-    cursor: not-allowed;
-  }
-`;
-
-export const comingSoon = css`
-  label: RecordList-comingSoon;
-  flex: none;
-  padding: 0.2rem 0.45rem;
-  border-radius: 0.35rem;
-  background: #f3f4f6;
-  color: #9499a2;
-  font-size: 0.65rem;
-  font-weight: 600;
-`;
-
-/* 툴바 오른쪽 묶음. 지금은 '필터 준비 중' 표시만 둔다. */
-export const toolbarActions = css`
-  label: RecordList-toolbarActions;
-  display: flex;
-  flex: none;
-  gap: 0.35rem;
-`;
-
 export const items = css`
   label: RecordList-items;
   list-style: none;

@@ -6,6 +6,7 @@ import com.jachwisunbae.map.domain.MapAddress;
 import com.jachwisunbae.map.domain.NearbyPlace;
 import com.jachwisunbae.map.provider.AddressProvider;
 import com.jachwisunbae.map.provider.NearbyPlaceProvider;
+import com.jachwisunbae.map.provider.naver.NaverLocalSearchClient;
 import com.jachwisunbae.map.service.dto.result.NearbyResult;
 import com.jachwisunbae.map.type.MapCategory;
 import org.springframework.stereotype.Service;
@@ -25,17 +26,29 @@ public class MapService {
     private static final Set<Integer> SUPPORTED_RADII = Set.of(500, 1000, 2000);
     private final AddressProvider addressProvider;
     private final NearbyPlaceProvider nearbyPlaceProvider;
+    private final NaverLocalSearchClient naverLocalSearchClient;
 
-    public MapService(AddressProvider addressProvider, NearbyPlaceProvider nearbyPlaceProvider) {
+    public MapService(AddressProvider addressProvider, NearbyPlaceProvider nearbyPlaceProvider,
+                      NaverLocalSearchClient naverLocalSearchClient) {
         this.addressProvider = addressProvider;
         this.nearbyPlaceProvider = nearbyPlaceProvider;
+        this.naverLocalSearchClient = naverLocalSearchClient;
     }
 
     public List<MapAddress> geocode(String query) {
+        validateQuery(query);
+        return addressProvider.geocode(query.trim());
+    }
+
+    public List<MapAddress> searchPlace(String query) {
+        validateQuery(query);
+        return naverLocalSearchClient.search(query.trim());
+    }
+
+    private void validateQuery(String query) {
         if (query == null || query.isBlank() || query.length() > 200) {
             throw invalidQuery("주소 검색어는 1자 이상 200자 이하여야 합니다.");
         }
-        return addressProvider.geocode(query.trim());
     }
 
     public MapAddress reverseGeocode(BigDecimal latitude, BigDecimal longitude) {

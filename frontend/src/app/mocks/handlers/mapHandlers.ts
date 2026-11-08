@@ -138,6 +138,7 @@ const demoPlaces: DemoPlace[] = [
 
 export const mapHandlers = [
   http.get('*/api/maps/geocode', () => success([address])),
+  http.get('*/api/maps/search', () => success([address])),
   http.get('*/api/maps/reverse-geocode', ({ request }) => {
     const url = new URL(request.url);
     const latitude = Number(url.searchParams.get('latitude') ?? address.latitude);

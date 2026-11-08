@@ -118,14 +118,14 @@ describe('routeFocusView', () => {
     const middleLatitude = (route[0].latitude + destination.latitude) / 2;
     const view = routeFocusView(route, [], mobileMapViewport({ width: 390, height: 844 }, 110)!);
     expect(view.latitude).toBeLessThan(middleLatitude);
-    // 좌우 여백이 같으면 가로로는 옮기지 않는다.
-    expect(view.longitude).toBeCloseTo(destination.longitude, 9);
+    // 오른쪽 레일 줄 여백이 더 커서 가운데를 그만큼 동쪽으로 둔다.
+    expect(view.longitude).toBeGreaterThan(destination.longitude);
   });
 
-  it('데스크탑은 상세 칸이 아직 닫혀 있으면 열릴 폭(clamp(22rem, 28%, 26rem))을 미리 빼고, 크기를 모르면 고정 칸을 쓴다', () => {
-    const closed = desktopMapViewport({ width: 922, height: 736 }, { width: 1280, isDetailOpen: false });
-    expect(closed?.width).toBeCloseTo(922 - 358.4, 6);
-    expect(desktopMapViewport({ width: 563, height: 736 }, { width: 1280, isDetailOpen: true })?.width).toBe(563);
+  it('데스크탑은 지도 칸 폭을 그대로 쓰고, 왼쪽 필터와 정보 카드, 오른쪽 레일 줄 자리를 여백으로 비운다', () => {
+    const view = desktopMapViewport({ width: 922, height: 736 });
+    expect(view?.width).toBe(922);
+    expect(view?.padding).toEqual({ top: 24, right: 80, bottom: 40, left: 384 });
     expect(desktopMapViewport({ width: 0, height: 0 }, { width: 1280, isDetailOpen: false })).toBeNull();
     expect(mobileMapViewport({ width: 0, height: 0 }, 0)).toBeNull();
   });

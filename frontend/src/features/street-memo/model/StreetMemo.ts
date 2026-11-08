@@ -9,6 +9,8 @@ export type StreetMemo = {
   memo: string;
   preference: StreetMemoPreference;
   isMine: boolean;
+  /** 메모 위치가 속한 8자리 행정동 코드. 서버가 동을 찾지 못한 메모는 null이다. 동네 찾기 지도는 멀리 볼 때 이 코드로 묶는다. */
+  adminDongCode?: string | null;
 };
 
 export type StreetMemoDraft = {

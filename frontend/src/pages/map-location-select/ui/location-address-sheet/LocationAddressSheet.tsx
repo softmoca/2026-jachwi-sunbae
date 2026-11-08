@@ -1,5 +1,6 @@
 import { css } from '@emotion/css';
 
+import { UNSUPPORTED_ADDRESS_MESSAGE } from '@/features/map/lib/mapAddress';
 import type { MapAddress } from '@/features/map/model/Map';
 
 import type { LocationSelectionStatus } from '../../hooks/useLocationSelection';
@@ -12,31 +13,31 @@ type LocationAddressSheetProps = {
 };
 
 const LocationAddressSheet = ({ selected, status, onOpenSearch, onConfirm }: LocationAddressSheetProps) => {
-  const selectedAddress = selected.roadAddress ?? selected.jibunAddress;
+  const selectedAddress = selected.roadAddress ?? selected.jibunAddress ?? selected.address;
+  const isResolving = status === 'locating' || status === 'geocoding';
+  // 주소를 찾지 못했거나 조회가 실패한 자리도 좌표만으로 적용할 수 있다.
+  const hasNoAddress = !isResolving && selectedAddress === null;
 
   return (
     <section className={styles.sheet} aria-live="polite">
-      <strong>
-        {selectedAddress ?? (status === 'error' ? '주소를 확인하지 못했어요' : '주소를 확인하는 중이에요')}
+      <strong className={hasNoAddress ? styles.missingAddress : undefined}>
+        {isResolving && selectedAddress === null
+          ? '주소를 확인하는 중이에요'
+          : (selectedAddress ?? UNSUPPORTED_ADDRESS_MESSAGE)}
       </strong>
       <p>
         {selected.roadAddress !== null && selected.jibunAddress !== null
           ? selected.jibunAddress
           : '지도를 움직이거나 위치를 눌러 주세요.'}
       </p>
-      {status === 'error' ? (
+      {hasNoAddress ? (
         <button className={styles.addressNotice} type="button" onClick={onOpenSearch}>
           주소로 다시 찾아볼까요?
         </button>
       ) : (
         <p className={styles.addressHint}>표시된 주소가 맞는지 확인해 주세요.</p>
       )}
-      <button
-        className={styles.confirmButton}
-        type="button"
-        disabled={status !== 'ready' || selectedAddress === null}
-        onClick={onConfirm}
-      >
+      <button className={styles.confirmButton} type="button" disabled={isResolving} onClick={onConfirm}>
         이 위치 적용하기
       </button>
     </section>
@@ -76,6 +77,11 @@ const styles = {
       color: var(--color-muted);
       font-size: 0.7rem;
     }
+  `,
+
+  missingAddress: css`
+    label: LocationAddressSheet-missingAddress;
+    color: var(--color-muted);
   `,
 
   addressNotice: css`

@@ -27,6 +27,9 @@ const parseStreetMemo = (value: unknown): StreetMemo => {
     memo: readString(record, 'memo', { allowEmpty: true }),
     preference: readPreference(record),
     isMine: readBoolean(record, 'isMine'),
+    // 예전 서버나 목업이 필드를 빼고 보내도 묶지 않는 메모로 받는다.
+    adminDongCode:
+      typeof record.adminDongCode === 'string' && record.adminDongCode !== '' ? record.adminDongCode : null,
   };
 };
 

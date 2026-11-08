@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.jachwisunbae.checklist.type.CheckStage;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckStatus;
 import com.jachwisunbae.property.repository.query.PropertyChecklistApplicationQuery;
 import com.jachwisunbae.property.repository.query.PropertyChecklistItemQuery;
@@ -79,6 +80,23 @@ class JdbcPropertyChecklistRepositoryTest {
                 .extracting(PropertyChecklistItemQuery::systemCheckItemId, PropertyChecklistItemQuery::displayOrder,
                         PropertyChecklistItemQuery::status, PropertyChecklistItemQuery::memo)
                 .containsExactly(tuple(1L, 1, CheckStatus.UNCONFIRMED, ""), tuple(2L, 2, CheckStatus.CAUTION, "벽이 얇다"));
+    }
+
+    @Test
+    @DisplayName("매물 항목은 비활성 시스템 항목의 현재 카테고리를 조회하고 참조가 없으면 기타로 제공한다")
+    void readsCurrentCategoryWithoutChangingSnapshots() {
+        long checklistId = repository.save(PROPERTY_ID, null, "기존 양식", CheckStage.ON_SITE);
+        itemRepository.saveAll(checklistId, List.of(
+                new PropertyChecklistItemStateQuery(1L, "당시 질문", 1, CheckStatus.CAUTION, "기존 메모"),
+                new PropertyChecklistItemStateQuery(null, "참조 없는 질문", 2, CheckStatus.GOOD, "")));
+        jdbcTemplate.update("UPDATE system_check_items SET category = 'WATER_BATHROOM', deleted_at = NOW(6) WHERE id = 1");
+
+        var items = repository.findApplication(MEMBER_ID, PROPERTY_ID, checklistId).orElseThrow().items();
+
+        assertThat(items).extracting(PropertyChecklistItemQuery::question, PropertyChecklistItemQuery::category,
+                PropertyChecklistItemQuery::status, PropertyChecklistItemQuery::memo)
+                .containsExactly(tuple("당시 질문", CheckItemCategory.WATER_BATHROOM, CheckStatus.CAUTION, "기존 메모"),
+                        tuple("참조 없는 질문", CheckItemCategory.OTHER, CheckStatus.GOOD, ""));
     }
 
     @Test

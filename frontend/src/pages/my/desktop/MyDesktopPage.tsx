@@ -1,6 +1,5 @@
 import { css } from '@emotion/css';
 
-import { useMember } from '@/features/auth/api/useCurrentMember';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
@@ -14,7 +13,6 @@ import * as shared from '../MyPage.styles';
 /** 데스크탑 마이. 공용 헤더로 이동하므로 뒤로 가기 없이 제목만 두고, 홈과 같은 64rem 본문에 카드를 늘이지 않고 나란히 둔다. */
 const MyDesktopPage = () => {
   const config = usePublicConfig();
-  const member = useMember();
 
   return (
     <main className={shared.page}>
@@ -25,7 +23,7 @@ const MyDesktopPage = () => {
         <WeatherSummaryCard />
         <div className={styles.links}>
           <PrivacyLinkCard />
-          <AccountResetCard memberId={member.memberId} />
+          <AccountResetCard />
         </div>
       </div>
       <footer className={`${shared.footer} ${styles.footer}`}>

@@ -18,6 +18,7 @@ const memo = {
   memo: '  줄바꿈도\n그대로  ',
   preference: 'DISLIKE',
   isMine: true,
+  adminDongCode: '11680640',
 };
 
 beforeEach(() => {
@@ -33,7 +34,15 @@ it('지도 사각형 범위로 메모를 조회하고 입력한 공백·줄바�
     }),
   );
   await expect(fetchStreetMemos(config, bounds)).resolves.toEqual([
-    { id: 7, latitude: 37.5, longitude: 127.03, memo: '  줄바꿈도\n그대로  ', preference: 'DISLIKE', isMine: true },
+    {
+      id: 7,
+      latitude: 37.5,
+      longitude: 127.03,
+      memo: '  줄바꿈도\n그대로  ',
+      preference: 'DISLIKE',
+      isMine: true,
+      adminDongCode: '11680640',
+    },
   ]);
   expect(Object.fromEntries(requested!.searchParams)).toEqual({
     minLatitude: '37.49',
@@ -41,6 +50,21 @@ it('지도 사각형 범위로 메모를 조회하고 입력한 공백·줄바�
     minLongitude: '127.02',
     maxLongitude: '127.04',
   });
+});
+
+it('행정동 코드가 null이거나 빠진 메모는 묶지 않는 메모(null)로 받는다', async () => {
+  const withoutCode: Partial<typeof memo> = { ...memo };
+  delete withoutCode.adminDongCode;
+  server.use(
+    http.get('*/api/street-memos', () =>
+      envelope([
+        { ...memo, adminDongCode: null },
+        { ...withoutCode, streetMemoId: 8 },
+      ]),
+    ),
+  );
+  const memos = await fetchStreetMemos(config, bounds);
+  expect(memos.map((item) => item.adminDongCode)).toEqual([null, null]);
 });
 
 it.each([

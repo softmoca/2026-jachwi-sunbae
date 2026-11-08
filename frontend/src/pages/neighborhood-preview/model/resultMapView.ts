@@ -139,34 +139,33 @@ export const routeFocusView = (
 };
 
 const REM = 16;
-/** 데스크탑 상세 칸 폭(`ListDetailLayout`의 `clamp(22rem, 28%, 26rem)`). */
-const desktopDetailWidth = (layoutWidth: number) => Math.min(26 * REM, Math.max(22 * REM, layoutWidth * 0.28));
 
 /**
- * 데스크탑 결과 지도 칸. 동네를 고르면 목록 옆에 상세 칸이 열려 지도 칸이 그만큼 좁아지므로, 아직 닫혀 있으면 그 폭을 미리 뺀다.
- * 위는 색 기준 상자, 왼쪽은 상세 닫기 버튼, 오른쪽은 확대 축소 버튼, 아래는 월세 상자 자리를 비운다.
+ * 데스크탑 결과 지도 칸. 옆 칸은 동네 대중교통 상세에만 열려 평소 지도 칸 폭은 그대로다.
+ * 왼쪽은 지도 안 월세 필터(위)와 마커 정보 카드(아래)가 차지하는 폭(22rem과 여백), 오른쪽은 확대 축소와 레일 줄, 위아래는 가장자리 여백을 비운다.
+ * 옆 칸이 열린 상태(`isDetailOpen`)는 지도 칸 크기가 이미 줄어 있으므로 따로 빼지 않는다.
  */
 export const desktopMapViewport = (
   map: { width: number; height: number },
-  layout: { width: number; isDetailOpen: boolean },
+  _layout?: { width: number; isDetailOpen: boolean },
 ): MapViewport | null => {
   if (map.width === 0 || map.height === 0) return null;
   return {
-    width: map.width - (layout.isDetailOpen ? 0 : desktopDetailWidth(layout.width)),
+    width: map.width,
     height: map.height,
-    padding: { top: 96, right: 72, bottom: 40, left: 64 },
+    padding: { top: 24, right: 5 * REM, bottom: 40, left: 24 * REM },
   };
 };
 
-/** 동네를 고르면 휴대폰에서 올라오는 동네 시트의 처음 높이(`AreaPlacesSheet`, 지도 칸의 38%). */
-const MOBILE_AREA_SHEET_RATIO = 0.38;
+/** 휴대폰 한 단계 정보 시트의 높이(지도 칸의 40%). 동네, 마커, My 정보가 모두 이 높이로 올라온다. */
+const MOBILE_AREA_SHEET_RATIO = 0.4;
 
-/** 휴대폰과 태블릿 결과 지도 칸. 위는 조건 줄과 색 기준(`headerBottom`, 지도 칸 위에서부터 px), 아래는 동네 시트 높이를 비운다. */
+/** 휴대폰과 태블릿 결과 지도 칸. 위는 결과 머리(`headerBottom`, 지도 칸 위에서부터 px), 오른쪽은 확대 축소와 레일 줄, 아래는 정보 시트 높이를 비운다. */
 export const mobileMapViewport = (map: { width: number; height: number }, headerBottom: number): MapViewport | null => {
   if (map.width === 0 || map.height === 0) return null;
   return {
     width: map.width,
     height: map.height,
-    padding: { top: headerBottom + 8, right: 16, bottom: map.height * MOBILE_AREA_SHEET_RATIO + 16, left: 16 },
+    padding: { top: headerBottom + 8, right: 4.5 * REM, bottom: map.height * MOBILE_AREA_SHEET_RATIO + 16, left: 16 },
   };
 };

@@ -14,7 +14,7 @@ type Props = {
 };
 
 /**
- * 기록 카드 오른쪽 위 더보기(⋮) 메뉴. 리스트와 지도 아래 매물 목록이 함께 쓰고, 지금은 삭제만 둔다.
+ * 지도에서 고른 자리의 매물 카드 오른쪽 위 더보기(⋮) 메뉴. 지금은 삭제만 둔다. 매물 리스트에서도 같은 메뉴를 사용한다.
  * 연 뒤 메뉴 밖을 누르거나 Esc를 누르면 닫는다. 다른 카드의 메뉴를 열면 앞 메뉴는 닫힌다.
  */
 const RecordCardMenu = ({ propertyId, propertyName, onDone }: Props) => {
@@ -58,6 +58,7 @@ const RecordCardMenu = ({ propertyId, propertyName, onDone }: Props) => {
         <div className={styles.menu}>
           <RecordDeleteButton
             propertyId={propertyId}
+            propertyName={propertyName}
             onDone={(message) => {
               setIsOpen(false);
               onDone(message);

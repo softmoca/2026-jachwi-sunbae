@@ -4,6 +4,7 @@ import com.jachwisunbae.checklist.entity.UserChecklist;
 import com.jachwisunbae.checklist.entity.UserChecklistItem;
 import com.jachwisunbae.checklist.repository.query.UserChecklistItemDetail;
 import com.jachwisunbae.checklist.repository.query.UserChecklistSummaryQuery;
+import com.jachwisunbae.checklist.type.CheckItemCategory;
 import com.jachwisunbae.checklist.type.CheckItemType;
 import com.jachwisunbae.checklist.type.CheckStage;
 import com.jachwisunbae.common.exception.client.ClientException;
@@ -60,7 +61,7 @@ public class JdbcUserChecklistRepository implements UserChecklistRepository {
             CheckItemType.valueOf(rs.getString("item_type")),
             rs.getString("question"),
             rs.getInt("display_order")
-        ), rs.getBoolean("active"));
+        ), rs.getBoolean("active"), CheckItemCategory.valueOf(rs.getString("category")));
 
     public JdbcUserChecklistRepository(final JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -181,6 +182,7 @@ public class JdbcUserChecklistRepository implements UserChecklistRepository {
                        COALESCE(uci.item_type, sci.item_type) AS item_type,
                        COALESCE(uci.question, sci.question) AS question,
                        uci.display_order,
+                       COALESCE(sci.category, 'OTHER') AS category,
                        CASE WHEN sci.id IS NOT NULL AND sci.deleted_at IS NULL
                            THEN TRUE ELSE FALSE END AS active
                 FROM user_checklist_items uci

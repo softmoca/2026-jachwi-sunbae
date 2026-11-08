@@ -1,4 +1,5 @@
 import { css } from '@emotion/css';
+import type { ReactNode } from 'react';
 
 import BottomSheet from '@/shared/ui/bottom-sheet/BottomSheet';
 
@@ -9,11 +10,16 @@ type Props = {
   /** 지도에서 고른 매물. 겹쳐 묶인 마커를 누르면 여러 개다. */
   records: RecordsState['records'];
   onClose: () => void;
+  /** 매물 하나를 볼 때 머리 오른쪽에 둘 이전, 다음 화살표. */
+  stepper?: ReactNode;
   onNotice: (message: string) => void;
 };
 
-/** 휴대폰 지도에서 고른 매물을 보는 바텀시트. 겹친 매물은 함께 늘어놓고, 카드를 누르면 상세 화면으로 간다. */
-const RecordsSelectedSheet = ({ records, onClose, onNotice }: Props) => {
+/**
+ * 휴대폰 지도에서 고른 매물을 보는 바텀시트. 겹친 매물은 함께 늘어놓고, 카드를 누르면 상세 화면으로 간다.
+ * 매물 하나를 볼 때는 머리의 이전, 다음 화살표로 앞뒤 매물로 넘긴다. 시트는 그대로 두고 내용만 바꾼다.
+ */
+const RecordsSelectedSheet = ({ records, onClose, stepper, onNotice }: Props) => {
   if (records.length === 0) return null;
   return (
     <BottomSheet
@@ -22,6 +28,7 @@ const RecordsSelectedSheet = ({ records, onClose, onNotice }: Props) => {
       initialHeightPercent={records.length > 1 ? 45 : 28}
       closeLabel="매물 닫기"
       onClose={onClose}
+      headerEnd={stepper}
     >
       <RecordGroupList records={records} onNotice={onNotice} className={styles.list} />
     </BottomSheet>

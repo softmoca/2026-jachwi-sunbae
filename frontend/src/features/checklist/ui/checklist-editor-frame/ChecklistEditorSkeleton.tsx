@@ -1,12 +1,12 @@
 import { css } from '@emotion/css';
 
 import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
-import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
+import { CHECKLISTS_PATH } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import Skeleton from '@/shared/ui/skeleton/Skeleton';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
-import ChecklistEditorFrame, { ChecklistDesktopHeading } from './ChecklistEditorFrame';
+import ChecklistEditorFrame from './ChecklistEditorFrame';
 
 const ITEM_COUNT = 4;
 
@@ -16,23 +16,19 @@ const ITEM_COUNT = 4;
  * 읽기 프로그램 안내는 감싸는 쪽(`QueryState`, `LoadingRegion`)이 한다.
  * 첫 번들 크기 한도 때문에 라우트 Suspense 대체 화면으로는 쓰지 않는다. 화면 코드는 자동 로그인과 함께 받으므로 대개 먼저 도착한다.
  */
-const ChecklistEditorSkeleton = () => {
+const ChecklistEditorSkeleton = ({ title = '체크리스트 편집' }: { title?: string }) => {
   const isDesktop = useIsDesktop();
-  const goBack = useReturnNavigation({ cameFromTarget: true, fallback: HOME_PATH });
+  const goBack = useReturnNavigation({ cameFromTarget: true, fallback: CHECKLISTS_PATH });
 
   return (
     <ChecklistEditorFrame isDesktop={isDesktop} className={styles.page}>
-      {isDesktop ? (
-        <ChecklistDesktopHeading />
-      ) : (
-        <TopNavigation
-          className={styles.topNavigation}
-          title="체크리스트 편집"
-          backLabel="이전 화면으로 돌아가기"
-          navigationIcon="arrow-left"
-          onBack={goBack}
-        />
-      )}
+      <TopNavigation
+        className={styles.topNavigation}
+        title={title}
+        backLabel="체크리스트 관리로 돌아가기"
+        navigationIcon={isDesktop ? 'close' : 'arrow-left'}
+        onBack={goBack}
+      />
       <div className={styles.body}>
         <Skeleton width="40%" height="1rem" />
         <div className={styles.items}>

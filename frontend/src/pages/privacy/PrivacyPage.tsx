@@ -1,6 +1,7 @@
 import { css, cx } from '@emotion/css';
 import { useNavigate, useNavigationType } from 'react-router-dom';
 
+import { useAuthentication } from '@/features/auth/model/useAuthentication';
 import { createAccountDeletionMailto } from '@/shared/config/accountDeletion';
 import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import AppBar from '@/shared/ui/app-bar/AppBar';
@@ -9,6 +10,8 @@ import { ButtonLink } from '@/shared/ui/button/Button';
 const PrivacyPage = () => {
   const navigate = useNavigate();
   const navigationType = useNavigationType();
+  // 이 화면은 로그인 없이도 열린다. 로그인한 상태면 삭제 요청 메일에 회원 번호를 미리 적어 둔다.
+  const memberId = useAuthentication().session?.memberId ?? undefined;
   const goBack = () => {
     if (navigationType === 'PUSH' || window.history.state?.idx > 0) {
       void navigate(-1);
@@ -89,8 +92,8 @@ const PrivacyPage = () => {
           <ol>
             <li>이메일 제목에 “자취선배 계정 및 데이터 삭제 요청”이라고 적어 주세요.</li>
             <li>
-              계정을 확인할 수 있도록 회원 번호를 적어 주세요. 마이 화면의 초기화 아래 메일 요청 링크를 이용하면
-              자동으로 적혀요.
+              계정을 확인할 수 있도록 회원 번호를 적어 주세요. 마이 화면에서 이 화면을 열고 아래 버튼을 누르면 자동으로
+              적혀요.
             </li>
             <li>계정 전체 또는 삭제를 원하는 데이터 범위를 적어 보내 주세요.</li>
           </ol>
@@ -102,7 +105,7 @@ const PrivacyPage = () => {
           {/* 메일 앱을 여는 외부 주소라 라우터 이동 대신 문서 이동으로 연다. */}
           <ButtonLink
             className={styles.mailButton}
-            to={createAccountDeletionMailto()}
+            to={createAccountDeletionMailto(memberId)}
             reloadDocument
             variant="primary"
             fullWidth

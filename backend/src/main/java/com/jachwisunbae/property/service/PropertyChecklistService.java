@@ -11,7 +11,6 @@ import com.jachwisunbae.checklist.type.CheckStatus;
 import com.jachwisunbae.common.exception.client.BusinessRuleViolationException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
-import com.jachwisunbae.common.exception.server.DataInconsistencyException;
 import com.jachwisunbae.property.repository.PropertyChecklistRepository;
 import com.jachwisunbae.property.repository.PropertyChecklistItemRepository;
 import com.jachwisunbae.property.repository.PropertyProgressRepository;
@@ -66,12 +65,16 @@ public class PropertyChecklistService {
     }
 
     private void applyInitialChecklist(final Long memberId, final Long propertyId, final CheckStage stage) {
+        List<SystemCheckItem> coreItems = systemCheckItemRepository.findActiveCoreByStage(stage);
+        if (coreItems.isEmpty()) {
+            return;
+        }
         Optional<UserChecklist> preferredChecklist = findPreferredChecklist(memberId, stage);
         if (preferredChecklist.isPresent()) {
             applyUserChecklist(propertyId, stage, preferredChecklist.get(), List.of());
             return;
         }
-        applyInitialSystemChecklist(propertyId, stage);
+        saveSystemChecklist(propertyId, stage, coreItems, List.of());
     }
 
     private Optional<UserChecklist> findPreferredChecklist(final Long memberId, final CheckStage stage) {
@@ -83,24 +86,25 @@ public class PropertyChecklistService {
             .filter(checklist -> checklist.getStage() == stage);
     }
 
-    private void applyInitialSystemChecklist(final Long propertyId, final CheckStage stage) {
-        List<SystemCheckItem> coreItems = systemCheckItemRepository.findActiveCoreByStage(stage);
-        saveSystemChecklist(propertyId, stage, coreItems, List.of());
-    }
-
     @Transactional
     public PropertyChecklistApplicationQuery apply(final Long memberId, final Long propertyId,
                                                    final CheckStage stage,
                                                    final PropertyChecklistSourceType sourceType,
                                                    final Long checklistId) {
         validateOwnedPropertyForUpdate(memberId, propertyId);
+        List<SystemCheckItem> coreItems = sourceType == PropertyChecklistSourceType.SYSTEM_DEFAULT
+                ? systemCheckItemRepository.findActiveCoreByStage(stage) : List.of();
+        if (sourceType == PropertyChecklistSourceType.SYSTEM_DEFAULT && coreItems.isEmpty()) {
+            throw new BusinessRuleViolationException(ErrorCode.CHECKLIST_INACTIVE_ITEM_NOT_ALLOWED,
+                "현재 제공하지 않는 단계의 기본 체크리스트는 적용할 수 없습니다.");
+        }
 
         List<PropertyChecklistItemStateQuery> previous = propertyChecklistItemRepository.findCurrentStates(propertyId, stage);
         propertyChecklistItemRepository.deleteByPropertyAndStage(propertyId, stage);
         propertyChecklistRepository.deleteByPropertyAndStage(propertyId, stage);
 
         if (sourceType == PropertyChecklistSourceType.SYSTEM_DEFAULT) {
-            long propertyChecklistId = applySystemChecklist(propertyId, stage, previous);
+            long propertyChecklistId = saveSystemChecklist(propertyId, stage, coreItems, previous);
             return completeApplication(memberId, propertyId, stage, propertyChecklistId, null);
         }
 
@@ -124,17 +128,6 @@ public class PropertyChecklistService {
         propertyRepository.findByIdAndMemberIdForUpdate(propertyId, memberId)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND,
                 "매물을 찾을 수 없습니다."));
-    }
-
-    private long applySystemChecklist(final Long propertyId, final CheckStage stage,
-                                      final List<PropertyChecklistItemStateQuery> previousItems) {
-        List<SystemCheckItem> coreItems = systemCheckItemRepository.findActiveCoreByStage(stage);
-        if (coreItems.isEmpty()) {
-            // 시스템이 제공해야 하는 기본 체크 항목(시드 데이터)이 없는 것은 사용자가 해결할 수 없는 서버 데이터 문제다.
-            throw new DataInconsistencyException(ErrorCode.INTERNAL_SERVER_ERROR,
-                "stage=" + stage + " 현재 단계의 기본 체크 항목이 없습니다.");
-        }
-        return saveSystemChecklist(propertyId, stage, coreItems, previousItems);
     }
 
     private long saveSystemChecklist(final Long propertyId, final CheckStage stage,

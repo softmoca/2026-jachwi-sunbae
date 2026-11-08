@@ -10,6 +10,7 @@ import com.jachwisunbae.property.service.pdf.view.PropertyComparisonPdfView;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,8 @@ public class PropertyComparisonPdfRenderer {
     private static final String TEMPLATE = "pdf/property-comparison";
     private static final String REGULAR_FONT = "/fonts/NanumGothic-Regular.ttf";
     private static final String BOLD_FONT = "/fonts/NanumGothic-Bold.ttf";
+    // 서비스 화면 머리글과 같은 자취선배 오리 로고. 사진이 없는 매물 카드의 자리 그림으로도 쓴다.
+    private static final String LOGO = "/images/jachwi-sunbae-goose.png";
 
     private final TemplateEngine templateEngine;
     private final PropertyComparisonPdfViewMapper viewMapper;
@@ -40,7 +43,9 @@ public class PropertyComparisonPdfRenderer {
         PropertyComparisonPdfView view = viewMapper.map(records);
         Context context = new Context(Locale.KOREA);
         context.setVariable("overviewRows", view.overviewRows());
+        context.setVariable("stageRows", view.stageRows());
         context.setVariable("properties", view.properties());
+        context.setVariable("logoSource", logoSource());
         return templateEngine.process(TEMPLATE, context);
     }
 
@@ -63,6 +68,15 @@ public class PropertyComparisonPdfRenderer {
     private void configureFonts(final PdfRendererBuilder builder) {
         builder.useFont(() -> requiredResource(REGULAR_FONT), "NanumGothic", 400, FontStyle.NORMAL, true);
         builder.useFont(() -> requiredResource(BOLD_FONT), "NanumGothic", 700, FontStyle.NORMAL, true);
+    }
+
+    private String logoSource() {
+        try (InputStream input = requiredResource(LOGO)) {
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(input.readAllBytes());
+        } catch (IOException exception) {
+            throw new InternalSystemException(ErrorCode.PROPERTY_COMPARISON_EXPORT_FAILED,
+                "PDF 로고 리소스를 읽지 못했습니다: " + LOGO, exception);
+        }
     }
 
     private InputStream requiredResource(final String path) {

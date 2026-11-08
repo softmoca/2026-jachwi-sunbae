@@ -106,8 +106,23 @@ injectGlobal`
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --page-inline-padding: 1rem;
+  /* 홈 카드(사용방법, 기능 카드, 저렴한 한 끼)가 함께 쓰는 글자 크기, 위치, 간격. 카드마다 다르게 두지 않는다. */
+  --home-card-title-size: 1.2rem;
+  --home-card-title-line-height: 1.25;
+  --home-card-description-size: 0.78rem;
+  --home-card-text-inset: 1.25rem;
+  --home-card-text-gap: 0.3rem;
   --app-max-width: 24.375rem;
   --app-bar-height: 2.9rem;
   --bottom-navigation-height: 2.47rem;
+}
+
+/* 태블릿 너비부터 카드가 넓어지는 만큼 홈 카드 글자와 여백을 키운다. */
+@media (min-width: 768px) {
+  :root {
+    --home-card-title-size: 1.5rem;
+    --home-card-description-size: 0.95rem;
+    --home-card-text-inset: 1.6rem;
+  }
 }
 `;

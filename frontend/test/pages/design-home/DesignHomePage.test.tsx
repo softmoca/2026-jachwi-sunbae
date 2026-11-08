@@ -46,7 +46,7 @@ const renderHome = () => {
 
 it('기능 카드, 빠른 메뉴 2개와 내 매물로 만든 최근 기록을 보여준다', async () => {
   renderHome();
-  expect(screen.getByRole('link', { name: /본 방을 기록해요/ })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '방을 기록해요' })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: '최근 기록한 방' })).toBeInTheDocument();
   expect(await screen.findByText('신림역 원룸')).toBeInTheDocument();
   expect(screen.getByText('망원동 투룸')).toBeInTheDocument();
@@ -60,10 +60,10 @@ it('기능 카드, 빠른 메뉴 2개와 내 매물로 만든 최근 기록을 �
 });
 
 it.each([
-  ['link', /본 방을 기록해요/, '본 방 기록 화면'],
+  ['link', '방을 기록해요', '본 방 기록 화면'],
   ['link', '체크리스트', '체크리스트 화면'],
   ['link', '방 비교', '방 비교 화면'],
-  ['link', '동네를 알아보는 중이에요', '동네 찾기 화면'],
+  ['link', '동네를 알아봐요', '동네 찾기 화면'],
   ['link', '마이페이지', '마이페이지 화면'],
   ['link', /오늘 한 끼, 저렴하게/, '저렴한 한 끼 화면'],
 ] as const)('%s %s는 기존 앱 화면(%s)으로 이동한다', async (role, name, heading) => {
