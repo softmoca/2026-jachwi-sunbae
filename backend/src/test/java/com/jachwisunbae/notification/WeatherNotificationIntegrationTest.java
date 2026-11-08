@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.notification.domain.LifeWeatherReport.Condition;
@@ -33,6 +34,8 @@ import com.jachwisunbae.notification.service.WeatherNotificationDispatchService;
 import com.jachwisunbae.notification.service.NotificationSettingsService;
 import com.jachwisunbae.weather.repository.JdbcWeatherForecastRepository;
 import com.jachwisunbae.weather.repository.MemberWeatherLocationRepository;
+import com.jachwisunbae.weather.service.WeatherForecastQueryService.ForecastCacheKey;
+import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult;
 import com.jachwisunbae.weather.service.MemberWeatherLocationService;
 import java.time.Clock;
 import java.time.Instant;
@@ -97,6 +100,7 @@ class WeatherNotificationIntegrationTest {
     @Autowired private NotificationSettingsRepository settingsRepository;
     @Autowired private WeatherNotificationRepository notifications;
     @Autowired private LifeWeatherAnalysisService analysis;
+    @Autowired private Cache<ForecastCacheKey, WeatherForecastResult> forecastCache;
     @MockitoBean private PushSender sender;
     private final List<Push> pushes = new CopyOnWriteArrayList<>();
     private Function<Push, Boolean> outcome;
@@ -117,6 +121,8 @@ class WeatherNotificationIntegrationTest {
 
     @BeforeEach
     void setup() {
+        // 컨텍스트를 공유하는 테스트끼리 같은 격자·날짜의 캐시 항목이 이어지지 않게 비운다.
+        forecastCache.invalidateAll();
         CLOCK.now.set(MORNING);
         jdbc.update("DELETE FROM members");
         jdbc.update("DELETE FROM weather_forecasts");
