@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.jachwisunbae'
 version = '4.0.0'
-description = 'Jachwi Sunbae MVP2 backend application'
+description = 'Jachwi Sunbae backend application'
 
 def sourceCommitId = providers.environmentVariable('SOURCE_COMMIT_ID')
 		.orElse(providers.environmentVariable('CODEBUILD_RESOLVED_SOURCE_VERSION'))
@@ -59,6 +59,7 @@ dependencies {
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'com.tngtech.archunit:archunit:1.5.1'
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.testcontainers:mysql'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
