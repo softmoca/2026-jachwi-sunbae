@@ -1,0 +1,17 @@
+규칙: Repository는 Service와 Controller에 의존하지 않는다
+
+선언: 메서드 <com.jachwisunbae.weather.repository.WeatherForecastQueryRepository.findDaily(com.jachwisunbae.weather.domain.GridPoint, java.time.LocalDate)>
+  - 문제: WeatherForecastQueryRepository.findDaily()에서 Service 계층 타입 WeatherForecastResult$Daily 타입을 반환합니다.\
+    위치: (WeatherForecastQueryRepository.java:0)\
+    상세: 의존 유형: 반환 타입 | 대상: <com.jachwisunbae.weather.service.dto.result.WeatherForecastResult$Daily>
+  - 문제: WeatherForecastQueryRepository.findDaily()에서 Service 계층 타입 WeatherForecastResult$Daily() 생성자를 호출합니다.\
+    위치: (WeatherForecastQueryRepository.java:47), (WeatherForecastQueryRepository.java:48)\
+    상세: 의존 유형: 생성자 호출 | 대상: <com.jachwisunbae.weather.service.dto.result.WeatherForecastResult$Daily.<init>(java.lang.Double, java.lang.Double, java.time.LocalDateTime, java.time.LocalDateTime)>
+
+선언: 메서드 <com.jachwisunbae.weather.repository.WeatherForecastQueryRepository.findHourly(com.jachwisunbae.weather.domain.GridPoint, java.time.LocalDate)>
+  - 문제: WeatherForecastQueryRepository.findHourly()에서 Service 계층 타입 List<WeatherForecastResult$Hour> 타입을 반환합니다.\
+    위치: (WeatherForecastQueryRepository.java:0)\
+    상세: 의존 유형: 제네릭 반환 타입 | 대상: <java.util.List<com.jachwisunbae.weather.service.dto.result.WeatherForecastResult$Hour>> | 타입 인자의 의존 대상: <com.jachwisunbae.weather.service.dto.result.WeatherForecastResult$Hour>
+  - 문제: WeatherForecastQueryRepository.findHourly()에서 Service 계층 타입 WeatherForecastResult$Hour() 생성자를 호출합니다.\
+    위치: (WeatherForecastQueryRepository.java:31)\
+    상세: 의존 유형: 생성자 호출 | 대상: <com.jachwisunbae.weather.service.dto.result.WeatherForecastResult$Hour.<init>(java.time.LocalDateTime, java.time.LocalDateTime, java.lang.Double, java.lang.Double, java.lang.Double, java.lang.Double, java.lang.Double, java.lang.Double, java.lang.Double, java.lang.Double)>
