@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.jachwisunbae'
 version = '4.0.0'
-description = 'Jachwi Sunbae MVP2 backend application'
+description = 'Jachwi Sunbae backend application'
 
 def sourceCommitId = providers.environmentVariable('SOURCE_COMMIT_ID')
 		.orElse(providers.environmentVariable('CODEBUILD_RESOLVED_SOURCE_VERSION'))
