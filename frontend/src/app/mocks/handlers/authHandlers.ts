@@ -6,6 +6,9 @@ import { failure, success } from '../mockStore';
 // 탈퇴하면 쿠키가 지워진 것처럼 다음 로그인에서 회원 번호를 하나 올린다. 매물 등 목 데이터는 회원별로 나누지 않는다.
 let currentMemberId = 1;
 let hasRefreshCookie = true;
+// 앱 네이티브 로그인용 nonce. 실제 서버처럼 한 번 쓰면 버린다.
+let issuedNonce: string | null = null;
+let nonceSequence = 0;
 
 const tokenResponse = (newMember = false) =>
   success({
@@ -45,4 +48,22 @@ export const authHandlers = [
   http.post('*/api/auth/oauth/:provider/start', () =>
     success({ authorizationUrl: `${globalThis.location?.origin ?? 'http://localhost:3000'}/oauth/complete` }),
   ),
+  // 앱 네이티브 로그인 nonce(#570 2단계). 지금 회원에 묶인 일회용 값을 준다.
+  http.post('*/api/auth/oauth/:provider/nonce', () => {
+    if (!hasRefreshCookie) return failure('OAUTH_AUTHENTICATION_FAILED', 401);
+    nonceSequence += 1;
+    issuedNonce = `local-msw-nonce-${nonceSequence}`;
+    return success({ nonce: issuedNonce });
+  }),
+  // 앱이 받은 id_token으로 인증을 마친다. 로컬 목은 토큰을 검증하지 않고 nonce만 확인해, 지금 회원에 처음 연결한 것처럼 보인다.
+  http.post('*/api/auth/oauth/:provider/id-token', async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+    const nonce = issuedNonce;
+    issuedNonce = null;
+    if (!hasRefreshCookie) return failure('OAUTH_AUTHENTICATION_FAILED', 401);
+    if (typeof body?.idToken !== 'string' || nonce === null || body.nonce !== nonce) {
+      return failure('OAUTH_ID_TOKEN_INVALID', 400);
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

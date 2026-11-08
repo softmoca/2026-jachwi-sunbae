@@ -192,4 +192,21 @@ describe('최종 API 명세 MSW handlers', () => {
     expect(response.status).toBe(status);
     expect(body).toMatchObject({ code });
   });
+
+  it('앱 네이티브 로그인 목은 발급한 nonce로 한 번만 id-token을 받는다', async () => {
+    const issue = await readJson(await fetch(apiUrl('/api/auth/oauth/KAKAO/nonce'), { method: 'POST' }));
+    const { nonce } = issue.data as { nonce: string };
+    expect(nonce).toMatch(/^local-msw-nonce-\d+$/);
+
+    const send = (body: unknown) =>
+      fetch(apiUrl('/api/auth/oauth/KAKAO/id-token'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    expect((await send({ idToken: 'local-id-token', nonce })).status).toBe(204);
+    const reused = await send({ idToken: 'local-id-token', nonce });
+    expect(reused.status).toBe(400);
+    expect(await readJson(reused)).toMatchObject({ code: 'OAUTH_ID_TOKEN_INVALID' });
+  });
 });
