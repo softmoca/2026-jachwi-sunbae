@@ -68,6 +68,9 @@
 | `delivery_coupon` | 배달 할인 알림          |
 | `test`            | 수신 확인용 테스트 알림 |
 
+- `POL-NOTIFICATION-017`: 앱은 푸시를 눌러 화면을 열 때 주소에 `notification_id`(data의 `notificationId`)와 `notification_type`(data의 `type`)을 쿼리로 붙인다. 백그라운드, 꺼진 상태, Android 포그라운드 배너 세 경로가 같다. `url`이 없으면 기본 화면을 열고, 서비스 밖 `url`이면 열지 않는다.
+- `POL-NOTIFICATION-018`: 웹은 첫 화면에서 이 쿼리를 읽어 PostHog `push_opened`를 한 번 남기고 주소에서 지운다. 발송 수는 서버 이벤트 없이 DB 발송 기록(`weather_notifications`, `delivery_discount_notifications`)에서 센다. 퍼널과 목표 행동은 [프론트엔드 PostHog 문서](../../../frontend/docs/analytics.md#푸시-퍼널)를 따른다.
+
 ## 4. 인수 기준
 
 | ID                  | 조건과 행동                                                                  | 관찰할 결과                                                       |
