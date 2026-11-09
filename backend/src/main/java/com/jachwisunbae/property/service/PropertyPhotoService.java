@@ -49,7 +49,7 @@ public class PropertyPhotoService {
 
     @Transactional
     public PropertyPhotoUploadResult upload(final Long memberId, final Long propertyId, final MultipartFile file) {
-        validateOwnedPropertyForUpload(memberId, propertyId);
+        lockOwnedProperty(memberId, propertyId);
         validatePhotoLimit(propertyId);
 
         PhotoFile photoFile = loadPhotoFile(file);
@@ -77,7 +77,7 @@ public class PropertyPhotoService {
         }
     }
 
-    private void validateOwnedPropertyForUpload(final Long memberId, final Long propertyId) {
+    private void lockOwnedProperty(final Long memberId, final Long propertyId) {
         propertyRepository.findByIdAndMemberIdForUpdate(propertyId, memberId)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PROPERTY_NOT_FOUND,
                 "매물을 찾을 수 없습니다."));
@@ -109,7 +109,7 @@ public class PropertyPhotoService {
 
     @Transactional
     public void delete(final Long memberId, final Long propertyId, final Long photoId) {
-        findOwnedProperty(memberId, propertyId);
+        lockOwnedProperty(memberId, propertyId);
         PropertyPhoto photo = findPhoto(propertyId, photoId);
         photoStorage.delete(photo.getStorageKey());
         propertyPhotoRepository.deleteById(photoId);
@@ -118,7 +118,7 @@ public class PropertyPhotoService {
 
     @Transactional
     public void designateRepresentative(final Long memberId, final Long propertyId, final Long photoId) {
-        findOwnedProperty(memberId, propertyId);
+        lockOwnedProperty(memberId, propertyId);
         propertyPhotoRepository.findByIdAndPropertyId(photoId, propertyId)
             .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.PHOTO_NOT_FOUND,
                 "사진을 찾을 수 없습니다."));

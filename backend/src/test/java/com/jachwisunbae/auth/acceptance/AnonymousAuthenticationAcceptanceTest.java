@@ -1,16 +1,21 @@
 package com.jachwisunbae.auth.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jachwisunbae.auth.client.OAuthProviderClient;
+import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
-import com.jachwisunbae.auth.token.RefreshTokenProvider;
+import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.Cookie;
 import java.time.LocalDateTime;
@@ -30,7 +35,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -52,21 +59,181 @@ class AnonymousAuthenticationAcceptanceTest {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private RefreshTokenProvider refreshTokenProvider;
+    private JwtTokenProvider tokenProvider;
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
+
+    @MockitoSpyBean
+    private OAuthProviderClient oauthProviderClient;
 
     @DynamicPropertySource
     static void configureDatabase(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
+        registry.add("auth.oauth.success-redirect-uri", () -> "https://app.example.com/");
+        registry.add("auth.oauth.kakao.client-id", () -> "test-client");
+        registry.add("auth.oauth.kakao.client-secret", () -> "test-secret");
+        registry.add("auth.oauth.kakao.redirect-uri",
+                () -> "https://example.com/api/auth/oauth/KAKAO/callback");
     }
 
     @BeforeEach
     void clearMembers() {
+        jdbcTemplate.update("DELETE FROM oauth_attempts");
         jdbcTemplate.update("DELETE FROM refresh_tokens");
+        jdbcTemplate.update("DELETE FROM property_photos");
+        jdbcTemplate.update("DELETE FROM properties");
+        jdbcTemplate.update("DELETE FROM member_identities");
         jdbcTemplate.update("DELETE FROM members");
+    }
+
+    @Test
+    @DisplayName("OAuth 콜백은 시작한 세션에서 한 번만 연결하고 현재 Refresh Token을 교체한다")
+    void verifiesOAuthCallbackOnceForStartingSession() throws Exception {
+        var login = mvc.perform(post("/api/auth/login")).andReturn();
+        String accessToken = objectMapper.readTree(login.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+        Cookie cookie = login.getResponse().getCookie("refresh_token");
+        long memberId = objectMapper.readTree(login.getResponse().getContentAsString())
+                .path("data").path("member").path("memberId").asLong();
+        Cookie otherCookie = startAnonymous().refreshCookie();
+        String startPath = "/api/auth/oauth/KAKAO/start";
+        String callbackPath = "/api/auth/oauth/KAKAO/callback";
+
+        mvc.perform(post(startPath).cookie(cookie)).andExpect(status().isUnauthorized());
+        mvc.perform(post(startPath).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken).cookie(otherCookie))
+                .andExpect(status().isUnauthorized());
+
+        var started = mvc.perform(post(startPath).header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .cookie(cookie))
+                .andExpect(status().isOk()).andReturn();
+        String url = objectMapper.readTree(started.getResponse().getContentAsString())
+                .path("data").path("authorizationUrl").asText();
+        var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
+        String state = params.getFirst("state");
+        String nonce = params.getFirst("nonce");
+        assertThat(state).isNotBlank().isNotEqualTo(nonce);
+        doReturn("external-user").when(oauthProviderClient)
+                .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(nonce));
+
+        mvc.perform(get(callbackPath).cookie(otherCookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/oauth/APPLE/callback").cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized());
+        var linked = mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isSeeOther())
+                .andExpect(header().string(HttpHeaders.LOCATION, "https://app.example.com/")).andReturn();
+        Cookie replacement = linked.getResponse().getCookie("refresh_token");
+        assertThat(replacement).isNotNull();
+        assertThat(replacement.getValue()).isNotEqualTo(cookie.getValue());
+        assertThat(replacement.isHttpOnly()).isTrue();
+        mvc.perform(post("/api/auth/refresh").cookie(cookie))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(memberId));
+        mvc.perform(post("/api/auth/refresh").cookie(otherCookie)).andExpect(status().isOk());
+        mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("OAUTH_AUTHENTICATION_FAILED"));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT member_id FROM member_identities WHERE provider = 'KAKAO' AND provider_subject = 'external-user'",
+                Long.class)).isEqualTo(memberId);
+    }
+
+    @Test
+    @DisplayName("익명 기록을 연결된 회원으로 이전하고 기존 회원의 인증은 유지한다")
+    void mergesAnonymousRecordsIntoLinkedMember() throws Exception {
+        AnonymousLogin source = startAnonymous();
+        AnonymousLogin target = startAnonymous();
+        AnonymousLogin secondSourceSession = addSession(source);
+        attachIdentity(target, "target");
+        String oldAccess = accessToken(source);
+        jdbcTemplate.update("INSERT INTO properties (id, member_id, name, created_at) VALUES (999, ?, '집', NOW(6))",
+                source.memberId());
+        jdbcTemplate.update("""
+                INSERT INTO property_photos (property_id, member_id, storage_key, content_type, size_bytes, created_at, deleted_at)
+                VALUES (999, ?, 'original/photo', 'image/jpeg', 100, NOW(6), NOW(6))
+                """, source.memberId());
+
+        jdbcTemplate.update("""
+                INSERT INTO member_weather_locations (member_id, grid_x, grid_y, updated_at)
+                VALUES (?, 60, 127, NOW(6))
+                """, source.memberId());
+        jdbcTemplate.update("""
+                INSERT INTO member_weather_notification_settings (member_id, enabled, updated_at)
+                VALUES (?, TRUE, NOW(6)), (?, FALSE, NOW(6))
+                """, source.memberId(), target.memberId());
+
+        Cookie replacement = completeOAuth(source, "target");
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(target.memberId()));
+        mvc.perform(post("/api/auth/refresh").cookie(target.refreshCookie())).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/refresh").cookie(secondSourceSession.refreshCookie()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + oldAccess))
+                .andExpect(status().isUnauthorized());
+        assertThat(jdbcTemplate.queryForObject("SELECT member_id FROM properties WHERE id = 999", Long.class))
+                .isEqualTo(target.memberId());
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM property_photos
+                WHERE property_id = 999 AND member_id = ? AND storage_key = 'original/photo' AND deleted_at IS NOT NULL
+                """, Long.class, target.memberId())).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT grid_x FROM member_weather_locations WHERE member_id = ?", Integer.class, target.memberId()))
+                .isEqualTo(60);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT enabled FROM member_weather_notification_settings WHERE member_id = ?", Boolean.class,
+                target.memberId())).isFalse();
+    }
+
+    @Test
+    @DisplayName("OAuth 회원이 다른 연결 계정으로 전환해도 기존 기록과 다른 기기 인증은 유지한다")
+    void switchesLinkedAccountsWithoutMerging() throws Exception {
+        AnonymousLogin source = startAnonymous();
+        AnonymousLogin target = startAnonymous();
+        AnonymousLogin secondSourceSession = addSession(source);
+        attachIdentity(source, "source");
+        attachIdentity(target, "target");
+        jdbcTemplate.update("INSERT INTO properties (id, member_id, name, created_at) VALUES (999, ?, '집', NOW(6))",
+                source.memberId());
+
+        Cookie replacement = completeOAuth(source, "target");
+        mvc.perform(post("/api/auth/refresh").cookie(replacement))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(target.memberId()));
+        mvc.perform(post("/api/auth/refresh").cookie(source.refreshCookie())).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/refresh").cookie(secondSourceSession.refreshCookie()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(source.memberId()));
+        assertThat(jdbcTemplate.queryForObject("SELECT member_id FROM properties WHERE id = 999", Long.class))
+                .isEqualTo(source.memberId());
+    }
+
+    private void attachIdentity(AnonymousLogin login, String subject) {
+        jdbcTemplate.update("""
+                INSERT INTO member_identities (member_id, provider, provider_subject, created_at)
+                VALUES (?, 'KAKAO', ?, NOW(6))
+                """, login.memberId(), subject);
+    }
+
+    private String accessToken(AnonymousLogin login) throws Exception {
+        var response = mvc.perform(post("/api/auth/refresh").cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        return objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+    }
+
+    private Cookie completeOAuth(AnonymousLogin login, String subject) throws Exception {
+        var response = mvc.perform(post("/api/auth/oauth/KAKAO/start")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(login)).cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        String url = objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("authorizationUrl").asText();
+        var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
+        doReturn(subject).when(oauthProviderClient)
+                .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(params.getFirst("nonce")));
+        return mvc.perform(get("/api/auth/oauth/KAKAO/callback").cookie(login.refreshCookie())
+                        .param("state", params.getFirst("state")).param("code", "valid-code"))
+                .andExpect(status().isSeeOther())
+                .andExpect(header().string(HttpHeaders.LOCATION, "https://app.example.com/")).andReturn().getResponse().getCookie("refresh_token");
     }
 
     @Test
@@ -98,7 +265,7 @@ class AnonymousAuthenticationAcceptanceTest {
         assertThat(refreshCookie.getSecure()).isTrue();
         assertThat(refreshCookie.getPath()).isEqualTo("/api/auth");
         assertThat(refreshCookie.getMaxAge()).isEqualTo(31_536_000);
-        String tokenHash = refreshTokenProvider.hash(refreshCookie.getValue());
+        String tokenHash = tokenProvider.hashOpaqueToken(refreshCookie.getValue());
 
         mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
@@ -163,6 +330,77 @@ class AnonymousAuthenticationAcceptanceTest {
 
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM members", Long.class)).isEqualTo(1L);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("같은 회원의 두 인증은 서로 다른 Refresh Token으로 복원하고 만료도 독립적으로 연장한다")
+    void restoresIndependentSessionsForSameMember() throws Exception {
+        AnonymousLogin first = startAnonymous();
+        AnonymousLogin second = addSession(first);
+        RefreshToken secondToken = storedToken(second);
+        LocalDateTime shortenedExpiry = secondToken.getCreatedAt().plusDays(1);
+        jdbcTemplate.update("UPDATE refresh_tokens SET expires_at = ? WHERE id = ?",
+                shortenedExpiry, secondToken.getId());
+
+        mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+        assertThat(storedToken(second).getExpiresAt()).isEqualTo(shortenedExpiry);
+        LocalDateTime firstExpiry = storedToken(first).getExpiresAt();
+
+        mvc.perform(post("/api/auth/refresh").cookie(second.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+
+        assertThat(storedToken(first).getExpiresAt()).isEqualTo(firstExpiry);
+        assertThat(storedToken(second).getExpiresAt()).isAfter(shortenedExpiry);
+        assertThat(first.refreshCookie().getValue()).isNotEqualTo(second.refreshCookie().getValue());
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM members", Long.class)).isOne();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM refresh_tokens", Long.class)).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("로그아웃은 현재 기기의 쿠키만 만료시키고 다른 기기와 연결된 계정을 유지한다")
+    void revokesOnlySelectedRefreshToken() throws Exception {
+        AnonymousLogin first = startAnonymous();
+        AnonymousLogin second = addSession(first);
+        AnonymousLogin other = startAnonymous();
+        attachIdentity(first, "logout-account");
+        String accessToken = accessToken(first);
+        String bearer = "Bearer " + accessToken;
+
+        mvc.perform(post("/api/auth/logout").cookie(first.refreshCookie()))
+                .andExpect(status().isUnauthorized()).andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+        mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer).cookie(other.refreshCookie()))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"))
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+        mvc.perform(post("/api/auth/refresh").cookie(other.refreshCookie())).andExpect(status().isOk());
+
+        var logout = mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .cookie(first.refreshCookie()))
+                .andExpect(status().isNoContent()).andReturn();
+        Cookie expired = logout.getResponse().getCookie("refresh_token");
+        assertThat(expired).isNotNull();
+        assertThat(expired.getMaxAge()).isZero();
+        assertThat(expired.getPath()).isEqualTo(first.refreshCookie().getPath());
+        assertThat(expired.isHttpOnly()).isTrue();
+        assertThat(expired.getSecure()).isTrue();
+
+        mvc.perform(post("/api/auth/logout").header(HttpHeaders.AUTHORIZATION, bearer).cookie(first.refreshCookie()))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/auth/refresh").cookie(first.refreshCookie()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));
+        mvc.perform(post("/api/auth/refresh").cookie(second.refreshCookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.member.memberId").value(first.memberId()));
+        mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(first.memberId()));
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT member_id FROM member_identities WHERE provider_subject = 'logout-account'", Long.class))
+                .isEqualTo(first.memberId());
+        assertThat(startAnonymous().memberId()).isNotEqualTo(first.memberId());
     }
 
     @ParameterizedTest
@@ -299,8 +537,15 @@ class AnonymousAuthenticationAcceptanceTest {
     }
 
     private RefreshToken storedToken(AnonymousLogin login) {
-        return refreshTokenRepository.findByTokenHash(refreshTokenProvider.hash(login.refreshCookie().getValue()))
+        return refreshTokenRepository.findByTokenHash(tokenProvider.hashOpaqueToken(login.refreshCookie().getValue()))
                 .orElseThrow();
+    }
+
+    private AnonymousLogin addSession(AnonymousLogin original) {
+        String rawToken = tokenProvider.generateOpaqueToken();
+        refreshTokenRepository.save(RefreshToken.create(original.memberId(), tokenProvider.hashOpaqueToken(rawToken),
+                storedToken(original).getCreatedAt(), 365));
+        return new AnonymousLogin(original.memberId(), new Cookie("refresh_token", rawToken));
     }
 
     private void invalidateAuthentication(AnonymousLogin login, String state) {

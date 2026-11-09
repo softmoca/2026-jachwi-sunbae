@@ -13,6 +13,8 @@ public interface MemberRepository {
 
     Member save(Member member);
 
+    void mergeOwnedData(Long source, Long target, LocalDateTime mergedAt);
+
     void deleteOwnedData(Long memberId, LocalDateTime deletedAt);
 
     void delete(Long memberId, LocalDateTime deletedAt);

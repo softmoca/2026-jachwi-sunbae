@@ -109,7 +109,7 @@ class JwtTokenProviderTest {
     }
 
     private static JwtTokenProvider provider(String secret, String issuer, String audience, Instant now) {
-        return new JwtTokenProvider(secret, issuer, audience, ACCESS_TOKEN_SECONDS, Clock.fixed(now, ZoneOffset.UTC));
+        return new JwtTokenProvider(secret, issuer, audience, ACCESS_TOKEN_SECONDS, 365, Clock.fixed(now, ZoneOffset.UTC));
     }
 
     private static void assertInvalidToken(Executable call) {
