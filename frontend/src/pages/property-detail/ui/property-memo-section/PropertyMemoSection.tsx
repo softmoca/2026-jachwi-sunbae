@@ -12,7 +12,7 @@ type PropertyMemoSectionProps = {
   propertyId: number;
 };
 
-/** 메모를 창 없이 그 자리에서 고친다. 바깥을 누르거나 Cmd/Ctrl+Enter를 누르면 저장하고, Esc는 취소한다. */
+/** 메모를 창 없이 그 자리에서 고친다. 엔터는 줄바꿈이고, 바깥을 누르거나 Cmd/Ctrl+Enter를 누르면 저장하며, Esc는 취소한다. */
 const PropertyMemoSection = ({ propertyId }: PropertyMemoSectionProps) => {
   const memo = usePropertyMemo(propertyId);
   const saveMemo = useSavePropertyMemoDocument(propertyId);
@@ -58,6 +58,7 @@ const PropertyMemoSection = ({ propertyId }: PropertyMemoSectionProps) => {
             onChange={(event) => setDraft(event.target.value)}
             onBlur={commit}
             onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) return;
               if (event.key === 'Escape') {
                 // 취소: 포커스를 잃어도 저장되지 않도록 먼저 편집을 끝낸다.
                 cancelledRef.current = true;

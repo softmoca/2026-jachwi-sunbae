@@ -47,6 +47,9 @@ export const field = css`
   font-size: 0.78rem;
   line-height: 1.5;
   text-align: left;
+  /* 엔터로 넣은 줄바꿈과 연속 공백을 입력한 그대로 보여 주고, 긴 URL은 칸 안에서 접는다. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   cursor: text;
 
   &:hover {
