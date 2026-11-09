@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.jachwisunbae.weather.domain.DailyForecast;
@@ -17,6 +18,8 @@ import com.jachwisunbae.weather.domain.GridPoint;
 import com.jachwisunbae.weather.domain.HourlyForecast;
 import com.jachwisunbae.weather.repository.JdbcWeatherForecastRepository;
 import com.jachwisunbae.weather.repository.MemberWeatherLocationRepository;
+import com.jachwisunbae.weather.service.WeatherForecastQueryService.ForecastCacheKey;
+import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -64,6 +67,8 @@ class WeatherApiIntegrationTest {
     private JdbcWeatherForecastRepository forecasts;
     @Autowired
     private MemberWeatherLocationRepository locations;
+    @Autowired
+    private Cache<ForecastCacheKey, WeatherForecastResult> forecastCache;
 
     @DynamicPropertySource
     static void database(final DynamicPropertyRegistry registry) {
@@ -84,6 +89,8 @@ class WeatherApiIntegrationTest {
 
     @BeforeEach
     void setup() {
+        // 컨텍스트를 공유하는 테스트끼리 같은 격자·날짜의 캐시 항목이 이어지지 않게 비운다.
+        forecastCache.invalidateAll();
         jdbc.update("DELETE FROM member_weather_locations");
         jdbc.update("DELETE FROM refresh_tokens");
         jdbc.update("DELETE FROM members");
@@ -168,6 +175,9 @@ class WeatherApiIntegrationTest {
         forecasts.startCollection(publication);
         assertUnverified();
         forecasts.completeCollection(publication, publication.plusMinutes(90));
+        // 수집 중 조회한 결과는 캐시 TTL(10분) 동안 유지된다. 완료 직후에도 캐시 항목이 만료되기 전까지는 값이 없다.
+        assertUnverified();
+        forecastCache.invalidateAll();
         mvc.perform(get("/api/weather/forecasts").header("Authorization", bearer(1))
                         .param("latitude", "37.5665").param("longitude", "126.978"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.hourly[23].tmp").value(22.0));
