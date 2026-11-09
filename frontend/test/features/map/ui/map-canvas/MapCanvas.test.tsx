@@ -522,8 +522,8 @@ describe('Naver 지도 상태 동기화', () => {
     await waitFor(() => expect(onCenterChange).toHaveBeenCalledExactlyOnceWith(37.5, 127.03), { timeout: 1500 });
   });
 
-  it('트랙패드 핀치(ctrl+휠)는 직접 받아 deltaY에 비례해 커서 자리를 기준으로 확대하고, ctrl 없는 휠은 SDK에 맡긴다', async () => {
-    renderWithConfig(<MapCanvas center={{ latitude: 37.5, longitude: 127 }} level={5} />);
+  it('GL 지도에서 트랙패드 핀치(ctrl+휠)는 직접 받아 deltaY에 비례해 커서 자리를 기준으로 확대하고, ctrl 없는 휠은 SDK에 맡긴다', async () => {
+    renderWithConfig(<MapCanvas center={{ latitude: 37.5, longitude: 127 }} level={5} customStyleId="style" />);
     await waitFor(() => expect(maps).toHaveLength(1));
     const zoomBy = vi.fn();
     const fromOffsetToCoord = vi.fn((point: { x: number; y: number }) => new FakeLatLng(point.y, point.x));
@@ -564,6 +564,20 @@ describe('Naver 지도 상태 동기화', () => {
     expect(zoomBy.mock.calls[0][0]).toBeCloseTo(40 / (100 * Math.LN2), 5);
     expect(fromOffsetToCoord).toHaveBeenCalledWith(expect.objectContaining({ x: 30, y: 40 }));
     expect(zoomBy.mock.calls[0][2]).toBe(false);
+  });
+
+  it('GL이 아닌 지도에서는 트랙패드 핀치를 가로채지 않고 스크롤 확대처럼 Naver 기본 처리에 맡긴다', async () => {
+    renderWithConfig(<MapCanvas center={{ latitude: 37.5, longitude: 127 }} level={5} />);
+    await waitFor(() => expect(maps).toHaveLength(1));
+    const zoomBy = vi.fn();
+    Object.assign(maps[0], { zoomBy, getProjection: () => ({ fromOffsetToCoord: vi.fn() }) });
+    const pinch = new WheelEvent('wheel', { deltaY: -40, ctrlKey: true, cancelable: true, bubbles: true });
+    maps[0].container.dispatchEvent(pinch);
+    await act(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    expect(pinch.defaultPrevented).toBe(false);
+    expect(zoomBy).not.toHaveBeenCalled();
   });
 
   it('앱 확대 단계를 반대 방향인 Naver zoom으로 바꿔 전달한다', async () => {
