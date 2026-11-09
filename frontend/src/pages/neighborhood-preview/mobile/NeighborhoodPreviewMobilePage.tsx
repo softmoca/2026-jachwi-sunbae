@@ -2,7 +2,6 @@ import { css } from '@emotion/css';
 import { useState } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 
-import { SERVICE_MAP_STYLE_ID } from '@/features/map/lib/mapStyle';
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
 import MapCategoryRail from '@/features/map/ui/map-category-rail/MapCategoryRail';
 import ExplorationRecordAction from '@/features/onboarding/ui/exploration-record-action/ExplorationRecordAction';
@@ -139,7 +138,6 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
       >
         <MapCanvas
           animateView
-          customStyleId={SERVICE_MAP_STYLE_ID}
           hideLoading={preview.isAnalyzing || Boolean(preview.error)}
           interactive
           onReady={preview.prefetchBoundaries}

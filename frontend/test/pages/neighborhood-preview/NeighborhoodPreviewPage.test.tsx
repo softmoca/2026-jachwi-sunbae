@@ -352,7 +352,7 @@ it('첫 진입은 지도이며 위치 미허용 시 권한 요청·직접 선택
   await waitFor(() => expect(readGeolocationPermission).toHaveBeenCalled());
   expect(requestCurrentMapLocation).not.toHaveBeenCalled();
   expect(screen.getByRole('region', { name: '지도에서 목적지 선택' })).toBeInTheDocument();
-  expect(screen.getByLabelText('지도 스타일')).toHaveTextContent('631c1c09-380e-427f-b7d8-e600956dac10');
+  expect(screen.getByLabelText('지도 스타일')).toBeEmptyDOMElement();
   expect(screen.queryByRole('button', { name: '지도에서 직접 선택' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '이 위치로 선택' })).not.toBeInTheDocument();
   expect(screen.getByRole('textbox', { name: '출퇴근 장소' })).not.toHaveFocus();
@@ -425,7 +425,7 @@ it('검색 결과의 현재 위치 버튼은 목적지와 결과를 유지하고
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
   await screen.findByRole('region', { name: '행정동 프리셋 지도' });
-  expect(screen.getByLabelText('지도 스타일')).toHaveTextContent('631c1c09-380e-427f-b7d8-e600956dac10');
+  expect(screen.getByLabelText('지도 스타일')).toBeEmptyDOMElement();
   await user.click(screen.getByRole('button', { name: '내 현재 위치로 이동' }));
   await waitFor(() => expect(screen.getByLabelText('지도 시점')).toHaveTextContent('37.55'));
   expect(screen.getByRole('region', { name: '행정동 프리셋 지도' })).toBeInTheDocument();
