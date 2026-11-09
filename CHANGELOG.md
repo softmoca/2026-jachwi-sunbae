@@ -6,6 +6,31 @@
 
 아직 릴리스하지 않은 변경을 기록한다.
 
+## [4.1.0] - 2026-11-09
+
+### Added
+
+- 네이버 검색 등록을 위한 사이트 소유 확인 태그와 `robots.txt`, `sitemap.xml`을 제공한다. 회원별 기록 화면은 수집을 막고, dev 배포는 전체 수집을 막는다.
+- 헤더 가운데에 날씨·위치·알림 권한 안내를 번갈아 표시하고, 10분 안에 수정하던 매물이 있으면 첫 진입 시 `이어서 보기`를 안내한다.
+
+### Changed
+
+- 지도 매물 마커를 대표 사진 카드로 바꾸고 겹친 매물은 개수 배지로 표시한다. 시설 마커 아이콘을 새 일러스트로 교체한다.
+- 동네 찾기 `My` 시트에 매물 이동·목록 복귀를 두고, 고른 동네 구역의 테두리와 투명도를 키운다.
+- 매물 상세의 이름·보증금·월세·메모를 그 자리에서 수정하고, 마이 알림 설정을 `알림 받기` 하나로 합친다.
+- 오류 화면을 새 그림과 새로고침 버튼으로 바꾼다.
+- ArchUnit으로 계층·예외·업무 패키지 의존 규칙을 백엔드 테스트에서 검사한다.
+- 백엔드·프론트엔드 제품 버전을 `4.1.0`으로 맞춘다.
+
+### Fixed
+
+- 방 비교와 체크리스트 선택의 체크 표시가 찌그러지던 문제를 수정한다.
+
+### Performance
+
+- 지도의 사용자 지정 스타일을 제거해 GL 모드를 끄고 행정동 경계와 매물 마커를 끌거나 확대·축소할 때의 프레임 저하를 줄인다.
+- 같은 격자·날짜의 날씨 예보 조회에 Caffeine 로컬 캐시를 적용해 날씨 조회와 대량 날씨 알림의 반복 DB 조회를 줄인다.
+
 ## [4.0.0] - 2026-11-06
 
 ### Breaking Changes
@@ -241,7 +266,8 @@
 - WebView 지도 마커 위치 갱신을 `transform` 기반으로 최적화한다.
 - 매물 사진 Object URL을 재사용해 지도 확대·이동 중 불필요한 재생성을 줄인다.
 
-[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.1.0
 [4.0.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.0.0
 [3.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v3.1.0
 [3.0.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v3.0.0
