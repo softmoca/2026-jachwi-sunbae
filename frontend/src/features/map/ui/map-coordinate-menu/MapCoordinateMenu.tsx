@@ -17,6 +17,7 @@ const MapCoordinateMenu = ({ menu }: Props) => (
     <div className={styles.menu} role="menu" aria-label={menu.title ?? DEFAULT_TITLE}>
       {menu.actions.map((action) => (
         <button key={action.id} type="button" role="menuitem" className={styles.action} onClick={action.onSelect}>
+          {action.icon && <img className={styles.icon} src={action.icon} alt="" draggable={false} />}
           {action.label}
         </button>
       ))}
@@ -41,7 +42,15 @@ export const createMapCoordinateMenuElement = (menu: MapCoordinateMenuModel): HT
     button.type = 'button';
     button.className = styles.action;
     button.setAttribute('role', 'menuitem');
-    button.textContent = action.label;
+    if (action.icon !== undefined) {
+      const icon = document.createElement('img');
+      icon.className = styles.icon;
+      icon.src = action.icon;
+      icon.alt = '';
+      icon.draggable = false;
+      button.append(icon);
+    }
+    button.append(document.createTextNode(action.label));
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       action.onSelect();
@@ -93,8 +102,19 @@ const styles = {
     }
   `,
 
+  icon: css`
+    label: MapCoordinateMenu-icon;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: none;
+    object-fit: contain;
+  `,
+
   action: css`
     label: MapCoordinateMenu-action;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.6rem 0.7rem;
     border: 0;
     border-radius: 0.5rem;

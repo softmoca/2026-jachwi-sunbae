@@ -128,24 +128,32 @@ const ChecklistSkeleton = ({ isPlaceholder = false }: { isPlaceholder?: boolean 
     aria-hidden={isPlaceholder || undefined}
   >
     {!isPlaceholder && <span className="sr-only">체크리스트를 불러오는 중이에요.</span>}
-    <div className={styles.skeletonSummary} aria-hidden="true">
-      <span className={`${styles.skeleton} ${styles.skeletonRing}`} />
-      <span className={styles.skeletonLegend}>
-        <span className={styles.skeleton} />
-        <span className={styles.skeleton} />
-        <span className={styles.skeleton} />
-      </span>
-    </div>
-    <div className={styles.expandedChecklist} aria-hidden="true">
-      <span className={`${styles.skeleton} ${styles.skeletonTitle}`} />
-      <ul className={styles.skeletonItems}>
-        {[0, 1, 2, 3].map((index) => (
-          <li key={index}>
+    {/* 회색 탭 바탕 위의 흰 카드들(머리와 진행 링, 카테고리)과 같은 구조로 그린다. */}
+    <div className={styles.skeletonStack} aria-hidden="true">
+      <div className={styles.skeletonCard}>
+        <span className={`${styles.skeleton} ${styles.skeletonTitle}`} />
+        <div className={styles.skeletonSummary}>
+          <span className={`${styles.skeleton} ${styles.skeletonRing}`} />
+          <span className={styles.skeletonLegend}>
             <span className={styles.skeleton} />
-            <span className={`${styles.skeleton} ${styles.skeletonAction}`} />
-          </li>
-        ))}
-      </ul>
+            <span className={styles.skeleton} />
+            <span className={styles.skeleton} />
+          </span>
+        </div>
+      </div>
+      {[0, 1].map((card) => (
+        <div key={card} className={styles.skeletonCard}>
+          <span className={`${styles.skeleton} ${styles.skeletonCategory}`} />
+          <ul className={styles.skeletonItems}>
+            {[0, 1].map((index) => (
+              <li key={index}>
+                <span className={styles.skeleton} />
+                <span className={`${styles.skeleton} ${styles.skeletonAction}`} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   </div>
 );
@@ -164,8 +172,14 @@ const AppliedChecklistItems = ({
 }) => {
   return (
     <>
-      {progress !== undefined && progress.totalCount > 0 && <ChecklistProgressRing progress={progress} />}
-      <PropertyChecklist key={propertyChecklistId} propertyId={propertyId} detail={detail} />
+      <PropertyChecklist
+        key={propertyChecklistId}
+        propertyId={propertyId}
+        detail={detail}
+        summary={
+          progress !== undefined && progress.totalCount > 0 ? <ChecklistProgressRing progress={progress} /> : undefined
+        }
+      />
     </>
   );
 };

@@ -1,7 +1,5 @@
 import { css, cx } from '@emotion/css';
 
-import Icon from '@/shared/ui/icon/Icon';
-
 import type { AddressSearchStatus } from '../../model/AddressSearch';
 import type { MapAddress } from '../../model/Map';
 
@@ -43,7 +41,6 @@ const AddressSearchResults = ({
             return (
               <li key={`${result.latitude}-${result.longitude}`}>
                 <button type="button" className={styles.item} onClick={() => onSelect(result)}>
-                  <Icon name="locate" size={18} />
                   <span className={styles.text}>
                     <strong>{primary}</strong>
                     {secondary !== null && <small>{secondary}</small>}

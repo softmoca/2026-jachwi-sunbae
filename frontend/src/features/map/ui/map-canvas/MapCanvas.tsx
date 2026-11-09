@@ -6,7 +6,8 @@ import { Button } from '@/shared/ui/button/Button';
 import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 
 import useNaverMap from '../../hooks/useNaverMap';
-import { clampToSouthKorea } from '../../lib/mapLocation';
+import { readCurrentLocation, useCurrentLocation } from '../../lib/currentLocationStore';
+import { clampToSouthKorea, requestCurrentMapLocation } from '../../lib/mapLocation';
 import { markerAnchorTransform, markerScale } from '../../lib/mapMarkerPresentation';
 import { regionLabelPosition, regionSummaryRows } from '../../lib/mapRegionSummary';
 import type { MapMarker } from '../../model/Map';
@@ -18,6 +19,7 @@ import * as styles from './MapCanvas.styles';
 import * as summaryStyles from './MapRegionSummary.styles';
 
 const EMPTY_MARKERS: MapMarker[] = [];
+const CURRENT_LOCATION_MARKER_ID = 'current-location';
 const EMPTY_CIRCLES: NonNullable<MapCanvasProps['circles']> = [];
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 
@@ -54,13 +56,38 @@ const MapCanvas = ({
   selectedRegionId,
   onSelectRegion,
 }: MapCanvasProps) => {
+  // 내 현재 위치는 모든 지도에서 파란 점으로 보인다. 위치 권한이 이미 허용돼 있으면 조용히 한 번 받아 온다.
+  const currentLocation = useCurrentLocation();
+  useEffect(() => {
+    if (readCurrentLocation() !== null) return;
+    navigator.permissions
+      ?.query({ name: 'geolocation' })
+      .then((status) => (status.state === 'granted' ? requestCurrentMapLocation() : undefined))
+      .catch(() => undefined);
+  }, []);
+  const allMarkers = useMemo<MapMarker[]>(
+    () =>
+      currentLocation === null
+        ? markers
+        : [
+            ...markers,
+            {
+              id: CURRENT_LOCATION_MARKER_ID,
+              latitude: currentLocation.latitude,
+              longitude: currentLocation.longitude,
+              label: '현재 위치',
+              tone: 'current',
+            },
+          ],
+    [markers, currentLocation],
+  );
   const boundedCenter = useMemo(() => clampToSouthKorea(center), [center.latitude, center.longitude]);
   const { containerRef, canvasRef, liveMode, sdkError, isLoading } = useNaverMap({
     center,
     animateView,
     coordinateAction,
     coordinateMenu,
-    markers,
+    markers: allMarkers,
     circles,
     radiusCenter,
     level,
@@ -244,7 +271,7 @@ const MapCanvas = ({
               aria-hidden="true"
             />
           ))}
-          {markers.map((marker) => {
+          {allMarkers.map((marker) => {
             return (
               <div
                 key={marker.id}

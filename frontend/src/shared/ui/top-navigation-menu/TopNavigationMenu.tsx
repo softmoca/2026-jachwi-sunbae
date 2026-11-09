@@ -90,8 +90,22 @@ const styles = {
       cursor: pointer;
     }
 
+    /* 삭제 항목은 매물 리스트의 ⋮ 메뉴와 같이 붉은 글씨와 작은 휴지통 아이콘으로 둔다. */
     & :is(a, button)[data-tone='danger'] {
-      color: var(--color-error);
+      gap: 0.35rem;
+      border-radius: 0.45rem;
+      color: #c44e4e;
+      font-weight: 500;
+    }
+
+    & :is(a, button)[data-tone='danger'] svg {
+      width: 0.85rem;
+      height: 0.85rem;
+      stroke-width: 1.7;
+    }
+
+    & :is(a, button)[data-tone='danger']:hover {
+      background: #fff3f3;
     }
   `,
 };

@@ -267,7 +267,7 @@ describe('생활 날씨 카드의 알림 받기', () => {
     expect(native.actions).toContain('enable');
     expect(screen.getByText('날씨는 위치를 확인한 뒤 알려 드려요')).toBeInTheDocument();
     expect(screen.getByText('배달 할인 알림은 위치 없이도 받아요')).toBeInTheDocument();
-    expect(screen.getByText('위치 권한을 허용하면 날씨 알림도 받을 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('위치 권한이 꺼져 있어요. 아래 설정 열기에서 켜 주세요.')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '설정 열기' }));
     await waitFor(() => expect(native.actions).toContain('settings'));

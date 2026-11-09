@@ -5,6 +5,8 @@ import useViewportFacilityLayer from '@/features/map/hooks/useViewportFacilityLa
 import type { MapCategory, MapMarker } from '@/features/map/model/Map';
 import type { MapCanvasProps, MapRegion } from '@/features/map/model/MapCanvas';
 import { usePropertyCommuteTimes, usePropertyList } from '@/features/property/api/useProperties';
+import usePropertyMarkerPhotos from '@/features/property/hooks/usePropertyMarkerPhotos';
+import { PROPERTY_PLACEHOLDER } from '@/shared/assets/propertyImageAssets';
 import useDebouncedValue from '@/shared/lib/hooks/useDebouncedValue';
 
 import type { MyPropertyRow } from '../model/myProperty';
@@ -14,6 +16,7 @@ import type { NeighborhoodPreviewContext } from './useNeighborhoodPreview';
 
 const NO_REGIONS: MapRegion[] = [];
 const NO_MARKERS: MapMarker[] = [];
+const NO_PHOTO_SOURCES: Parameters<typeof usePropertyMarkerPhotos>[0] = [];
 /** 고른 출퇴근 장소 말풍선 핀의 글자. 장소 이름은 검색창·찾기 버튼에 있으니 핀은 고른 자리만 알린다. */
 const DESTINATION_LABEL = '선택한 지역';
 /** 동네 출발 정류장 마커 id의 머리. 결과 지도에는 올리지 않아 화면 안 정류장과 겹치지 않게 거른다. */
@@ -79,9 +82,20 @@ const useNeighborhoodMapView = (
         latitude: property.location.latitude,
         longitude: property.location.longitude,
         commute: commutes.get(property.propertyId) ?? null,
+        representativePhoto: property.representativePhoto,
       }));
   }, [propertyList.data, commuteTimes.data]);
   const commuteMaxMinutes = commuteTimes.data?.maxMinutes ?? 60;
+  const myPhotoUrls = usePropertyMarkerPhotos(
+    showsMy
+      ? myRows.map((row) => ({
+          id: row.propertyId,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          representativePhoto: row.representativePhoto,
+        }))
+      : NO_PHOTO_SOURCES,
+  );
   const myMarkers = useMemo<MapMarker[]>(
     () =>
       showsMy
@@ -95,14 +109,17 @@ const useNeighborhoodMapView = (
                     longitude: row.longitude,
                     label: row.name,
                     // 매물 핀 금액 자리에 이번 출퇴근 장소까지 통근 시간을 적는다.
-                    summary: { amount: row.commute ? propertyCommuteLabel(row.commute, commuteMaxMinutes) : '…' },
+                    summary: {
+                      amount: row.commute ? propertyCommuteLabel(row.commute, commuteMaxMinutes) : '…',
+                    },
                     tone: 'property' as const,
                     actionable: true,
+                    photo: myPhotoUrls.get(String(row.propertyId)) ?? PROPERTY_PLACEHOLDER.src2x,
                   },
                 ],
           )
         : NO_MARKERS,
-    [showsMy, myRows, commuteMaxMinutes],
+    [showsMy, myRows, commuteMaxMinutes, myPhotoUrls],
   );
   // `My`를 켜면 받은 매물 마커가 한 화면에 모두 들어오게 한 번 옮긴다. 다시 켤 때마다 한 번씩 맞춘다.
   const [hasFittedMy, setHasFittedMy] = useState(false);

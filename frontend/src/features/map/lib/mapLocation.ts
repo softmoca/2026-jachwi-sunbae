@@ -1,3 +1,4 @@
+import { publishCurrentLocation } from './currentLocationStore';
 export type MapCoordinate = {
   latitude: number;
   longitude: number;
@@ -111,6 +112,7 @@ export const requestCurrentMapLocation = (): Promise<MapCoordinate> =>
         reject(new MapLocationError('unavailable', '남한 안에서만 현재 위치를 쓸 수 있습니다.'));
         return;
       }
+      publishCurrentLocation(coordinate);
       resolve(coordinate);
     };
     const toFailure = (error: GeolocationPositionError): MapLocationFailure =>

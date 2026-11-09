@@ -28,4 +28,19 @@ export const criteriaSummary = ({
     `통근 ${maxMinutes}분`,
     maxTransfers === 0 ? '환승 없음' : `환승 ${maxTransfers}회`,
     maxRent === 0 ? '월세 전체' : `월세 ${maxRent}만원`,
-  ].join(' · ');
+  ].join(', ');
+
+/** 헤더 카드에 값으로 보여 줄 조건. 슬라이더는 막대만 두고, 월세 값은 여기서 바뀐다. */
+export const criteriaItems = ({
+  maxMinutes,
+  maxTransfers,
+  maxRent,
+}: {
+  maxMinutes: number;
+  maxTransfers: number;
+  maxRent: number;
+}) => [
+  { label: '통근', value: `${maxMinutes}분` },
+  { label: '환승', value: maxTransfers === 0 ? '없음' : `${maxTransfers}회` },
+  { label: '월세', value: maxRent === 0 ? '전체' : `${maxRent}만` },
+];

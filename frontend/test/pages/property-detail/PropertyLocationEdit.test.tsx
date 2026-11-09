@@ -9,6 +9,7 @@ import { mapHandlers } from '@/app/mocks/handlers/mapHandlers';
 import { propertyChecklistHandlers } from '@/app/mocks/handlers/propertyChecklistHandlers';
 import { propertyHandlers } from '@/app/mocks/handlers/propertyHandlers';
 import { failure } from '@/app/mocks/mockStore';
+import MapLocationSelectPage from '@/pages/map-location-select/MapLocationSelectPage';
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
 import { resetAuthenticationForTests, setAuthentication } from '@/features/auth/model/authStore';
 import type { MapCanvasProps } from '@/features/map/model/MapCanvas';
@@ -42,9 +43,15 @@ afterEach(() => {
 });
 
 const renderDetail = () => {
-  const router = createMemoryRouter([{ path: '/properties/:propertyId', element: <PropertyDetailPage /> }], {
-    initialEntries: [{ pathname: '/properties/10', search: '?tab=details', state: { returnTo: '/properties' } }],
-  });
+  const router = createMemoryRouter(
+    [
+      { path: '/properties/:propertyId', element: <PropertyDetailPage /> },
+      { path: '/map/select-location', element: <MapLocationSelectPage /> },
+    ],
+    {
+      initialEntries: [{ pathname: '/properties/10', search: '?tab=details', state: { returnTo: '/properties' } }],
+    },
+  );
   render(
     <QueryClientProvider client={queryClient}>
       <PublicConfigProvider config={{ apiBaseUrl: 'http://localhost:8080' }}>
@@ -82,9 +89,13 @@ it('지도를 옮기자마자 저장을 누르면 옮기기 전 위치로 닫지
   try {
     await user.click(screen.getByRole('button', { name: '지도 끌기' }));
     await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
-    // 주소를 받는 동안 버튼이 확인 중으로 바뀌고 아직 저장하지 않는다.
-    expect(screen.getByRole('button', { name: '이 위치로 저장' })).toHaveAttribute('aria-busy', 'true');
+    // 주소를 받는 동안 버튼이 막혀 있어 아직 저장하지 않는다.
+    expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeDisabled();
     expect(updates.bodies).toEqual([]);
+    await waitFor(() => expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeEnabled(), {
+      timeout: 8000,
+    });
+    await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
     // 지도를 멈춘 뒤 주소를 묻기까지 잠깐 기다리므로 넉넉히 기다린다.
     await waitFor(() => expect(updates.bodies).toHaveLength(1), { timeout: 8000 });
     expect(updates.bodies[0]).toEqual(
@@ -115,7 +126,7 @@ it.each([
       expect(await screen.findByText('지원하지 않는 주소입니다', {}, { timeout: 8000 })).toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
       await waitFor(() => expect(updates.bodies).toHaveLength(1), { timeout: 8000 });
-      expect(updates.bodies[0]).toEqual(expect.objectContaining({ ...to, address: null }));
+      expect(updates.bodies[0]).toEqual(expect.objectContaining({ ...to, address: '' }));
       // 저장한 뒤 상세의 주소 칸도 빈칸 대신 지원하지 않는 주소라고 보인다.
       expect(await screen.findByRole('button', { name: /^주소 .*수정$/ })).toHaveTextContent(
         '지원하지 않는 주소입니다',

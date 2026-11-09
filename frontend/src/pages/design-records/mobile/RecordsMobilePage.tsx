@@ -44,7 +44,6 @@ const RecordsMobilePage = () => {
   });
   const layers = useRecordsMapLayers(records, {
     registeringAt: creatingAt,
-    onRegisterNotice: setNotice,
     onRegister: (location) => {
       if (quickCreate.isCreating) return;
       setCreatingAt(location);
@@ -57,8 +56,9 @@ const RecordsMobilePage = () => {
   usePreloadMapSdk(showsMap);
   // 오른쪽 위 검색 버튼을 누르면 헤더 자리를 주소 검색창으로 바꾼다.
   const [isSearching, setIsSearching] = useState(false);
-  // 헤더·동네 뱃지는 지도가 실제로 보일 때만 지도 위에 띄운다. 불러오는 중·실패 안내를 가리지 않게 한다.
-  const overMap = showsMap && records.properties.isSuccess;
+  // 헤더·동네 뱃지는 지도 보기에서 지도(불러오는 중 뼈대 포함) 위에 띄워, 지도가 나오기 전에도 헤더만 흰 띠로 남지 않게 한다.
+  // 실패 안내는 가리지 않도록 제외한다.
+  const overMap = showsMap && !records.properties.isError;
 
   return (
     <main className={styles.page}>
@@ -87,8 +87,9 @@ const RecordsMobilePage = () => {
           {!records.properties.isPending && (
             <RecordDistricts
               districts={records.districts}
+              counts={records.districtCounts}
               district={records.district}
-              onSelect={records.selectDistrict}
+              onSelect={(next) => records.selectDistrict(next, { open: true })}
               overMap={overMap}
             />
           )}

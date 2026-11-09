@@ -11,6 +11,7 @@ import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
 import { recordNeighbors } from '../model/recordNavigation';
 import { recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
+import RecordRegisterSuggestion from '../ui/record-register-suggestion/RecordRegisterSuggestion';
 import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsSelectedSheet from './RecordsSelectedSheet';
 
@@ -39,7 +40,7 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
         className={styles.recenter}
         type="button"
         aria-label="현재 위치로 이동"
-        onClick={() => records.moveToCurrentLocation()}
+        onClick={() => records.moveToCurrentLocation(layers.suggestRegisterAt)}
       >
         <Icon name="target" size={22} />
       </button>
@@ -52,6 +53,11 @@ const RecordsMobileMap = ({ records, layers }: Props) => {
         onNotice={records.setNotice}
       />
       <StreetMemoSheet layer={layers.memo} />
+      <RecordRegisterSuggestion
+        isOpen={layers.isSuggestingRegister}
+        onAccept={layers.acceptRegisterSuggestion}
+        onClose={layers.closeRegisterSuggestion}
+      />
       <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
     </section>
   );

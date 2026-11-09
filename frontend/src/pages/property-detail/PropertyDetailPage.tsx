@@ -18,13 +18,12 @@ import PropertyPhotoManager from '@/features/property/ui/property-photo-manager/
 import PropertyPhotoViewer from '@/features/property/ui/property-photo-viewer/PropertyPhotoViewer';
 import { LogScreen } from '@/shared/lib/analytics/logging';
 import useDocumentTitle from '@/shared/lib/hooks/useDocumentTitle';
-import { PROPERTY_DETAIL_TAB_PARAM, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
+import { MAP_SELECT_LOCATION_PATH, PROPERTY_DETAIL_TAB_PARAM, RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
-import ConfirmDialog from '@/shared/ui/confirm-dialog/ConfirmDialog';
 import ContentState from '@/shared/ui/content-state/ContentState';
+import DetailHeader from '@/shared/ui/detail-header/DetailHeader';
 import Icon from '@/shared/ui/icon/Icon';
 import QueryState from '@/shared/ui/query-state/QueryState';
-import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 import TopNavigationMenu from '@/shared/ui/top-navigation-menu/TopNavigationMenu';
 
 import { type DetailTab, parseDetailTab } from './model/detailTab';
@@ -92,6 +91,8 @@ const ResolvedPropertyDetailPage = ({
       query={property}
       loadingTitle="매물 상세를 불러오는 중이에요."
       skeleton={<PropertyDetailSkeleton />}
+      // 옆 칸으로 열었을 때는 이전, 다음으로 매물을 넘기며 다시 불러오므로, 빠른 응답에는 뼈대를 띄우지 않는다.
+      delayLoading={panel !== undefined}
       describeError={describeError}
       errorAction={<Link to={backTo}>{backTo === RECORDS_PATH ? '기록 화면으로 돌아가기' : '홈으로 돌아가기'}</Link>}
     >
@@ -114,8 +115,6 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
     fallback: backTo,
     fallbackState: returnState,
   });
-  const removeMutation = useRemoveProperty(propertyId);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseDetailTab(searchParams.get(PROPERTY_DETAIL_TAB_PARAM)) ?? 'details';
@@ -155,7 +154,27 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
     },
     onCancel: () => setEditingField(null),
   };
-  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  // 주소는 시트나 줄 안이 아니라 지도 화면에서 계속 눌러 가며 바꾼다. 저장하면 지금 화면으로 돌아온다.
+  const currentLocation = useLocation();
+  const editLocation = () =>
+    navigate(MAP_SELECT_LOCATION_PATH, {
+      state: {
+        returnTo: `${currentLocation.pathname}${currentLocation.search}`,
+        propertyId,
+        initialLocation:
+          detail.location.latitude === null || detail.location.longitude === null
+            ? undefined
+            : {
+                address: detail.location.address,
+                roadAddress: null,
+                jibunAddress: null,
+                latitude: detail.location.latitude,
+                longitude: detail.location.longitude,
+              },
+      },
+    });
+  // 삭제는 ⋮ 메뉴 안에 있어 잘못 누를 일이 적으므로 확인을 묻지 않고 바로 지운다.
+  const removeProperty = useRemoveProperty(propertyId);
   const photoTriggerRef = useRef<HTMLButtonElement | null>(null);
   // 옆 칸(데스크탑 본 방 기록)으로 열었으면 사진 관리도 화면을 옮기지 않고 이 칸 안에서 연다. 지도와 리스트가 그대로 남는다.
   const [isManagingPhotos, setIsManagingPhotos] = useState(false);
@@ -163,22 +182,17 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
 
   const Root = panel ? 'div' : 'main';
 
-  const deleteProperty = async () => {
-    try {
-      await removeMutation.mutateAsync();
-      setIsDeleteDialogOpen(false);
-      if (panel) panel.onClose();
-      else navigate(backTo, { replace: true, state: { focusHeading: true } });
-    } catch {
-      // 삭제 확인 창에서 재시도할 수 있도록 유지한다.
-    }
+  // 삭제를 마치면 옆 칸으로 연 경우는 칸을 닫고, 따로 연 화면은 돌아갈 곳으로 이동한다.
+  const afterDelete = () => {
+    if (panel) panel.onClose();
+    else navigate(backTo, { replace: true, state: { focusHeading: true } });
   };
 
   if (panel && isManagingPhotos)
     return (
       <div className={styles.page} data-panel="true">
         <div className={styles.container}>
-          <TopNavigation
+          <DetailHeader
             title={`${detail.name} · 사진`}
             onBack={() => setIsManagingPhotos(false)}
             backLabel="매물 상세로 돌아가기"
@@ -215,14 +229,17 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
           {panel?.headerEnd}
           <TopNavigationMenu label="매물 정보 메뉴 열기">
             <button
-              ref={deleteButtonRef}
               type="button"
               data-tone="danger"
+              disabled={removeProperty.isPending}
               onClick={() => {
-                removeMutation.reset();
-                setIsDeleteDialogOpen(true);
+                void removeProperty
+                  .mutateAsync()
+                  .then(afterDelete)
+                  .catch(() => undefined);
               }}
             >
+              <Icon name="trash" size={16} />
               삭제
             </button>
           </TopNavigationMenu>
@@ -267,7 +284,7 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
               }}
             />
             <div className={styles.infoPanel}>
-              <PropertyBasicInfoSection property={detail} {...inlineEdit} />
+              <PropertyBasicInfoSection property={detail} {...inlineEdit} onEditLocation={editLocation} />
 
               <PropertyAdditionalInfoSection property={detail} {...inlineEdit} />
 
@@ -286,7 +303,12 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
             </div>
           </section>
         ) : (
-          <section id="property-checklist-panel" role="tabpanel" aria-labelledby="property-checklist-tab">
+          <section
+            id="property-checklist-panel"
+            className={styles.checklistPanel}
+            role="tabpanel"
+            aria-labelledby="property-checklist-tab"
+          >
             <PropertyChecklistSection propertyId={propertyId} />
           </section>
         )}
@@ -302,23 +324,6 @@ const PropertyDetailView = ({ propertyId, detail, backTo, panel }: PropertyDetai
             }}
           />
         )}
-
-        <ConfirmDialog
-          isOpen={isDeleteDialogOpen}
-          title={`${detail.name}을 삭제할까요?`}
-          description="삭제한 매물은 되돌릴 수 없습니다."
-          confirmLabel="매물 삭제"
-          isConfirming={removeMutation.isPending}
-          returnFocusRef={deleteButtonRef}
-          onCancel={() => setIsDeleteDialogOpen(false)}
-          onConfirm={() => void deleteProperty()}
-        >
-          {removeMutation.isError && (
-            <p role="alert" className={styles.deleteError}>
-              매물을 삭제하지 못했어요. 매물은 그대로 있어요. 다시 시도해 주세요.
-            </p>
-          )}
-        </ConfirmDialog>
       </div>
     </Root>
   );
@@ -406,8 +411,39 @@ const styles = {
       cursor: pointer;
     }
 
+    /* 선택한 탭은 글자를 더 진하게 하는 대신 우리 파랑으로 알린다. */
     & button[aria-selected='true'] {
-      color: var(--color-ink);
+      color: var(--color-brand-blue-ink);
+    }
+  `,
+
+  /* 체크리스트 탭은 화면 폭 전체를 회색으로 깔고, 그 위에 흰 카드(진행 링, 머리, 카테고리)를 올린다. */
+  checklistPanel: css`
+    label: PropertyDetailPage-checklistPanel;
+    margin: 0 calc(var(--page-inline-padding) * -1) -1.5rem;
+    padding: 0.5rem 0 2rem;
+    background: var(--color-card-surface);
+    min-height: 60dvh;
+
+    /* 안쪽 섹션(DetailSection)이 흰 바탕과 위 구분선으로 회색을 가리지 않게 걷는다. */
+    & > section {
+      margin: 0;
+      padding: 0;
+      border-top: 0;
+      background: transparent;
+    }
+
+    /* 섹션 제목(체크리스트)은 화면에서 숨긴다. 아래 첫 카드가 사용자 체크리스트 제목으로 시작해 겹치기 때문이다.
+       화면 낭독기는 그대로 읽도록 지우지 않고 시각적으로만 숨긴다. */
+    & > section > div:first-of-type {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
     }
   `,
 

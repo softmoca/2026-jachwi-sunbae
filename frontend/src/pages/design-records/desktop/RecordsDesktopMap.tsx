@@ -11,6 +11,7 @@ import type { RecordsState } from '../hooks/useRecords';
 import type { RecordsMapLayers } from '../hooks/useRecordsMapLayers';
 import { recordsMapHint } from '../model/recordPresentation';
 import RecordMapTapIntro from '../ui/record-map-tap-intro/RecordMapTapIntro';
+import RecordRegisterSuggestion from '../ui/record-register-suggestion/RecordRegisterSuggestion';
 
 type Props = {
   records: RecordsState;
@@ -34,7 +35,7 @@ const RecordsDesktopMap = ({ records, layers, districts, className }: Props) => 
       className={styles.recenter}
       type="button"
       aria-label="현재 위치로 이동"
-      onClick={() => records.moveToCurrentLocation()}
+      onClick={() => records.moveToCurrentLocation(layers.suggestRegisterAt)}
     >
       <Icon name="target" size={22} />
     </button>
@@ -43,6 +44,11 @@ const RecordsDesktopMap = ({ records, layers, districts, className }: Props) => 
       <span className={styles.hint}>{recordsMapHint(records.records, layers)}</span>
     )}
     <StreetMemoPanel layer={layers.memo} className={styles.memoCard} />
+    <RecordRegisterSuggestion
+      isOpen={layers.isSuggestingRegister}
+      onAccept={layers.acceptRegisterSuggestion}
+      onClose={layers.closeRegisterSuggestion}
+    />
     <RecordMapTapIntro setLevel={records.setLevel} hasTapped={layers.tapPoint !== null} />
   </section>
 );

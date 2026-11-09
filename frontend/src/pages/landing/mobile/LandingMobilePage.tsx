@@ -1,8 +1,7 @@
 import { css } from '@emotion/css';
 import type { CSSProperties } from 'react';
 
-import logo from '@/shared/assets/jachwi-sunbae-goose.webp';
-import logo2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
+import { LOGO_DUCK } from '@/shared/assets/imageAssets';
 
 import flyoverVideo from '../assets/landing-flyover.mp4';
 import {
@@ -17,6 +16,8 @@ import {
 import LandingGetStarted from '../ui/LandingGetStarted';
 import LandingTech from '../ui/LandingTech';
 import LandingWhy from '../ui/LandingWhy';
+
+const { src: logo, src2x: logo2x } = LOGO_DUCK;
 
 type LandingMobilePageProps = {
   search: string;

@@ -9,8 +9,8 @@ import PropertyPhotoManager from '@/features/property/ui/property-photo-manager/
 import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import useReturnNavigation from '@/shared/lib/navigation/useReturnNavigation';
 import ContentState from '@/shared/ui/content-state/ContentState';
+import DetailHeader from '@/shared/ui/detail-header/DetailHeader';
 import QueryState from '@/shared/ui/query-state/QueryState';
-import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 import PropertyPhotosSkeleton from './PropertyPhotosSkeleton';
 
@@ -41,7 +41,7 @@ const ResolvedPropertyPhotosPage = ({ propertyId }: { propertyId: number }) => {
     >
       {(detail) => (
         <main className={styles.page}>
-          <TopNavigation title={`${detail.name} · 사진`} onBack={goBack} backLabel="매물 상세로 돌아가기" />
+          <DetailHeader title={`${detail.name} · 사진`} onBack={goBack} backLabel="매물 상세로 돌아가기" />
           <div className={styles.container}>
             <h1 className="sr-only">{detail.name} 사진 관리</h1>
             <PropertyPhotoManager propertyId={propertyId} />

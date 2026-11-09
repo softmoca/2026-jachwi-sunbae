@@ -55,6 +55,19 @@ export const details = cx(
   'NeighborhoodPlacePanel-details',
 );
 
+/** 시트 높이를 채우고 동작 버튼을 맨 아래에 둔다. */
+export const fill = css`
+  label: NeighborhoodPlacePanel-fill;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  & > .NeighborhoodPlacePanel-actions {
+    margin-top: auto;
+  }
+`;
+
 // 다른 요소의 선택자에서 `.NeighborhoodPlacePanel-actions`로 가리킨다.
 export const actions = cx(
   css`

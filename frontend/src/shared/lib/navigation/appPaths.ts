@@ -12,6 +12,7 @@ export const HOME_PATH = '/';
 export const RECORDS_PATH = '/properties';
 export const CHECKLISTS_PATH = '/checklists';
 export const CHECKLIST_CREATE_PATH = `${CHECKLISTS_PATH}/new`;
+/** 서비스가 제공하는 기본 체크리스트. 수정하지 않고 보기만 한다. */
 export const CHECKLIST_PROPERTY_ID_PARAM = 'propertyId';
 export const propertyChecklistCreatePath = (propertyId: number) =>
   `${CHECKLIST_CREATE_PATH}?${CHECKLIST_PROPERTY_ID_PARAM}=${propertyId}`;

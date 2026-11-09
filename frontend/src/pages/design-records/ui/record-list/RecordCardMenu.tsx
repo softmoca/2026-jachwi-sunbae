@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useRemoveProperty } from '@/features/property/api/usePropertyMutations';
 import Icon from '@/shared/ui/icon/Icon';
-
-import RecordDeleteButton from './RecordDeleteButton';
 
 import * as styles from './RecordList.styles';
 
@@ -19,6 +18,9 @@ type Props = {
  */
 const RecordCardMenu = ({ propertyId, propertyName, onDone }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
+  // 삭제는 ⋮ 메뉴 안에 있어 잘못 누를 일이 적으므로 따로 확인을 묻지 않고 바로 지운다.
+  const removeProperty = useRemoveProperty(propertyId);
+  const deleteRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
@@ -56,14 +58,23 @@ const RecordCardMenu = ({ propertyId, propertyName, onDone }: Props) => {
       </button>
       {isOpen && (
         <div className={styles.menu}>
-          <RecordDeleteButton
-            propertyId={propertyId}
-            propertyName={propertyName}
-            onDone={(message) => {
+          <button
+            ref={deleteRef}
+            type="button"
+            aria-label={`${propertyName} 삭제`}
+            data-record-delete-control=""
+            disabled={removeProperty.isPending}
+            onClick={() => {
               setIsOpen(false);
-              onDone(message);
+              removeProperty.mutate(undefined, {
+                onSuccess: () => onDone('기록을 삭제했어요.'),
+                onError: () => onDone('기록을 삭제하지 못했어요. 다시 시도해 주세요.'),
+              });
             }}
-          />
+          >
+            <Icon name="trash" size={16} />
+            삭제
+          </button>
         </div>
       )}
     </div>

@@ -44,13 +44,11 @@ const meta = {
       options: ['locating', 'geocoding', 'ready', 'error'],
       description: '위치 확인 단계. ready일 때만 확정 버튼을 누를 수 있다.',
     },
-    onOpenSearch: { description: '주소 검색 열기' },
     onConfirm: { description: '이 위치로 확정' },
   },
   args: {
     selected: selectedAddress,
     status: 'ready',
-    onOpenSearch: fn(),
     onConfirm: fn(),
   },
 } satisfies Meta<typeof LocationAddressSheet>;

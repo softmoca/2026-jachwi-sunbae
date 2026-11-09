@@ -63,7 +63,7 @@ const PlaceDetails = ({ place, preview, phoneAction, commuteMaxMinutes = 60 }: P
   if (place.kind === 'property') {
     const { property } = place;
     return (
-      <div className={styles.details}>
+      <div className={`${styles.details} ${styles.fill}`}>
         <p className={styles.lead}>내 매물</p>
         <dl className={styles.facts}>
           <dt>보증금/월세</dt>
@@ -72,9 +72,13 @@ const PlaceDetails = ({ place, preview, phoneAction, commuteMaxMinutes = 60 }: P
           <dd>{property.address || '주소 정보가 없어요'}</dd>
           <dt>통근</dt>
           <dd>
-            {property.commute
-              ? `${preview.destination.name}까지 ${propertyCommuteLabel(property.commute, commuteMaxMinutes)}`
-              : '통근 시간을 불러오고 있어요'}
+            {property.commute ? (
+              <>
+                {preview.destination.name}까지 <b>{propertyCommuteLabel(property.commute, commuteMaxMinutes)}</b>
+              </>
+            ) : (
+              '통근 시간을 불러오고 있어요'
+            )}
           </dd>
         </dl>
         <div className={styles.actions}>

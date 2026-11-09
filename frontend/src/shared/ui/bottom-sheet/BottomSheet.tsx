@@ -6,6 +6,12 @@ import Icon from '../icon/Icon';
 
 type BottomSheetProps = {
   title: string;
+  /** 참이면 제목을 화면에서 숨기고(읽는 프로그램에는 그대로 읽힌다) 닫기 버튼만 남긴다. 내용이 스스로 무엇인지 보여 줄 때 쓴다. */
+  hideTitle?: boolean;
+  /** 참이면 제목줄 전체(제목, 닫기)를 화면에서 숨긴다. 내용 안에 닫기를 직접 두는 시트가 쓴다. 제목은 읽는 프로그램에 그대로 읽힌다. */
+  hideHeader?: boolean;
+  /** 참이면 닫기(X)를 테두리 없는 작은 아이콘으로 그린다. */
+  compactClose?: boolean;
   children: ReactNode;
   onClose: () => void;
   closeLabel?: string;
@@ -20,6 +26,8 @@ type BottomSheetProps = {
   onBack?: () => void;
   /** 제목 오른쪽 끝에 둘 동작(외부 링크 아이콘 등). 페이지로 열려 닫기가 생기면 그 왼쪽에 둔다. */
   headerEnd?: ReactNode;
+  /** 시트를 크게(expanded, full) 열면 `headerEnd`를 숨긴다. 작게 올라와 있을 때만 쓰는 이동 도구용이다. */
+  hidesHeaderEndWhenExpanded?: boolean;
   /** 제목 아래 작은 한 줄(주소 등). */
   subtitle?: string;
   /**
@@ -36,6 +44,9 @@ type SheetMode = 'peek' | 'default' | 'expanded' | 'full';
 
 const BottomSheet = ({
   title,
+  hideTitle = false,
+  hideHeader = false,
+  compactClose = false,
   children,
   onClose,
   closeLabel = '상세 닫기',
@@ -46,6 +57,7 @@ const BottomSheet = ({
   peekSignal,
   onBack,
   headerEnd,
+  hidesHeaderEndWhenExpanded = false,
   subtitle,
   floating,
   className,
@@ -62,6 +74,23 @@ const BottomSheet = ({
   const gesture = useRef<{ startY: number; height: number; limit: number; frame: number | null } | null>(null);
   const dragged = useRef(false);
   const sheetRef = useRef<HTMLElement>(null);
+  // 휴대폰 키패드가 오르면 시트 아래쪽이 가려진다. 키패드 높이만큼 시트를 위로 올려, 시트를 높게 열지 않아도 입력칸이 보이게 한다.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const sheet = sheetRef.current;
+    if (viewport === null || viewport === undefined || sheet === null) return;
+    const update = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      sheet.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
+  }, []);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const handleRef = useRef<HTMLButtonElement>(null);
   const isFullPage = mode === 'full';
@@ -170,24 +199,32 @@ const BottomSheet = ({
           <span />
         </button>
       )}
-      <header className={styles.header}>
+      <header className={hideHeader ? `${styles.header} sr-only` : styles.header}>
         {back && (
           <button type="button" className={styles.back} aria-label="뒤로 가기" onClick={back}>
             <Icon name="chevron-left" size={22} />
           </button>
         )}
         <div className={styles.titles}>
-          <h2>{title}</h2>
+          <h2 className={hideTitle ? 'sr-only' : undefined}>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
-        {headerEnd}
+        {hidesHeaderEndWhenExpanded && (mode === 'expanded' || mode === 'full') ? null : headerEnd}
         {(showCloseButton || isFullPage) && (
-          <button ref={closeButtonRef} type="button" onClick={onClose} aria-label={closeLabel}>
-            <Icon name="close" size={20} />
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className={compactClose ? styles.compactClose : undefined}
+            onClick={onClose}
+            aria-label={closeLabel}
+          >
+            <Icon name="close" size={compactClose ? 16 : 20} />
           </button>
         )}
       </header>
-      <div className={styles.content}>{children}</div>
+      <div className={styles.content} data-header-hidden={hideHeader || undefined}>
+        {children}
+      </div>
     </section>
   );
 };
@@ -200,9 +237,9 @@ const styles = {
       position: absolute;
       left: 0;
       right: 0;
-      bottom: var(--map-sheet-bottom, 0px);
+      bottom: calc(var(--map-sheet-bottom, 0px) + var(--keyboard-inset, 0px));
       height: var(--sheet-height, var(--sheet-default-height, 58%));
-      max-height: calc(100% - var(--map-sheet-bottom, 0px) - 1rem);
+      max-height: calc(100% - var(--map-sheet-bottom, 0px) - var(--keyboard-inset, 0px) - 1rem);
       display: flex;
       flex-direction: column;
       z-index: 35;
@@ -319,6 +356,18 @@ const styles = {
     }
   `,
 
+  /* 닫기를 테두리 없는 작은 회색 아이콘으로 둔다(메모처럼 가벼운 시트용). */
+  compactClose: css`
+    label: BottomSheet-compactClose;
+
+    && {
+      width: 1.75rem;
+      height: 1.75rem;
+      border: 0;
+      color: var(--color-muted);
+    }
+  `,
+
   titles: css`
     label: BottomSheet-titles;
     display: grid;
@@ -351,6 +400,11 @@ const styles = {
     min-height: 0;
     flex: 1;
     padding: 0 1.25rem 1.5rem;
+
+    /* 제목줄을 숨긴 시트는 내용이 맨 위부터 시작하므로 위쪽 여백을 준다. */
+    &[data-header-hidden='true'] {
+      padding-top: 1.25rem;
+    }
   `,
 };
 

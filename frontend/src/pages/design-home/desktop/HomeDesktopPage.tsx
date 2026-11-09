@@ -1,5 +1,6 @@
 import { css } from '@emotion/css';
 
+import HeaderWeather from '@/features/weather/ui/header-weather/HeaderWeather';
 import DesktopHeader from '@/shared/ui/desktop-header/DesktopHeader';
 
 import CheapMealCard from '../ui/CheapMealCard';
@@ -14,7 +15,7 @@ import * as shared from '../HomePage.styles';
 /** 데스크탑 홈. 다른 화면과 같은 공용 헤더를 쓰고, 기능 카드 옆 오른쪽 열에 빠른 메뉴·최근 기록을 둔다. */
 const HomeDesktopPage = () => (
   <main className={shared.page}>
-    <DesktopHeader />
+    <DesktopHeader center={<HeaderWeather />} />
     <div className={styles.layout}>
       <GuideCard className={styles.guide} />
       <CheapMealCard className={styles.meals} />

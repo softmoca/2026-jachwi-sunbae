@@ -3,12 +3,12 @@ import { css, cx } from '@emotion/css';
 import { usePropertyList } from '@/features/property/api/useProperties';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
 import PropertyAddress from '@/features/property/ui/property-address/PropertyAddress';
+import PropertyPlaceholderPhoto from '@/features/property/ui/property-placeholder-photo/PropertyPlaceholderPhoto';
 import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
 import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
 import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
-import Icon from '@/shared/ui/icon/Icon';
 import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import RailCard from '@/shared/ui/rail-card/RailCard';
 import StateIllustration from '@/shared/ui/state-illustration/StateIllustration';
@@ -69,7 +69,7 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
                       />
                     ) : (
                       <span className={`${styles.roomPicture} ${styles.photoFallback}`} aria-label="대표 사진 없음">
-                        <Icon name="image" size={18} />
+                        <PropertyPlaceholderPhoto className={styles.fallbackImage} />
                       </span>
                     )}
                     <div className={styles.roomInfo}>
@@ -214,6 +214,17 @@ const styles = {
       font-size: 0.58rem;
       text-decoration: none;
     }
+  `,
+
+  /* 사진이 없는 방은 목록, 상세와 같은 기본 이미지(집 그림)로 채운다. */
+  fallbackImage: css`
+    label: RecentRooms-fallbackImage;
+    /* 칸 높이(7rem)를 꽉 채우고 넘치는 좌우는 잘라, 위아래에 회색 띠가 남지 않게 한다. */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   `,
 
   photoFallback: css`

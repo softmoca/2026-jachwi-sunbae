@@ -107,7 +107,7 @@ const styles = {
     @media (min-width: 48rem) {
       position: static;
       max-width: 20rem;
-      margin: 0;
+      margin: 0 auto;
       padding-inline: 0;
       background: none;
     }

@@ -81,7 +81,10 @@ const SearchField = ({
 
       {value.length > 0 && (
         <button className={styles.clear} type="button" aria-label="검색어 지우기" disabled={disabled} onClick={clear}>
-          <Icon name="close" size={17} />
+          {/* 아이폰 입력창처럼 회색 동그라미 안에 흰 x를 둔다. */}
+          <span className={styles.clearIcon}>
+            <Icon name="close" size={11} />
+          </span>
         </button>
       )}
       {showSubmitButton && (
@@ -143,9 +146,7 @@ const styles = {
       border-color 0.15s ease,
       box-shadow 0.15s ease;
 
-    &:focus-within {
-      border-color: var(--color-ink, #212124);
-    }
+    /* 입력할 때 테두리를 검게 바꾸지 않는다. */
 
     & input {
       width: 100%;
@@ -200,10 +201,21 @@ const styles = {
     min-height: 2.35rem;
     border: 0;
     background: transparent;
-    color: var(--color-ink);
     cursor: pointer;
     display: grid;
     place-items: center;
+  `,
+
+  /* 아이폰 입력창의 지우기 버튼처럼 옅은 회색 동그라미에 흰 x. */
+  clearIcon: css`
+    label: SearchField-clearIcon;
+    display: grid;
+    width: 1.1rem;
+    height: 1.1rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #c7c9ce;
+    color: #fff;
   `,
 
   submit: css`

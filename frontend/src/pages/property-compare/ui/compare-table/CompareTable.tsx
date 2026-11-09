@@ -2,9 +2,8 @@ import { css, cx } from '@emotion/css';
 
 import type { PropertySummary } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyPlaceholderPhoto from '@/features/property/ui/property-placeholder-photo/PropertyPlaceholderPhoto';
 import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
-import mascotImage from '@/shared/assets/jachwi-sunbae-goose.webp';
-import mascotImage2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
 import SelectionControl from '@/shared/ui/selection-control/SelectionControl';
 
 import { StageOverview } from '../compare-property-option/ComparePropertyOption';
@@ -46,7 +45,7 @@ const CompareTable = ({ properties, selectedIds, maxSelection, onToggle }: Compa
             >
               <span className={styles.thumbnail}>
                 {property.representativePhoto === null ? (
-                  <img src={mascotImage} srcSet={`${mascotImage} 1x, ${mascotImage2x} 2x`} alt="" />
+                  <PropertyPlaceholderPhoto />
                 ) : (
                   <AuthenticatedPhoto
                     propertyId={property.propertyId}
@@ -142,12 +141,17 @@ const styles = {
   checkmark: css`
     label: CompareTable-checkmark;
     display: grid;
+    flex: none;
+    box-sizing: border-box;
     width: 1.1rem;
     height: 1.1rem;
     border: 1px solid var(--color-border-strong);
     border-radius: 50%;
     background: #fff;
     color: var(--color-on-primary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
     place-items: center;
 
     .CompareTable-row[data-selected='true'] & {

@@ -84,9 +84,36 @@ injectGlobal`
   font-weight: 750;
 }
 
+.content-state-screen {
+  display: grid;
+  min-height: 85dvh;
+  place-items: center;
+}
+
+.content-state--page {
+  min-height: 0;
+  margin-top: 0;
+  padding: 2rem 1rem;
+  border: 0;
+  background: transparent;
+}
+
+.content-state--page strong {
+  font-size: 1.05rem;
+}
+
+.content-state--page > span {
+  font-size: 0.9rem;
+}
+
 .content-state--error {
   border-color: color-mix(in srgb, var(--color-error) 35%, transparent);
   background: var(--color-error-surface);
+}
+
+.content-state--page.content-state--error {
+  border-color: transparent;
+  background: transparent;
 }
 
 .section-note,

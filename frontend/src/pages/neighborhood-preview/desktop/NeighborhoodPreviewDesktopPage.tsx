@@ -14,8 +14,8 @@ import StateIllustration from '@/shared/ui/state-illustration/StateIllustration'
 import useNeighborhoodMapView from '../hooks/useNeighborhoodMapView';
 import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview';
 import useResultMapViewport from '../hooks/useResultMapViewport';
-import { COMMUTE_COLORS, commuteLegend, OUT_OF_RENT_COLOR } from '../model/commuteColors';
-import { emptyAreaMessage, transferLabel } from '../model/criteriaLabels';
+import { COMMUTE_COLORS, commuteLegend } from '../model/commuteColors';
+import { criteriaSummary, emptyAreaMessage } from '../model/criteriaLabels';
 import { desktopMapViewport } from '../model/resultMapView';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
 import ConditionPanel from '../ui/condition-panel/ConditionPanel';
@@ -75,9 +75,18 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
       <header className={styles.areaHeader}>
         <div>
           <h2>찾은 동네</h2>
-          <p>
-            {preview.destination.name}까지 · 통근 {preview.maxMinutes}분 이내 · {transferLabel(preview.maxTransfers)}
-          </p>
+          {/* 윗줄에는 출퇴근 장소, 아랫줄에는 걸러 낸 조건(통근, 환승, 월세)을 줄을 나눠 둔다. */}
+          <p className={styles.areaDestination}>{preview.destination.name}</p>
+          <p className={styles.areaCriteria}>{criteriaSummary(preview)}</p>
+          {/* 지도 색 기준은 지도 위 슬라이더 아래가 아니라 이 머리에 둔다. */}
+          <div className={styles.areaLegend} aria-label="통근 시간 색상 기준">
+            {commuteLegend(preview.maxMinutes).map(([group, label]) => (
+              <span key={group}>
+                <i style={{ background: COMMUTE_COLORS[group].fillColor }} />
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
         <Button
           variant="secondary"
@@ -167,21 +176,7 @@ const NeighborhoodPreviewDesktopPage = ({ preview }: Props) => {
             <>
               {/* 지도 안 왼쪽 위: 월세 시세 슬라이더와 지도 색 기준. 끄는 동안 지도 색과 왼쪽 목록이 바로 바뀐다. */}
               <div className={styles.rentFilter}>
-                <RentSlider preview={preview} />
-                <div className={`${shared.colorLegend} ${styles.legend}`} aria-label="통근 시간 색상 기준">
-                  {commuteLegend(preview.maxMinutes).map(([group, label]) => (
-                    <span key={group}>
-                      <i style={{ background: COMMUTE_COLORS[group].fillColor }} />
-                      {label}
-                    </span>
-                  ))}
-                  {preview.maxRent > 0 && (
-                    <span>
-                      <i style={{ background: OUT_OF_RENT_COLOR.fillColor }} />
-                      월세 조건 밖
-                    </span>
-                  )}
-                </div>
+                <RentSlider preview={preview} compact />
               </div>
               {/* 지도 안 왼쪽 아래: 지도에서 누른 마커(또는 지도에서 고른 동네, My 목록) 정보 카드. */}
               {infoSubject && (
@@ -289,10 +284,16 @@ const styles = {
     overflow-y: auto;
     display: grid;
     align-content: start;
-    gap: 0.5rem;
-    margin: 0;
+    gap: 0;
+    /* 목록 칸의 가로 안쪽 여백까지 줄을 늘려 폭을 끝까지 쓴다. */
+    margin: 0 -1.5rem;
     padding: 0 0 0.25rem;
     list-style: none;
+
+    /* 카드 없이 한 줄씩: 이름, 월세, 통근 시간을 한 줄에 늘어놓고 줄 사이는 얇은 선으로 나눈다. */
+    & li {
+      border-bottom: 1px solid var(--color-border);
+    }
 
     & button {
       display: flex;
@@ -300,10 +301,9 @@ const styles = {
       justify-content: space-between;
       gap: 0.75rem;
       width: 100%;
-      padding: 0.85rem 1rem;
-      border: 1px solid var(--color-border);
-      border-radius: 0.9rem;
-      background: var(--color-surface);
+      padding: 0.75rem 1.5rem;
+      border: 0;
+      background: transparent;
       color: var(--color-ink);
       font: inherit;
       text-align: left;
@@ -315,19 +315,19 @@ const styles = {
     }
 
     & button[aria-pressed='true'] {
-      border-color: var(--color-ink);
       background: var(--color-surface-muted);
-      box-shadow: inset 0 0 0 1px var(--color-ink);
     }
 
     & button:focus-visible {
       outline: 2px solid var(--color-focus);
-      outline-offset: 2px;
+      outline-offset: -2px;
     }
 
     & span {
-      display: grid;
-      gap: 0.2rem;
+      display: flex;
+      flex: 1;
+      align-items: baseline;
+      gap: 0.75rem;
       min-width: 0;
     }
 
@@ -345,7 +345,10 @@ const styles = {
 
     & b {
       flex: none;
-      font-size: 1.05rem;
+      color: var(--color-brand-blue-ink);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
     }
   `,
 
@@ -399,9 +402,52 @@ const styles = {
     }
 
     & p {
-      margin: 0.3rem 0 0;
-      color: var(--color-muted);
-      font-size: 0.8rem;
+      margin: 0;
+    }
+  `,
+
+  /* 윗줄: 출퇴근 장소. 아랫줄보다 진하고 조금 크게 둔다. */
+  areaDestination: css`
+    label: NeighborhoodPreviewDesktopPage-areaDestination;
+    margin-top: 0.35rem;
+    overflow: hidden;
+    color: var(--color-ink);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  `,
+
+  /* 아랫줄: 필터링 조건. 옅은 회색 작은 글씨. */
+  areaCriteria: css`
+    label: NeighborhoodPreviewDesktopPage-areaCriteria;
+    margin-top: 0.15rem;
+    color: var(--color-muted);
+    font-size: 0.78rem;
+  `,
+
+  /* 지도 색 기준. 한 줄로 이름 아래에 둔다. */
+  areaLegend: css`
+    label: NeighborhoodPreviewDesktopPage-areaLegend;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.9rem;
+    margin-top: 0.6rem;
+    color: var(--color-ink-soft);
+    font-size: 0.72rem;
+    font-weight: 700;
+
+    & span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    & i {
+      width: 3px;
+      height: 0.65rem;
+      flex: none;
+      border-radius: 1px;
     }
   `,
 
@@ -432,12 +478,6 @@ const styles = {
   `,
 
   /* 월세 필터 안 색 기준 줄. 필터가 흰 바탕이라 따로 바탕을 두지 않는다. */
-  legend: css`
-    label: NeighborhoodPreviewDesktopPage-legend;
-    padding: 0.2rem 0 0;
-    background: none;
-  `,
-
   /* 지도 안 왼쪽 위 월세 슬라이더와 색 기준. 오른쪽 위 버튼 줄과 겹치지 않게 폭을 둔다. */
   rentFilter: css`
     label: NeighborhoodPreviewDesktopPage-rentFilter;
@@ -446,11 +486,11 @@ const styles = {
     left: 1rem;
     z-index: 31;
     width: min(22rem, calc(100% - 6rem));
-    box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 12%);
+    /* 테두리와 그림자 없이, 지도 위에서 읽히게 옅은 흰 바탕만 깐다. */
     padding: 0.9rem 1.1rem 0.6rem;
-    border: 1px solid var(--color-border);
     border-radius: 1rem;
-    background: var(--color-surface);
+    background: rgb(255 255 255 / 82%);
+    backdrop-filter: blur(6px);
   `,
 
   /* 지도 오른쪽 위. 왼쪽 위 색상 기준 상자와 같은 높이에서 시작한다. */

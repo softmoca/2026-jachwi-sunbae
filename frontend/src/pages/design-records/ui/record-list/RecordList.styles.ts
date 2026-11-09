@@ -58,28 +58,37 @@ export const menu = css`
     top: 2.1rem;
     right: 0;
     z-index: 5;
-    min-width: 6rem;
-    padding: 0.3rem;
+    min-width: 5rem;
+    padding: 0.15rem;
     border: 1px solid #eceef1;
-    border-radius: 0.7rem;
+    border-radius: 0.6rem;
     background: white;
-    box-shadow: 0 0.3rem 0.85rem #1e2b3d24;
+    box-shadow: 0 1px 6px rgb(0 0 0 / 8%);
   }
 
   & button {
     display: flex;
     width: 100%;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 0.6rem;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
     border: 0;
     border-radius: 0.45rem;
     background: transparent;
     color: #c44e4e;
     font: inherit;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
     text-align: left;
     cursor: pointer;
+  }
+
+  /* 휴지통 아이콘은 글자 높이에 맞춰 작고 가는 선으로 그린다. */
+  & button svg {
+    width: 0.85rem;
+    height: 0.85rem;
+    stroke-width: 1.7;
   }
 
   & button:hover {

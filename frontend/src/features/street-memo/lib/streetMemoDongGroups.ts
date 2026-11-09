@@ -3,17 +3,18 @@ import type { MapMarker } from '@/features/map/model/Map';
 import type { StreetMemo } from '../model/StreetMemo';
 
 /**
- * 본 방 기록 지도에서 메모를 하나씩 보여 주는 가장 먼 확대 단계(작을수록 가까움). 휴대폰 화면 폭이 약 1km인 단계다.
+ * 본 방 기록 지도에서 메모를 하나씩 보여 주는 가장 먼 확대 단계(작을수록 가까움). 휴대폰 화면 폭이 약 1km였던 5단계에서 한 단계 더 멀리(6단계)까지 낱개로 보여, 묶음으로 바뀌는 시점을 늦췄다.
  * 이보다 멀면 화면의 메모를 모두 행정동 묶음으로, 이 단계부터는 모두 낱개로 보여 준다.
  */
-export const MEMO_INDIVIDUAL_MAX_LEVEL = 5;
+export const MEMO_INDIVIDUAL_MAX_LEVEL = 6;
 export const STREET_MEMO_DONG_MARKER_PREFIX = 'street-memo-dong:';
 
 /**
  * 지도가 멈춘 확대 단계로 묶음을 보여 줄지 정한다. 데스크탑 휠은 소수 단계로 멈추므로 정수 단계로 반올림해,
  * 한 단계 안에서는 묶음과 낱개가 섞이거나 오가지 않게 한다.
  */
-export const showsDongMemoGroups = (level: number) => Math.round(level) > MEMO_INDIVIDUAL_MAX_LEVEL;
+export const showsDongMemoGroups = (level: number, individualMaxLevel: number = MEMO_INDIVIDUAL_MAX_LEVEL) =>
+  Math.round(level) > individualMaxLevel;
 
 export type DongMemoGroup = {
   adminDongCode: string;

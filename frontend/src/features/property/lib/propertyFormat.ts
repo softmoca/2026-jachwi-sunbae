@@ -6,6 +6,10 @@ export const formatWon = (amount: number): string => `${new Intl.NumberFormat('k
 export const formatManwon = (amount: number): string =>
   `${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(amount / 10_000)}만원`;
 
+/** 사진 마커에 붙는 월세만. 만원 단위 숫자 뒤에 `만`을 붙인다(예: `300만`). */
+export const formatMarkerRent = (monthlyRentAmount: number): string =>
+  `${(monthlyRentAmount / 10_000).toLocaleString('ko-KR', { maximumFractionDigits: 2 })}만`;
+
 /** 보증금과 월세를 아직 넣지 않은 매물(지도에서 바로 만든 새 매물은 둘 다 0)에 금액 대신 보이는 글. */
 export const PRICE_PENDING_LABEL = '가격 입력 전';
 

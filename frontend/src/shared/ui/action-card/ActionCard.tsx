@@ -184,7 +184,7 @@ const styles = {
       opacity: 0.8;
 
       @media (max-width: 360px) {
-        font-size: 0.6rem;
+        font-size: 0.72rem;
       }
     `,
     'ActionCard-description',

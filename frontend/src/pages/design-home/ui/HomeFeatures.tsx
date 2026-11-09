@@ -90,8 +90,15 @@ const styles = {
 
     & > img {
       right: -16%;
-      bottom: -10%;
+      bottom: 2%;
       width: 108%;
+    }
+
+    /* 태블릿 너비부터는 카드가 높아져 그림을 아래쪽에 붙여 둔다. */
+    @media (min-width: 768px) {
+      & > img {
+        bottom: -10%;
+      }
     }
   `,
 

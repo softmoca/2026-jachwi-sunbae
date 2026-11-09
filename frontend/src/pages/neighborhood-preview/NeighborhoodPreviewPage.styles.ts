@@ -92,14 +92,14 @@ export const mapBack = cx(
     border: 1px solid #e3e5e9;
     border-radius: 50%;
     background: white;
-    box-shadow: 0 2px 10px #00000018;
+    box-shadow: 0 1px 6px rgb(0 0 0 / 8%);
     color: #383c43;
     cursor: pointer;
   `,
   'NeighborhoodPreviewPage-mapBack',
 );
 
-/* 데스크탑 헤더 안에서는 그림자 없이 회색 칸으로 둔다. */
+/* 데스크탑 헤더 안의 검색창은 본 방 기록과 같은 흰 칸에 그림자를 쓴다(`activeSearchField`). */
 export const headerMapSearch = css`
   label: NeighborhoodPreviewPage-headerMapSearch;
   display: flex;
@@ -110,8 +110,6 @@ export const headerMapSearch = css`
 
   & > :last-child {
     flex: 1;
-    background: var(--color-card-surface);
-    box-shadow: none;
   }
 
   & .NeighborhoodPreviewPage-mapBack {
@@ -761,11 +759,11 @@ export const activeSearchField = css`
   label: NeighborhoodPreviewPage-activeSearchField;
   min-width: 0;
   background: white;
-  box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
 
   &:focus-within {
     border-color: var(--color-border);
-    box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
   }
 `;
 

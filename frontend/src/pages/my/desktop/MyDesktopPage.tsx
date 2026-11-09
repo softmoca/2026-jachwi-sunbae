@@ -10,7 +10,7 @@ import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
 import * as shared from '../MyPage.styles';
 
-/** 데스크탑 마이. 공용 헤더로 이동하므로 뒤로 가기 없이 제목만 두고, 홈과 같은 64rem 본문에 카드를 늘이지 않고 나란히 둔다. */
+/** 데스크탑 마이. 공용 헤더로 이동하므로 뒤로 가기 없이 제목만 두고, 좁은 한 열에 카드를 위에서 아래로 쌓는다. */
 const MyDesktopPage = () => {
   const config = usePublicConfig();
 
@@ -35,34 +35,34 @@ const MyDesktopPage = () => {
 
 const styles = {
   /*
-   * 데스크탑 마이: 26rem 카드 두 장이 나란히 놓이는 폭으로 제목·카드·바닥 문구를 화면 가운데에 둔다.
-   * 카드는 화면 폭을 따라 늘이지 않는다.
+   * 데스크탑 마이: 좁은 한 열(30rem)에 제목, 날씨 카드, 링크 카드를 위에서 아래로 쌓아 화면 가운데에 둔다.
+   * 이 화면의 기준 글자 크기(rem)는 데스크탑 셸이 125%로 올려 두므로, 카드 안 글자와 여백은 휴대폰과 같은 값으로 둔다.
    */
   layout: css`
     label: MyDesktopPage-layout;
-    width: min(100%, calc(26rem * 2 + 1.25rem + 4rem));
+    width: min(100%, 30rem);
     margin-right: auto;
     margin-left: auto;
-    padding-right: 2rem;
-    padding-left: 2rem;
-    --my-card-padding: 1.4rem;
-    --my-text-size: 1.05rem;
-    --my-subtext-size: 0.85rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+    --my-card-padding: 1.1rem;
+    --my-text-size: 0.92rem;
+    --my-subtext-size: 0.76rem;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
-    gap: 1.25rem;
-    padding-top: 2rem;
-    padding-bottom: 2.5rem;
+    gap: 0.9rem;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
   `,
 
   footer: css`
     label: MyDesktopPage-footer;
-    width: min(100%, calc(26rem * 2 + 1.25rem + 4rem));
+    width: min(100%, 30rem);
     margin-right: auto;
     margin-left: auto;
-    padding-right: 2rem;
-    padding-left: 2rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
     /* 바닥 문구는 카드 아래에 떠 있지 않고 화면 맨 아래에 둔다. */
     margin-top: auto;
     padding-top: 3rem;
@@ -75,11 +75,11 @@ const styles = {
     margin-bottom: 0.5rem;
   `,
 
-  /* 개인정보 처리방침과 초기화는 한 묶음으로 쌓는다(넓은 화면에서는 날씨 옆 열). */
+  /* 개인정보 처리방침과 초기화는 한 묶음으로 쌓는다. */
   links: css`
     label: MyDesktopPage-links;
     display: grid;
-    gap: 1.25rem;
+    gap: 0.9rem;
   `,
 };
 

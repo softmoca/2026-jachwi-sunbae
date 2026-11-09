@@ -122,21 +122,22 @@ const PropertyChecklistItemControl = ({ propertyId, propertyChecklistId, item }:
 const styles = {
   item: css`
     label: PropertyChecklistItemControl-item;
-    & + & {
-      border-top: 1px solid var(--color-border);
-    }
+    /* 항목 사이에는 줄을 긋지 않는다. 가로선은 카테고리 사이에만 있다. */
   `,
   row: css`
     label: PropertyChecklistItemControl-row;
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    padding: var(--space-md) 0;
+    padding: 0.9rem 0;
   `,
   question: css`
     label: PropertyChecklistItemControl-question;
     flex: 1 1 auto;
     min-width: 0;
+    /* 질문과 메모 칸, 안내 문구 사이를 카드 사이처럼 띄운다. */
+    display: grid;
+    gap: 0.6rem;
     & > strong {
       display: block;
       font-size: 0.875rem;
@@ -152,17 +153,31 @@ const styles = {
     flex: none;
     align-items: center;
     gap: 0.25rem;
+    /* 질문 첫 줄(글자 높이 약 1.36rem)과 세로 가운데가 맞게 버튼 높이만큼 위로 올린다. */
+    margin-top: calc((1.36rem - 1.9rem) / 2);
+
+    @media (pointer: coarse) {
+      margin-top: calc((1.36rem - 2.25rem) / 2);
+    }
   `,
   statusButton: css`
     label: PropertyChecklistItemControl-statusButton;
-    min-height: 2.5rem;
-    padding: 0.5rem;
+    min-height: 1.9rem;
+    padding: 0.25rem 0.5rem;
     border-radius: var(--radius-sm);
     color: var(--color-ink);
     font-size: 0.75rem;
     white-space: nowrap;
     & > span {
+      justify-content: center;
       gap: 0.2rem;
+    }
+    /* 선택하면 앞에 붙는 체크(✓) 글자 때문에 버튼 폭이 바뀌어 옆 질문 글자가 흔들리지 않게, 체크가 든 폭으로 늘 고정한다. */
+    &[data-status='GOOD'] {
+      min-width: 4.5rem;
+    }
+    &[data-status='CAUTION'] {
+      min-width: 3.7rem;
     }
     &[data-status='GOOD'][aria-pressed='true'] {
       background: color-mix(in srgb, var(--color-check-good-ink) 14%, var(--color-surface));
@@ -176,7 +191,7 @@ const styles = {
       cursor: wait;
     }
     @media (pointer: coarse) {
-      min-height: 2.75rem;
+      min-height: 2.25rem;
     }
   `,
   feedback: css`

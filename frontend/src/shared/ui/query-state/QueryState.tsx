@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import useDelayedLoading from '@/shared/lib/hooks/useDelayedLoading';
+
 import ContentState from '../content-state/ContentState';
 import PageLoading from '../page-loading/PageLoading';
 import LoadingRegion from '../skeleton/LoadingRegion';
@@ -26,6 +28,11 @@ type QueryStateProps<TData> = {
   /** 페이지 레이아웃 뼈대. 주면 기다리는 동안 뼈대를 그리고, 없으면 가운데에 Progress Circle(40)을 둔다. */
   skeleton?: ReactNode;
   describeError: (error: unknown) => QueryErrorView;
+  /**
+   * 켜면 빠른 응답(약 300ms 안)에는 로딩 UI 없이 빈 자리만 두었다가 바로 내용을 보여 준다. 느릴 때만 뼈대를 그린다.
+   * 같은 화면 안에서 항목을 넘기며 다시 불러오는 곳(이전, 다음)에서 뼈대가 깜빡이지 않게 할 때 쓴다.
+   */
+  delayLoading?: boolean;
   /** 오류 화면에 함께 보여 줄 돌아가기 링크 같은 동작. */
   errorAction?: ReactNode;
   children: (data: TData) => ReactNode;
@@ -41,9 +48,13 @@ const QueryState = <TData,>({
   skeleton,
   describeError,
   errorAction,
+  delayLoading = false,
   children,
 }: QueryStateProps<TData>) => {
+  const isLoadingVisible = useDelayedLoading(query.isPending && delayLoading);
   if (query.isPending) {
+    // 빠른 응답을 기다리는 동안은 로딩 UI를 아직 그리지 않는다. 읽기 프로그램에는 기다리는 중임을 알린다.
+    if (delayLoading && !isLoadingVisible) return <div role="status" aria-label={loadingTitle} />;
     return skeleton === undefined ? (
       <PageLoading label={loadingTitle} />
     ) : (

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -323,12 +323,19 @@ it('동네를 찾으면 그 출퇴근 장소를 기억해 본 방 기록의 통�
   localStorage.removeItem('jachwi-sunbae:commute-destination');
 });
 it('월세 조건에 맞는 동네가 없으면 월세 조건을 넓혀보라고 안내한다', async () => {
-  show();
-  const user = await choosePoint();
-  await user.click(screen.getByRole('button', { name: '월세 전체' }));
-  await user.click(screen.getByRole('option', { name: '30만원 이하' }));
-  await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(await screen.findByText('조건에 맞는 동네가 없어요. 월세 조건을 넓혀보세요.')).toBeInTheDocument();
+  // 빈 결과 안내는 데스크탑 결과 목록에만 있다.
+  const matchMedia = useDesktopViewport();
+  try {
+    show();
+    const user = await choosePoint();
+    await user.click(screen.getByRole('button', { name: '이 조건으로 동네 찾기' }));
+    // 월세 필터는 결과 지도 안 슬라이더이며, 처음 칸(30만원 이하)으로 줄이면 맞는 동네가 없다.
+    const slider = await screen.findByRole('slider', { name: '최대 월세 시세' });
+    fireEvent.change(slider, { target: { value: '1' } });
+    expect(await screen.findByText('조건에 맞는 동네가 없어요. 월세 조건을 넓혀보세요.')).toBeInTheDocument();
+  } finally {
+    matchMedia.mockRestore();
+  }
 });
 it('조건에 맞는 동네가 없으면 통근·환승 조건을 넓혀보라고 안내한다', async () => {
   server.use(
@@ -340,12 +347,17 @@ it('조건에 맞는 동네가 없으면 통근·환승 조건을 넓혀보라�
       }),
     ),
   );
-  show();
-  const user = await choosePoint();
-  await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(
-    await screen.findByText('조건에 맞는 동네가 없어요. 통근 시간이나 환승 조건을 넓혀보세요.'),
-  ).toBeInTheDocument();
+  const matchMedia = useDesktopViewport();
+  try {
+    show();
+    const user = await choosePoint();
+    await user.click(screen.getByRole('button', { name: '이 조건으로 동네 찾기' }));
+    expect(
+      await screen.findByText('조건에 맞는 동네가 없어요. 통근 시간이나 환승 조건을 넓혀보세요.'),
+    ).toBeInTheDocument();
+  } finally {
+    matchMedia.mockRestore();
+  }
 });
 it('첫 진입은 지도이며 위치 미허용 시 권한 요청·직접 선택 입구·하단 확인 화면이 없다', async () => {
   show();
@@ -571,7 +583,7 @@ it('통근 서버 오류는 가짜 결과로 대체하지 않는다', async () =
   show();
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('대중교통 정보를 준비하고 있어요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('동네를 불러오지 못했어요');
   expect(screen.queryByRole('region', { name: '행정동 프리셋 지도' })).not.toBeInTheDocument();
   await waitFor(() =>
     expect(trackPostHogEvent).toHaveBeenCalledWith(

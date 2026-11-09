@@ -14,6 +14,7 @@ export const markerSignature = (marker: MapMarker, selectedMarkerId: string | nu
     marker.caption ?? '',
     marker.summary?.amount ?? '',
     marker.image?.src ?? '',
+    marker.photo ?? '',
     marker.actionable === true ? '1' : '0',
     selectedMarkerId === marker.id ? '1' : '0',
   ].join('|');

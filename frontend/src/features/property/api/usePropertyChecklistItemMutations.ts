@@ -4,6 +4,7 @@ import { queryClient } from '@/shared/api/queryClient';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
+import { rememberRecentEdit } from '../lib/recentEdit';
 import type { PropertyChecklistDetail, PropertyChecklistItemStatus } from '../model/Property';
 import { updatePropertyChecklistItemMemo, updatePropertyChecklistItemStatus } from './propertyApi';
 import { propertyQueryKeys } from './propertyQueryKeys';
@@ -21,6 +22,7 @@ const updateChecklistItem = (
         ? current
         : { ...current, items: current.items.map((item) => (item.itemId === itemId ? update(item) : item)) },
   );
+  rememberRecentEdit(propertyId, 'checklist');
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: propertyQueryKeys.checklists(propertyId), exact: true }),
     queryClient.invalidateQueries({ queryKey: propertyQueryKeys.lists() }),

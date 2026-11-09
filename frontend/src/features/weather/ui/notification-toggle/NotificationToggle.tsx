@@ -14,6 +14,8 @@ type NotificationToggleProps = {
   /** 진행 표시의 이름. 읽기 프로그램에만 알린다. */
   busyLabel?: string;
   onToggle: () => void;
+  title?: string;
+  description?: string;
 };
 
 /** 알림 받기 토글. 권한은 OS가 직접 묻고, 받을 수 없는 이유만 토글 아래에 알린다. */
@@ -24,6 +26,8 @@ const NotificationToggle = ({
   isBusy = false,
   busyLabel = '알림 설정을 바꾸고 있어요.',
   onToggle,
+  title = '알림 받기',
+  description = '생활 날씨·배달 할인',
 }: NotificationToggleProps) => {
   const labelId = useId();
   const showsBusy = useDelayedLoading(isBusy);
@@ -31,8 +35,8 @@ const NotificationToggle = ({
     <>
       <div className={styles.row}>
         <p className={styles.label}>
-          <strong id={labelId}>알림 받기</strong>
-          <span>생활 날씨·배달 할인</span>
+          <strong id={labelId}>{title}</strong>
+          <span>{description}</span>
         </p>
         <span className={styles.control}>
           {showsBusy && <ProgressCircle size={24} label={busyLabel} />}

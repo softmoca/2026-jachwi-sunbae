@@ -52,9 +52,12 @@ export const header = css`
   display: grid;
   grid-template-columns: 2.5rem 1fr 2.5rem;
   align-items: center;
+  box-sizing: border-box;
+  height: calc(max(0.85rem, env(safe-area-inset-top)) + 3.2rem);
   padding: max(0.85rem, env(safe-area-inset-top)) 1rem 0.7rem;
 
   @media (min-width: 768px) {
+    height: calc(max(1.1rem, env(safe-area-inset-top)) + 3.3rem);
     padding: max(1.1rem, env(safe-area-inset-top)) 1.5rem 0.8rem;
   }
 `;
@@ -63,9 +66,17 @@ export const header = css`
 export const searchHeader = css`
   label: RecordsMobilePage-searchHeader;
   display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: calc(max(0.85rem, env(safe-area-inset-top)) + 3.2rem);
   padding: max(0.85rem, env(safe-area-inset-top)) 1rem 0.7rem;
 
+  & > * {
+    height: 2.5rem;
+  }
+
   @media (min-width: 768px) {
+    height: calc(max(1.1rem, env(safe-area-inset-top)) + 3.3rem);
     padding: max(1.1rem, env(safe-area-inset-top)) 1.5rem 0.8rem;
   }
 `;

@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { describeChecklistLoadError } from '@/features/checklist/api/checklistErrorMessages';
 import { useChecklistList } from '@/features/checklist/api/useChecklists';
 import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
+import useIsDesktop from '@/shared/lib/hooks/useIsDesktop';
 import { CHECKLIST_CREATE_PATH, checklistDetailPath, HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import { Button, ButtonLink } from '@/shared/ui/button/Button';
 import Icon from '@/shared/ui/icon/Icon';
@@ -16,9 +17,11 @@ const describeError = describeChecklistLoadError('체크리스트를 불러오�
 const ChecklistManagement = () => {
   const list = useChecklistList(USER_CHECKLIST_STAGE);
   const params = useParams();
+  const isDesktop = useIsDesktop();
   return (
     <main className={styles.page}>
-      <TopNavigation title="체크리스트 관리" backTo={HOME_PATH} backLabel="홈으로 돌아가기" />
+      {/* 데스크탑은 공용 헤더가 있어 휴대폰용 뒤로가기 제목줄을 두지 않는다. */}
+      {!isDesktop && <TopNavigation title="체크리스트 관리" backTo={HOME_PATH} backLabel="홈으로 돌아가기" />}
       <ButtonLink to={CHECKLIST_CREATE_PATH} variant="secondary" fullWidth className={styles.create}>
         <Icon name="plus" size={16} /> 사용자 체크리스트 만들기
       </ButtonLink>
@@ -90,6 +93,11 @@ const styles = {
   page: css`
     label: ChecklistManagement-page;
     padding: 0 1rem 2rem;
+
+    /* 데스크탑은 목록 칸에 카드가 꽉 차지 않게 좌우 여백을 넓혀 카드 가로 길이를 줄인다. */
+    @media (min-width: 1024px) {
+      padding: 0 2rem 2rem;
+    }
   `,
   create: css`
     label: ChecklistManagement-create;

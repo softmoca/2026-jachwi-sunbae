@@ -28,7 +28,9 @@ const RecordsSelectedSheet = ({ records, onClose, stepper, onNotice }: Props) =>
       initialHeightPercent={records.length > 1 ? 45 : 28}
       closeLabel="매물 닫기"
       onClose={onClose}
+      // 이전, 다음 이동은 시트가 작게 올라와 있을 때 쓴다. 크게 열면 숨긴다.
       headerEnd={stepper}
+      hidesHeaderEndWhenExpanded
     >
       <RecordGroupList records={records} onNotice={onNotice} className={styles.list} />
     </BottomSheet>

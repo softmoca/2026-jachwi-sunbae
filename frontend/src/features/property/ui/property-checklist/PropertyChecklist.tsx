@@ -1,4 +1,5 @@
 import { css } from '@emotion/css';
+import type { ReactNode } from 'react';
 import { useId } from 'react';
 
 import { USER_CHECKLIST_STAGE } from '@/features/checklist/model/checklist';
@@ -15,6 +16,8 @@ type PropertyChecklistProps = {
   readonly detail: PropertyChecklistDetail;
   readonly replaceNavigation?: boolean;
   readonly fromPropertyDetail?: boolean;
+  /** 머리 카드 안, 제목 아래에 같이 둘 요약(진행 링 등). 주면 평가한 수는 요약 오른쪽 끝에 크게 둔다. */
+  readonly summary?: ReactNode;
 };
 
 const PropertyChecklist = ({
@@ -22,44 +25,59 @@ const PropertyChecklist = ({
   detail,
   replaceNavigation = false,
   fromPropertyDetail = true,
+  summary,
 }: PropertyChecklistProps) => {
   const id = useId();
   const completedCount = detail.items.filter((item) => item.status !== 'UNCONFIRMED').length;
   const groups = groupPropertyChecklistItems(detail.items, detail.stage);
 
+  const count = (
+    <span role="status" className={summary === undefined ? undefined : 'sr-only'}>
+      <span aria-hidden="true">
+        {completedCount}/{detail.items.length}
+      </span>
+      <span className="sr-only">
+        {detail.items.length}개 중 {completedCount}개 평가
+      </span>
+    </span>
+  );
+
   return (
     <section className={styles.checklist} aria-labelledby={`${id}-title`}>
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <h2 id={`${id}-title`}>사용자 체크리스트</h2>
-          {detail.stage === USER_CHECKLIST_STAGE && (
-            <ButtonLink
-              variant="text"
-              className={styles.replaceAction}
-              to={`${propertyActiveChecklistPath(propertyId, detail.stage)}?mode=replace`}
-              replace={replaceNavigation}
-              state={fromPropertyDetail ? { from: 'property-detail' } : undefined}
-              aria-label="사용자 체크리스트 교체"
-            >
-              <Icon name="replace" size={14} />
-              교체
-            </ButtonLink>
-          )}
+      <header className={styles.headerCard}>
+        <div className={styles.header}>
+          <div className={styles.titleRow}>
+            <h2 id={`${id}-title`}>사용자 체크리스트</h2>
+            {detail.stage === USER_CHECKLIST_STAGE && (
+              <ButtonLink
+                variant="text"
+                className={styles.replaceAction}
+                to={`${propertyActiveChecklistPath(propertyId, detail.stage)}?mode=replace`}
+                replace={replaceNavigation}
+                state={fromPropertyDetail ? { from: 'property-detail' } : undefined}
+                aria-label="사용자 체크리스트 교체"
+              >
+                <Icon name="replace" size={14} />
+                교체
+              </ButtonLink>
+            )}
+          </div>
+          {summary === undefined && count}
         </div>
-        <span role="status">
-          <span aria-hidden="true">
-            {completedCount}/{detail.items.length}
-          </span>
-          <span className="sr-only">
-            {detail.items.length}개 중 {completedCount}개 평가
-          </span>
-        </span>
+        {summary !== undefined && (
+          <div className={styles.summaryRow}>
+            {summary}
+            {count}
+          </div>
+        )}
       </header>
       {groups.map((group, index) => (
         <section className={styles.group} key={group.name} aria-labelledby={`${id}-category-${index}`}>
           <h3 id={`${id}-category-${index}`}>
-            <Icon name={group.icon} size={18} />
-            {group.name}
+            <span className={styles.categoryIcon} aria-hidden="true">
+              <Icon name={group.icon} size={18} />
+            </span>
+            <span className={styles.categoryName}>{group.name}</span>
           </h3>
           <ol className={styles.items}>
             {group.items.map((item) => (
@@ -83,12 +101,28 @@ const styles = {
     label: PropertyChecklist-checklist;
     --color-surface: var(--color-canvas);
     --color-border: color-mix(in srgb, var(--color-border-strong) 60%, var(--color-canvas));
-    margin-top: var(--space-md);
-    padding: var(--space-md) var(--space-md) 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-surface);
+    /* 머리 카드(제목과 요약)와 섹션(카테고리)마다 흰 카드를 따로 두고, 사이에 회색 바탕이 보이게 띄운다. */
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0;
     min-width: 0;
+  `,
+  headerCard: css`
+    label: PropertyChecklist-headerCard;
+    padding: 0 1rem 1rem;
+    background: var(--color-canvas);
+  `,
+  summaryRow: css`
+    label: PropertyChecklist-summaryRow;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    /* 진행 링 자체의 위쪽 여백은 카드가 이미 가지므로 없앤다. */
+    & > :first-child {
+      margin-top: 0;
+    }
   `,
   header: css`
     label: PropertyChecklist-header;
@@ -96,6 +130,7 @@ const styles = {
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
+    padding: 0.95rem 0 0.4rem;
     & h2 {
       margin: 0;
       font-size: 1.05rem;
@@ -131,18 +166,31 @@ const styles = {
   `,
   group: css`
     label: PropertyChecklist-group;
-    & + & {
-      border-top: 1px solid var(--color-border);
-    }
+    /* 섹션(카테고리)마다 따로 떨어진 흰 카드. 사이에는 선 대신 회색 바탕이 보인다. */
+    padding: 0 1rem 0.3rem;
+    background: var(--color-canvas);
     & h3 {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       margin: 0;
-      padding-top: var(--space-lg);
+      padding: 0.9rem 0 0.2rem;
       font-size: 0.9375rem;
       font-weight: 750;
     }
+  `,
+  /* 카테고리 이름 앞에는 아이콘만 둔다. */
+  /* 카테고리 이름 옆 아이콘은 모양은 그대로 두고 색만 우리 파랑으로 둔다. */
+  categoryIcon: css`
+    label: PropertyChecklist-categoryIcon;
+    display: inline-flex;
+    flex: none;
+    color: var(--color-brand-blue-ink);
+  `,
+  categoryName: css`
+    label: PropertyChecklist-categoryName;
+    flex: 1;
+    min-width: 0;
   `,
   items: css`
     label: PropertyChecklist-items;

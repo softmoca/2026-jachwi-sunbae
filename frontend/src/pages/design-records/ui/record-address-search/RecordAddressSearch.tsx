@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { MapAddress } from '@/features/map/model/Map';
 import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
@@ -33,6 +33,8 @@ const RecordAddressSearch = ({
   className,
 }: Props) => {
   const search = useAddressSearch();
+  // 검색창에서 손을 떼(포커스가 밖으로 나가) 결과 목록을 닫는다. 다시 눌러 입력하면 다시 열린다.
+  const [isOpen, setIsOpen] = useState(true);
   const { query } = search;
   // 결과를 고르면 검색어가 그 주소로 바뀐다. 이때는 다시 검색하지 않는다.
   const pickedRef = useRef<string | null>(null);
@@ -48,7 +50,13 @@ const RecordAddressSearch = ({
   }, [query]);
 
   return (
-    <div className={`${styles.root} ${className ?? ''}`.trim()}>
+    <div
+      className={`${styles.root} ${className ?? ''}`.trim()}
+      onFocus={() => setIsOpen(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+      }}
+    >
       <SearchField
         className={styles.field}
         shape="pill"
@@ -62,16 +70,21 @@ const RecordAddressSearch = ({
         onSubmit={() => void search.submit()}
         onClear={search.clear}
       />
-      <AddressSearchResults
-        results={search.results}
-        dropdown
-        status={search.status === 'idle' && search.results.length > 0 ? 'success' : search.status}
-        onSelect={(result) => {
-          pickedRef.current = formatAddress(result);
-          search.pick(result);
-          onSelect(result);
-        }}
-      />
+      {isOpen && (
+        // 결과를 누를 때 입력창의 포커스가 먼저 빠져 목록이 닫히지 않게 한다.
+        <div onMouseDown={(event) => event.preventDefault()}>
+          <AddressSearchResults
+            results={search.results}
+            dropdown
+            status={search.status === 'idle' && search.results.length > 0 ? 'success' : search.status}
+            onSelect={(result) => {
+              pickedRef.current = formatAddress(result);
+              search.pick(result);
+              onSelect(result);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -89,8 +102,16 @@ const styles = {
   field: css`
     label: RecordAddressSearch-field;
     min-width: 0;
+    /* 입력칸 높이를 평소 헤더 버튼과 같은 2.5rem으로 고정한다. */
+    height: 2.5rem;
+    box-sizing: border-box;
     background: white;
-    box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+
+    & input {
+      min-height: 0;
+      height: 100%;
+    }
   `,
 };
 

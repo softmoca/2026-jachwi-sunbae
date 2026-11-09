@@ -1,21 +1,15 @@
 import { css } from '@emotion/css';
 
-import emptyProperties from '@/shared/assets/illustrations/goose-empty-properties.webp';
-import emptyProperties2x from '@/shared/assets/illustrations/goose-empty-properties@2x.webp';
-import emptySearch from '@/shared/assets/illustrations/goose-empty-search.webp';
-import emptySearch2x from '@/shared/assets/illustrations/goose-empty-search@2x.webp';
-import error from '@/shared/assets/illustrations/goose-error.webp';
-import error2x from '@/shared/assets/illustrations/goose-error@2x.webp';
-import notFound from '@/shared/assets/illustrations/goose-not-found.webp';
-import notFound2x from '@/shared/assets/illustrations/goose-not-found@2x.webp';
+import { EMPTY_ILLUSTRATION, ERROR_ILLUSTRATION, type ImageAsset } from '@/shared/assets/imageAssets';
 
 export type StateIllustrationName = 'error' | 'empty-properties' | 'empty-search' | 'not-found';
 
-const SOURCES: Record<StateIllustrationName, [string, string]> = {
-  error: [error, error2x],
-  'empty-properties': [emptyProperties, emptyProperties2x],
-  'empty-search': [emptySearch, emptySearch2x],
-  'not-found': [notFound, notFound2x],
+/** 오류는 경고 표시를 든 오리, 빈 목록과 검색 결과 없음과 없는 페이지는 로고 오리가 물음표를 띄운 그림을 쓴다. */
+const SOURCES: Record<StateIllustrationName, ImageAsset> = {
+  error: ERROR_ILLUSTRATION,
+  'empty-properties': EMPTY_ILLUSTRATION,
+  'empty-search': EMPTY_ILLUSTRATION,
+  'not-found': EMPTY_ILLUSTRATION,
 };
 
 type Props = {
@@ -30,15 +24,15 @@ type Props = {
  * 기본 크기와 2배 WebP를 두어 화면 배율에 맞게 고른다.
  */
 const StateIllustration = ({ name, size = 7, className }: Props) => {
-  const [src, src2x] = SOURCES[name];
+  const { src, src2x } = SOURCES[name];
   return (
     <img
       className={className ? `${styles.image} ${className}` : styles.image}
       style={{ width: `${size}rem` }}
       src={src}
       srcSet={`${src} 1x, ${src2x} 2x`}
-      width={name === 'error' ? 160 : 128}
-      height={name === 'error' ? 107 : 128}
+      width={160}
+      height={107}
       alt=""
       aria-hidden="true"
     />

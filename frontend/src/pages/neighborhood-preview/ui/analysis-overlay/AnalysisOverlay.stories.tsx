@@ -32,8 +32,7 @@ const meta = {
       description: '최대 통근 시간(분)',
     },
     isMockData: { description: '서버 대신 예시 데이터로 보여주는 중인지' },
-    reset: { description: '조건 다시 고르기' },
-    retry: { description: '분석 다시 시도' },
+    reset: { description: '다시 시도(출퇴근 장소부터 다시 입력)와 분석 취소' },
   },
   args: {
     isAnalyzing: true,
@@ -47,7 +46,6 @@ const meta = {
     maxMinutes: 40,
     isMockData: false,
     reset: fn(),
-    retry: fn(),
   },
 } satisfies Meta<StoryArgs>;
 

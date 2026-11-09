@@ -28,8 +28,10 @@ const StreetMemoForm = ({ isSubmitting, submitFailed, onSubmit, onCancel }: Prop
         if (canSubmit) onSubmit(memo, preference);
       }}
     >
+      {/* 쓴 메모가 누구에게 보이는지 미리 알린다. */}
+      <p className={styles.visibility}>여러분이 남긴 평가는 자취선배를 쓰는 모두에게 보여요.</p>
       <fieldset className={styles.preferences}>
-        <legend>이 장소, 어땠어요?</legend>
+        <legend className="sr-only">이 장소를 평가해 주세요</legend>
         {PREFERENCES.map((value) => (
           <button
             key={value}
@@ -58,11 +60,11 @@ const StreetMemoForm = ({ isSubmitting, submitFailed, onSubmit, onCancel }: Prop
         </p>
       )}
       <div className={styles.actions}>
-        <Button type="button" variant="secondary" onClick={onCancel}>
+        <Button type="button" variant="text" onClick={onCancel}>
           취소
         </Button>
-        <Button type="submit" disabled={!canSubmit}>
-          {isSubmitting ? '남기는 중…' : '메모 남기기'}
+        <Button type="submit" disabled={!canSubmit} className={styles.submit}>
+          {isSubmitting ? '남기는 중…' : '평가 남기기'}
         </Button>
       </div>
     </form>
@@ -73,7 +75,15 @@ const styles = {
   form: css`
     label: StreetMemoForm-form;
     display: grid;
-    gap: 1rem;
+    gap: 0.9rem;
+  `,
+
+  visibility: css`
+    label: StreetMemoForm-visibility;
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
   `,
 
   preferences: css`
@@ -88,39 +98,56 @@ const styles = {
     & legend {
       margin-bottom: 0.5rem;
       color: var(--color-ink-soft);
-      font-size: 0.875rem;
-      font-weight: 650;
+      font-size: 0.8125rem;
+      font-weight: 600;
     }
   `,
 
+  /* 큰 테두리 상자 대신 옅은 알약. 고르면 지도 말풍선과 같은 옅은 파랑, 옅은 빨강 바탕에 진한 글자로 바뀐다. */
   preference: css`
     label: StreetMemoForm-preference;
-    min-height: 3rem;
-    border: 1px solid var(--color-border-strong);
-    border-radius: 0.75rem;
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font-size: 0.9375rem;
-    font-weight: 700;
+    min-height: 2.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: #f1f2f4;
+    color: var(--color-ink-soft);
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
 
     &[aria-pressed='true'][data-preference='LIKE'] {
-      border-color: var(--color-brand-blue);
-      background: var(--color-brand-blue);
-      color: #fff;
+      background: var(--color-memo-like);
+      color: var(--color-memo-like-ink);
+      font-weight: 700;
     }
 
     &[aria-pressed='true'][data-preference='DISLIKE'] {
-      border-color: var(--color-danger);
-      background: var(--color-danger);
-      color: #fff;
+      background: var(--color-memo-dislike);
+      color: var(--color-memo-dislike-ink);
+      font-weight: 700;
     }
   `,
 
+  /* 테두리 없이 옅은 회색 바탕의 둥근 입력. 안쪽 여백을 넉넉히 둔다. */
   memo: css`
     label: StreetMemoForm-memo;
-    min-height: 6rem;
-    resize: vertical;
+
+    &&& {
+      min-height: 5.5rem;
+      padding: 0.8rem 0.9rem;
+      border: 0;
+      border-radius: 0.8rem;
+      background: #f6f7f8;
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      resize: none;
+    }
+
+    &&&:focus-visible {
+      outline: 0;
+      background: #f1f2f4;
+      box-shadow: none;
+    }
   `,
 
   error: css`
@@ -133,11 +160,14 @@ const styles = {
   actions: css`
     label: StreetMemoForm-actions;
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+  `,
 
-    & > * {
-      flex: 1;
-    }
+  /* 남기기 버튼이 남는 폭을 쓰고, 취소는 작은 글자 버튼으로 둔다. */
+  submit: css`
+    label: StreetMemoForm-submit;
+    flex: 1;
   `,
 };
 

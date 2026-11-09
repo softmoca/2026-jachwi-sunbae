@@ -6,6 +6,7 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import type { PropertyCreationEntrypoint } from '../lib/propertyAnalytics';
 import { trackPropertyEvent } from '../lib/propertyAnalytics';
+import { rememberRecentEdit } from '../lib/recentEdit';
 import { EXAMPLE_PROPERTY_ID, isExampleProperty } from '../model/exampleProperty';
 import { rememberMovedProperty } from '../model/movedProperty';
 import type { PropertyBasicInfo, PropertyDetail, PropertyPage } from '../model/Property';
@@ -110,6 +111,7 @@ export const useUpdateProperty = (propertyId: number) => {
               updatedAt: updated.updatedAt ?? current.updatedAt,
             },
       );
+      rememberRecentEdit(propertyId, 'info');
       await queryClient.invalidateQueries({ queryKey: propertyQueryKeys.lists() });
     },
   });
@@ -121,6 +123,7 @@ export const useSavePropertyMemoDocument = (propertyId: number) => {
     mutationFn: (request: SavePropertyMemoDocumentRequestDto) => savePropertyMemoDocument(config, propertyId, request),
     onSuccess: (memo) => {
       queryClient.setQueryData(propertyQueryKeys.memo(propertyId), memo);
+      rememberRecentEdit(propertyId, 'info');
       trackPropertyEvent('property_memo_saved', { property_id: propertyId });
     },
     onError: () => trackPropertyEvent('property_memo_save_failed', { property_id: propertyId, error_kind: 'request' }),

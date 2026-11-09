@@ -1,4 +1,4 @@
-import { formatPropertyPrice } from '@/features/property/lib/propertyFormat';
+import { formatMarkerRent, formatPropertyPrice } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
 
 export const propertyArea = (address: string | null) => {
@@ -20,6 +20,7 @@ export const recordPresentation = (property: PropertySummary) => ({
   note: property.location.address ?? '주소 미등록',
   /** 지도 마커에 붙는 짧은 가격. 가격을 넣기 전에도 `월세 0/0`으로 표시한다. */
   price: formatPropertyPrice(property.depositAmount, property.monthlyRentAmount, 'summary'),
+  rent: formatMarkerRent(property.monthlyRentAmount),
   latitude: property.location.latitude,
   longitude: property.location.longitude,
   checklist: property.stages.find((stage) => stage.stage === 'ON_SITE') ?? null,

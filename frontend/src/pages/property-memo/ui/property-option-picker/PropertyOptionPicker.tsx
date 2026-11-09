@@ -10,6 +10,8 @@ type PickerOption = { key: string; label: string };
 
 type PropertyOptionPickerProps = {
   label: string;
+  /** 참이면 이름을 화면에서 숨기고(읽는 프로그램에는 그대로 읽힌다) 고른 개수만 보인다. 시트 제목이 이미 같은 이름일 때 쓴다. */
+  hideLabel?: boolean;
   options: readonly PickerOption[];
   selected: string[];
   disabled?: boolean;
@@ -23,6 +25,7 @@ type PropertyOptionPickerProps = {
 /** 값을 글로 적는 대신 골라서 넣는다. 여러 개를 켤 수 있다. */
 const PropertyOptionPicker = ({
   label,
+  hideLabel = false,
   options,
   selected,
   disabled,
@@ -32,7 +35,7 @@ const PropertyOptionPicker = ({
 }: PropertyOptionPickerProps) => (
   <fieldset className={styles.picker}>
     <legend className={styles.legend}>
-      {label}
+      <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       <span className={styles.count}>{selected.length}개</span>
     </legend>
     {children !== undefined && <div className={styles.pickerContent}>{children}</div>}
@@ -111,19 +114,19 @@ const styles = {
     css`
       label: PropertyOptionPicker-badge;
       padding: 0.4rem 0.8rem;
-      border: 1px solid var(--color-border, #eaebed);
+      /* 테두리 없이 옅은 회색 알약, 고르면 옅은 파랑 바탕에 파란 글자. */
+      border: 0;
       border-radius: 999px;
-      background: var(--color-surface, #fff);
+      background: #f1f2f4;
       color: var(--color-muted, #868b94);
       transition:
-        border-color 0.15s ease,
         background 0.15s ease,
         color 0.15s ease;
 
       &[data-selected='true'] {
-        border-color: var(--color-primary, #6c873b);
-        background: var(--color-surface-brand, #f2f2f2);
-        color: var(--color-ink, #212124);
+        background: #eef3fd;
+        color: var(--color-brand-blue-ink);
+        font-weight: 700;
       }
     `,
     'PropertyOptionPicker-badge',
@@ -147,20 +150,19 @@ const styles = {
     display: grid;
     gap: 0.3rem;
     padding: 0.6rem 0.25rem 0.5rem;
-    border: 1px solid var(--color-border, #eaebed);
+    /* 테두리 없이 옅은 회색 칸, 고르면 옅은 파랑 바탕에 파란 글자. */
+    border: 0;
     border-radius: var(--radius-sm, 0.65rem);
-    background: var(--color-surface, #fff);
+    background: #f1f2f4;
     color: var(--color-muted, #868b94);
     justify-items: center;
     transition:
-      border-color 0.15s ease,
       background 0.15s ease,
       color 0.15s ease;
 
     &[data-selected='true'] {
-      border-color: var(--color-primary, #6c873b);
-      background: var(--color-surface-brand, #f2f2f2);
-      color: var(--color-ink, #212124);
+      background: #eef3fd;
+      color: var(--color-brand-blue-ink);
     }
 
     &:has(.PropertyOptionPicker-input:focus-visible) {

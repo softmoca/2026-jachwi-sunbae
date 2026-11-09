@@ -11,6 +11,8 @@ import { NativePushError, openNativeSettings, supportsNativePush } from '@/share
 import { fetchWeatherForecast, syncWeatherLocation } from '../api/weatherApi';
 import { readLastWeatherCoordinate, writeLastWeatherCoordinate } from '../lib/lastWeatherCoordinate';
 import { requestWeatherLocation } from '../lib/weatherLocation';
+import { readWeatherLocationChoice, writeWeatherLocationEnabled } from '../lib/weatherLocationPreference';
+import { toPlaceName } from '../lib/weatherPlaceName';
 import { useWeatherPushSync } from './useWeatherPushSync';
 import { changeWeatherPush } from './weatherPush';
 import { weatherQueryKeys } from './weatherQueryKeys';
@@ -24,12 +26,6 @@ type WeatherLocationState = {
   isStale: boolean;
 };
 
-/** 지번 주소에서 시·도를 뺀 구·동 정도만 남긴다. 예: "서울 중구 태평로1가 31" → "중구 태평로1가" */
-const toPlaceName = (address: string | null): string | null => {
-  const words = (address ?? '').split(' ').filter((word) => word.length > 0 && !/^\d/.test(word));
-  return words.length > 1 ? words.slice(1, 3).join(' ') : null;
-};
-
 /**
  * 마이의 생활 날씨 카드 상태. 날씨·배달 할인 공통 수신 동의는 서버에, 날씨 알림 위치는 기기 GPS로 구해 서버에 저장한다.
  * 알림을 켜 둔 채 화면을 열 때마다 위치를 다시 저장한다. 서버는 마지막으로 저장한 위치로 알림을 보내기 때문이다.
@@ -39,9 +35,11 @@ export const useWeatherSubscription = () => {
   const queryClient = useQueryClient();
   const platform = isRunningInNativeApp() ? 'app' : 'web';
   const hasSyncedRef = useRef(false);
+  // 카드에는 위치 토글이 없다. 직접 끈 적이 없으면 알림과 함께 현재 위치도 쓴다.
+  const [isLocationOn, setIsLocationOn] = useState(() => readWeatherLocationChoice() !== 'off');
   const [location, setLocation] = useState<WeatherLocationState>(() => ({
     status: 'idle',
-    coordinate: readLastWeatherCoordinate(),
+    coordinate: readWeatherLocationChoice() !== 'off' ? readLastWeatherCoordinate() : null,
     isStale: false,
   }));
 
@@ -78,8 +76,8 @@ export const useWeatherSubscription = () => {
   }, [memberId]);
 
   useEffect(() => {
-    if (isEnabled && !hasSyncedRef.current) void locate().catch(() => setHasLocationFailed(true));
-  }, [isEnabled, locate]);
+    if (isEnabled && isLocationOn && !hasSyncedRef.current) void locate().catch(() => setHasLocationFailed(true));
+  }, [isEnabled, isLocationOn, locate]);
 
   const toggle = useMutation({
     mutationFn: async ({
@@ -91,7 +89,7 @@ export const useWeatherSubscription = () => {
       locating: Promise<MapCoordinate | null> | null;
       memberId: number;
     }) => {
-      // 위치를 몰라도 공통 알림은 켠다. 위치는 날씨 알림에만 쓰인다.
+      // 위치를 몰라도 공통 알림은 켠다. 위치는 날씨 알림에만 쓰이고, 위치 토글이 켜져 있을 때만 함께 받는다.
       const coordinate = locating === null ? null : await locating;
       return changeWeatherPush(config, memberId, enabled, coordinate);
     },
@@ -141,7 +139,8 @@ export const useWeatherSubscription = () => {
     canRetry: settings.isError || settings.data?.problem === 'cleanup',
     // 알림은 켰지만 앱 안에서 위치 권한을 거부해 날씨를 보낼 위치가 없을 때만 시스템 설정으로 바로 보낸다.
     // 브라우저는 문구로만 안내한다.
-    canOpenSettings: supportsNativePush() && isEnabled && location.status === 'denied' && location.coordinate === null,
+    canOpenSettings:
+      supportsNativePush() && isLocationOn && location.status === 'denied' && location.coordinate === null,
     openSettings: () => {
       void openNativeSettings().catch(() => undefined);
     },
@@ -149,6 +148,23 @@ export const useWeatherSubscription = () => {
       void settings.refetch();
     },
     location,
+    // 위치 토글. 권한을 거부한 상태에서는 켜진 것으로 보이지 않는다.
+    isLocationOn: isLocationOn && location.status !== 'denied',
+    isLocationBusy: location.status === 'locating',
+    isLocationDenied: location.status === 'denied',
+    toggleLocation: () => {
+      if (location.status === 'locating') return;
+      const next = !(isLocationOn && location.status !== 'denied');
+      writeWeatherLocationEnabled(next);
+      setIsLocationOn(next);
+      if (next) {
+        hasSyncedRef.current = false;
+        void locate(isEnabled).catch(() => setHasLocationFailed(true));
+      } else {
+        // 끄면 이 기기에서는 현재 위치를 날씨에 쓰지 않는다. 서버에 저장된 마지막 위치는 알림이 계속 쓴다.
+        setLocation({ status: 'idle', coordinate: null, isStale: false });
+      }
+    },
     placeName: place.data ?? null,
     forecast,
     toggle: () => {
@@ -156,7 +172,7 @@ export const useWeatherSubscription = () => {
       setHasLocationFailed(false);
       toggle.mutate({
         enabled: !isEnabled,
-        locating: isEnabled || !supportsNativePush() ? null : locate(false),
+        locating: isEnabled || !supportsNativePush() || !isLocationOn ? null : locate(false),
         memberId,
       });
     },

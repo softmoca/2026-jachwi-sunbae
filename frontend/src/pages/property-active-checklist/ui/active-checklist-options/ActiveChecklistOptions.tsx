@@ -199,6 +199,8 @@ const styles = {
   selectionMark: css`
     label: ActiveChecklistOptions-selectionMark;
     display: grid;
+    flex: none;
+    box-sizing: border-box;
     width: 1.35rem;
     height: 1.35rem;
     border: 1px solid var(--color-border-strong, #d7d9dc);
@@ -206,6 +208,7 @@ const styles = {
     color: var(--color-on-primary);
     font-size: 0.72rem;
     font-weight: 800;
+    line-height: 1;
     place-items: center;
 
     .ActiveChecklistOptions-options label.is-selected & {

@@ -8,6 +8,7 @@ import { useStreetMemoMutations, useStreetMemos } from '../api/useStreetMemos';
 import {
   dongGroupMarker,
   groupMemosByDong,
+  MEMO_INDIVIDUAL_MAX_LEVEL,
   showsDongMemoGroups,
   STREET_MEMO_DONG_MARKER_PREFIX,
 } from '../lib/streetMemoDongGroups';
@@ -66,8 +67,8 @@ type MemoGroup = { id: string; memos: StreetMemo[]; marker: MapMarker };
  * 정한 단계보다 멀면 행정동 코드가 같은 메모를 동마다 한 묶음으로 두고(코드 없는 메모는 숨김),
  * 그 단계부터는 모든 메모를 낱개로 둔다. 한 단계 안에서 묶음과 낱개가 섞이지 않는다.
  */
-const groupMemos = (memos: StreetMemo[], level: number): MemoGroup[] =>
-  showsDongMemoGroups(level)
+const groupMemos = (memos: StreetMemo[], level: number, individualMaxLevel: number): MemoGroup[] =>
+  showsDongMemoGroups(level, individualMaxLevel)
     ? groupMemosByDong(memos).map((group) => {
         const marker = dongGroupMarker(group);
         return { id: marker.id, memos: group.memos, marker };
@@ -82,7 +83,13 @@ const groupMemos = (memos: StreetMemo[], level: number): MemoGroup[] =>
  * 메모를 남기면 상세를 열지 않고, 남긴 메모 말풍선이 그 자리에서 아래에서 떠오르며 나타난다(flash).
  * 화면 모양(데스크탑 칸·휴대폰 시트)은 지도 화면이 고르고, 이 Hook은 무엇을 보여줄지만 정한다.
  */
-const useStreetMemoLayer = (enabled: boolean, bounds: MapBounds | null, level: number) => {
+const useStreetMemoLayer = (
+  enabled: boolean,
+  bounds: MapBounds | null,
+  level: number,
+  /** 메모를 낱개로 보여 주는 가장 먼 단계. 화면이 넓은 데스크탑은 한 단계 더 멀리까지 넘긴다. */
+  individualMaxLevel: number = MEMO_INDIVIDUAL_MAX_LEVEL,
+) => {
   const { memos, isFailed } = useStreetMemos(enabled ? bounds : null);
   const { create, remove } = useStreetMemoMutations();
   const { log } = useLogger();
@@ -110,8 +117,8 @@ const useStreetMemoLayer = (enabled: boolean, bounds: MapBounds | null, level: n
     const shown = enabled ? memos : [];
     // 방금 남긴 메모는 떠오르는 동안 다른 메모와 묶지 않고, 목록을 다시 받아 오기 전이나 메모를 숨긴 배율에서도 그 자리에 둔다.
     const rest = flash ? shown.filter((memo) => memo.id !== flash.id) : shown;
-    return groupMemos(rest, level);
-  }, [enabled, memos, flash, level]);
+    return groupMemos(rest, level, individualMaxLevel);
+  }, [enabled, memos, flash, level, individualMaxLevel]);
   const memoMarkers = useMemo<MapMarker[]>(
     () => [...memoGroups.map((group) => group.marker), ...(flash ? [memoMarker(flash, true)] : [])],
     [memoGroups, flash],

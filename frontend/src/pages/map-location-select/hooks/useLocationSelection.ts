@@ -88,6 +88,8 @@ const useLocationSelection = (initialLocation: MapAddress | undefined) => {
   const handleCenterChange = (latitude: number, longitude: number) => {
     if (coordinatesAreClose(selected, { latitude, longitude })) return;
     if (centerTimerRef.current !== null) window.clearTimeout(centerTimerRef.current);
+    // 주소를 묻기 전에도 옮기는 중으로 알려, 그 사이 저장이 옮기기 전 위치로 닫히지 않게 한다.
+    setStatus('geocoding');
     centerTimerRef.current = window.setTimeout(
       () => void selectCoordinates(latitude, longitude),
       CENTER_RESOLVE_DELAY_MS,

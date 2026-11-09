@@ -95,9 +95,13 @@ export const control = cx(
     .TextField-field[data-variant='inline'] & textarea {
       display: block;
       min-height: 1.75rem;
-      padding: 0.15rem 0;
+      /* 글자가 칸 가장자리에 붙지 않게 아주 작은 안쪽 여백을 두고, 모서리를 둥글게 한다. 바탕은 입력할 때만 깐다. */
+      padding: 0.3rem 0.6rem;
+      /* 안쪽 여백만큼 칸을 양옆으로 밀어, 글자(메모 추가)의 왼쪽 선이 위 질문 글자와 맞게 한다. */
+      width: calc(100% + 1.2rem);
+      margin-inline: -0.6rem;
       border: 0;
-      border-radius: 0;
+      border-radius: 0.6rem;
       background: transparent;
       color: var(--color-muted);
       font-size: 0.8125rem;
@@ -112,10 +116,11 @@ export const control = cx(
       color: var(--color-muted);
     }
 
+    /* 입력할 때 테두리(포커스 링)를 두르지 않는다. 입력 중임은 옅은 회색 바탕으로만 알린다. */
     .TextField-field[data-variant='inline'] & textarea:focus-visible {
-      outline: 2px solid var(--color-focus);
-      outline-offset: 2px;
+      outline: 0;
       box-shadow: none;
+      background: var(--color-card-surface);
     }
 
     @media (pointer: coarse) {

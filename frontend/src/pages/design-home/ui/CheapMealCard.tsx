@@ -37,8 +37,13 @@ const styles = {
       max-width: calc(100% - 6rem);
     }
     margin-top: 0.65rem;
-    /* 위 기능 카드보다 눈에 덜 띄게 옅은 노랑 바탕에 진한 글자를 쓰고, 오른쪽으로 갈수록 더 밝게 번지게 한다. */
-    --action-card-ink: var(--color-ink);
+    /* 위 기능 카드보다 눈에 덜 띄게 옅은 노랑 바탕을 쓰고, 오른쪽으로 갈수록 더 밝게 번지게 한다. 글자는 검정 대신 진한 회색이다. */
+    --action-card-ink: #4d4e50;
+    /* 다른 홈 카드보다 글자를 한 단계 작게 둔다(제목 1.35rem, 설명 0.88rem 대신). */
+    && {
+      --action-card-title-size: 1.1rem;
+      --action-card-description-size: 0.76rem;
+    }
     background: linear-gradient(
       110deg,
       color-mix(in srgb, var(--color-brand-yellow) 32%, #fff) 35%,

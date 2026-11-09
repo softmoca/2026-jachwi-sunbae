@@ -9,7 +9,7 @@ import * as shared from '../../NeighborhoodPreviewPage.styles';
 type AnalysisOverlayProps = {
   preview: Pick<
     NeighborhoodPreviewContext,
-    'isAnalyzing' | 'error' | 'destination' | 'maxMinutes' | 'isMockData' | 'reset' | 'retry'
+    'isAnalyzing' | 'error' | 'destination' | 'maxMinutes' | 'isMockData' | 'reset'
   >;
 };
 
@@ -40,13 +40,10 @@ const AnalysisOverlay = ({ preview }: AnalysisOverlayProps) => {
   if (preview.error)
     return (
       <section className={`${shared.analysis} ${shared.mapOverlay}`}>
-        <h1>동네를 불러오지 못했어요</h1>
-        <p role="alert">{preview.error}</p>
-        <Button variant="secondary" onClick={preview.retry}>
+        <h1 role="alert">동네를 불러오지 못했어요</h1>
+        {/* 다시 시도는 같은 요청을 되풀이하지 않고 출퇴근 장소부터 다시 입력하게 한다. */}
+        <Button variant="secondary" onClick={preview.reset}>
           다시 시도
-        </Button>
-        <Button variant="text" onClick={preview.reset}>
-          목적지 다시 입력
         </Button>
       </section>
     );

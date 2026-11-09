@@ -9,6 +9,7 @@ import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
 import DesktopHeader from '@/shared/ui/desktop-header/DesktopHeader';
 import DesktopHeaderSlot, { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
+import DetailHeader from '@/shared/ui/detail-header/DetailHeader';
 import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
 
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
@@ -18,6 +19,7 @@ import { recordNeighbors } from '../model/recordNavigation';
 import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
+import RecordGroupList from '../ui/record-group/RecordGroupList';
 import RecordList from '../ui/record-list/RecordList';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
@@ -63,8 +65,12 @@ const RecordsDesktopPage = () => {
   });
   const layers = useRecordsMapLayers(records, {
     registeringAt: creatingAt,
-    onRegisterNotice: setNotice,
-    groupAction: 'zoom',
+    // 겹친 매물 마커를 누르면 갈라질 때까지 다가가지 않고, 맨 왼쪽 리스트를 그 자리 매물 목록(뒤로가기가 있는 목록)으로 바꾼다.
+    groupAction: 'list',
+    // 목록이나 상세를 열어 둔 채 지도 빈 곳을 눌러도 닫히지 않는다.
+    keepSelectionOnMapTap: true,
+    // 데스크탑은 화면이 넓어 거리 메모를 한 단계 더 멀리까지 낱개로 보여 준다.
+    memoLevelBoost: 1,
     onRegister: (location) => {
       if (quickCreate.isCreating) return;
       setCreatingAt(location);
@@ -82,6 +88,31 @@ const RecordsDesktopPage = () => {
       error={records.properties.error}
       onRetry={() => void records.properties.refetch()}
     />
+  ) : layers.groupRecords.length > 0 ? (
+    // 겹친 매물 마커를 누르면 맨 왼쪽 리스트가 그 자리 매물 목록으로 바뀌고, 뒤로가기로 원래 리스트로 돌아간다.
+    <div className={styles.list}>
+      <DetailHeader
+        title={`이 자리 매물 ${layers.groupRecords.length}개`}
+        backLabel="전체 리스트로 돌아가기"
+        onBack={layers.closeGroup}
+      />
+      <RecordGroupList records={layers.groupRecords} onOpen={records.showRecord} onNotice={setNotice} />
+    </div>
+  ) : records.district !== '전체' ? (
+    // 동네 뱃지를 고르면 맨 왼쪽 리스트가 그 동네 목록으로 바뀌고, 뒤로가기로 전체 리스트로 돌아간다. 옆으로 나오는 칸은 상세만 쓴다.
+    <div className={styles.list}>
+      <DetailHeader
+        title={`${records.district} 매물 ${records.records.length}개`}
+        backLabel="전체 리스트로 돌아가기"
+        onBack={() => records.selectDistrict('전체')}
+      />
+      <RecordList
+        records={records.records}
+        district={records.district}
+        onOpen={records.showRecord}
+        onNotice={setNotice}
+      />
+    </div>
   ) : (
     <RecordList
       className={styles.list}
@@ -148,6 +179,7 @@ const RecordsDesktopPage = () => {
                 districts={
                   <RecordDistricts
                     districts={records.districts}
+                    counts={records.districtCounts}
                     district={records.district}
                     onSelect={records.selectDistrict}
                     overMap

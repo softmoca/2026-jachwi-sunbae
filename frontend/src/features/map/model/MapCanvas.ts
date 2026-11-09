@@ -8,6 +8,8 @@ export type MapRadiusCircle = {
 export type MapTapAction = {
   id: string;
   label: string;
+  /** 글자 앞에 둘 작은 그림 주소. 이모지 대신 쓴다. */
+  icon?: string;
   onSelect: () => void;
 };
 

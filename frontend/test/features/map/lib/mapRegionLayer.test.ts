@@ -164,7 +164,7 @@ describe('경계 레이어', () => {
     layer.sync(regions, null);
     fire(polygons[0], 'mouseover');
     layer.sync(regions, 'a');
-    expect(polygons[0].setOptions.mock.lastCall?.[0].fillOpacity).toBeCloseTo(0.48);
+    expect(polygons[0].setOptions.mock.lastCall?.[0].fillOpacity).toBeCloseTo(0.65);
   });
 
   it('면 개수가 같으면 좌표만 바꾸고, 다르면 기존 경계와 리스너를 지우고 새로 만든다', () => {
