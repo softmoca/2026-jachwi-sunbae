@@ -52,8 +52,29 @@ class AdminBoundaryAssetsPlugin {
   }
 }
 
+// 검색엔진이 사이트 루트에서 찾는 파일. 개발 서버는 public을 그대로 서빙하므로 빌드에만 복사한다.
+const SEO_FILES = ['robots.txt', 'sitemap.xml'];
+
+class SeoFilesPlugin {
+  apply(compiler) {
+    compiler.hooks.thisCompilation.tap('SeoFiles', (compilation) => {
+      compilation.hooks.processAssets.tap(
+        { name: 'SeoFiles', stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL },
+        () => {
+          for (const filename of SEO_FILES) {
+            const sourcePath = path.resolve(__dirname, '../public', filename);
+            compilation.fileDependencies.add(sourcePath);
+            compilation.emitAsset(filename, new webpack.sources.RawSource(fs.readFileSync(sourcePath)));
+          }
+        },
+      );
+    });
+  }
+}
+
 const createPlugins = ({ isProduction, buildEnvironment }) => [
   new AdminBoundaryAssetsPlugin(),
+  new SeoFilesPlugin(),
   new webpack.DefinePlugin({
     __API_BASE_URL__: JSON.stringify(buildEnvironment.apiBaseUrl),
     __MAP_PROVIDER_MODE__: JSON.stringify(buildEnvironment.mapProviderMode),

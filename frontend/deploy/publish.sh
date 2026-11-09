@@ -38,6 +38,12 @@ fi
 VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
 printf '{"version":"%s"}\n' "${VERSION}" > "${DIST_DIR}/version.json"
 
+# dev 사이트는 검색에 나오지 않게 전체를 막고, 운영 주소를 가리키는 사이트맵은 올리지 않는다.
+if [[ "${DEPLOY_ENVIRONMENT}" == "dev" ]]; then
+    printf 'User-agent: *\nDisallow: /\n' > "${DIST_DIR}/robots.txt"
+    rm -f "${DIST_DIR}/sitemap.xml"
+fi
+
 export AWS_PAGER=""
 
 aws s3 sync "${DIST_DIR}/" "${S3_URI}" \
@@ -45,6 +51,8 @@ aws s3 sync "${DIST_DIR}/" "${S3_URI}" \
     --exclude '*.map' \
     --exclude 'index.html' \
     --exclude 'version.json' \
+    --exclude 'robots.txt' \
+    --exclude 'sitemap.xml' \
     --exclude 'boundaries/*' \
     --cache-control 'public,max-age=31536000,immutable'
 
@@ -74,9 +82,20 @@ aws s3 cp "${DIST_DIR}/version.json" "${S3_URI}version.json" \
     --cache-control 'no-cache,max-age=0,must-revalidate' \
     --content-type 'application/json; charset=utf-8'
 
+# 파일명에 해시가 없어 내용을 바꾸면 바로 보여야 하므로 index.html처럼 캐시하지 않는다.
+aws s3 cp "${DIST_DIR}/robots.txt" "${S3_URI}robots.txt" \
+    --cache-control 'no-cache,max-age=0,must-revalidate' \
+    --content-type 'text/plain; charset=utf-8'
+
+if [[ -f "${DIST_DIR}/sitemap.xml" ]]; then
+    aws s3 cp "${DIST_DIR}/sitemap.xml" "${S3_URI}sitemap.xml" \
+        --cache-control 'no-cache,max-age=0,must-revalidate' \
+        --content-type 'application/xml; charset=utf-8'
+fi
+
 INVALIDATION_ID="$(aws cloudfront create-invalidation \
     --distribution-id "${DISTRIBUTION_ID}" \
-    --paths '/index.html' '/version.json' '/boundaries/manifest.json' '/boundaries/legal-manifest.json' \
+    --paths '/index.html' '/version.json' '/robots.txt' '/sitemap.xml' '/boundaries/manifest.json' '/boundaries/legal-manifest.json' \
     --query 'Invalidation.Id' \
     --output text)"
 
