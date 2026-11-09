@@ -76,7 +76,7 @@ const createExample = (): Example => {
     nextPhotoId: 2,
     detail: {
       propertyId: EXAMPLE_PROPERTY_ID,
-      name: '코엑스 근처',
+      name: '(예시) 코엑스 근처',
       depositAmount: 30_000_000,
       monthlyRentAmount: 550_000,
       location: { address: '서울 강남구 영동대로 513', latitude: 37.51252, longitude: 127.0595 },

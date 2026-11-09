@@ -66,7 +66,7 @@ describe('브라우저 전용 예시 매물', () => {
     expect((await list()).content).toMatchObject([
       {
         propertyId: EXAMPLE_PROPERTY_ID,
-        name: '코엑스 근처',
+        name: '(예시) 코엑스 근처',
         depositAmount: 30_000_000,
         monthlyRentAmount: 550_000,
         photoCount: 1,
@@ -100,7 +100,7 @@ describe('브라우저 전용 예시 매물', () => {
       (await fetchPropertyChecklistOverview(config, EXAMPLE_PROPERTY_ID)).overallProgress,
     );
     authenticate(++memberId);
-    expect((await list()).content[0]?.name).toBe('코엑스 근처');
+    expect((await list()).content[0]?.name).toBe('(예시) 코엑스 근처');
   });
 
   it('사진 추가·대표 지정·삭제와 체크리스트 교체도 프론트에서 처리한다', async () => {
