@@ -2,6 +2,10 @@ package com.jachwisunbae.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -9,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.notification.domain.LifeWeatherReport.Condition;
@@ -18,17 +23,19 @@ import com.jachwisunbae.weather.domain.ForecastTimes;
 import com.jachwisunbae.weather.domain.GridPoint;
 import com.jachwisunbae.weather.domain.HourlyForecast;
 import com.jachwisunbae.notification.domain.NotificationSlot;
-import com.jachwisunbae.notification.domain.WeatherDevice;
+import com.jachwisunbae.notification.domain.NotificationDevice;
 import com.jachwisunbae.notification.domain.WeatherNotification;
-import com.jachwisunbae.notification.provider.WeatherPushSender;
-import com.jachwisunbae.notification.provider.WeatherPushSender.Push;
+import com.jachwisunbae.notification.provider.PushSender;
+import com.jachwisunbae.notification.provider.PushSender.Push;
 import com.jachwisunbae.notification.repository.WeatherNotificationRepository;
-import com.jachwisunbae.notification.repository.WeatherNotificationSettingsRepository;
+import com.jachwisunbae.notification.repository.NotificationSettingsRepository;
 import com.jachwisunbae.notification.service.LifeWeatherAnalysisService;
 import com.jachwisunbae.notification.service.WeatherNotificationDispatchService;
-import com.jachwisunbae.notification.service.WeatherNotificationSettingsService;
+import com.jachwisunbae.notification.service.NotificationSettingsService;
 import com.jachwisunbae.weather.repository.JdbcWeatherForecastRepository;
 import com.jachwisunbae.weather.repository.MemberWeatherLocationRepository;
+import com.jachwisunbae.weather.service.WeatherForecastQueryService.ForecastCacheKey;
+import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult;
 import com.jachwisunbae.weather.service.MemberWeatherLocationService;
 import java.time.Clock;
 import java.time.Instant;
@@ -59,7 +66,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -69,7 +78,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-@SpringBootTest(properties = "weather.notification.enabled=false")
+@SpringBootTest(properties = {"weather.notification.enabled=false", "weather.notification.test-push-key=" + WeatherNotificationIntegrationTest.TEST_PUSH_KEY})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import(WeatherNotificationIntegrationTest.ClockConfig.class)
@@ -80,20 +89,23 @@ class WeatherNotificationIntegrationTest {
     private static final GridPoint GRID = new GridPoint(60, 127);
     private static final String SECRET = "test-installation-secret-with-at-least-43-characters";
     private static final MutableClock CLOCK = new MutableClock();
+    static final String TEST_PUSH_KEY = "test-only-push-key";
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MockMvc mvc;
     @Autowired private JwtTokenProvider tokens;
     @Autowired private JdbcWeatherForecastRepository forecasts;
     @Autowired private MemberWeatherLocationRepository locations;
     @Autowired private MemberWeatherLocationService locationService;
-    @Autowired private WeatherNotificationSettingsService settings;
-    @Autowired private WeatherNotificationSettingsRepository settingsRepository;
+    @Autowired private NotificationSettingsService settings;
+    @Autowired private NotificationSettingsRepository settingsRepository;
     @Autowired private WeatherNotificationRepository notifications;
     @Autowired private LifeWeatherAnalysisService analysis;
+    @Autowired private Cache<ForecastCacheKey, WeatherForecastResult> forecastCache;
+    @MockitoBean private PushSender sender;
     private final List<Push> pushes = new CopyOnWriteArrayList<>();
     private Function<Push, Boolean> outcome;
     private WeatherNotificationDispatchService dispatch;
-    private WeatherDevice device;
+    private NotificationDevice device;
 
     @DynamicPropertySource
     static void database(final DynamicPropertyRegistry registry) {
@@ -109,6 +121,8 @@ class WeatherNotificationIntegrationTest {
 
     @BeforeEach
     void setup() {
+        // 컨텍스트를 공유하는 테스트끼리 같은 격자·날짜의 캐시 항목이 이어지지 않게 비운다.
+        forecastCache.invalidateAll();
         CLOCK.now.set(MORNING);
         jdbc.update("DELETE FROM members");
         jdbc.update("DELETE FROM weather_forecasts");
@@ -132,6 +146,8 @@ class WeatherNotificationIntegrationTest {
         var saved = notification();
         assertThat(saved.notices()).extracting(Notice::condition).containsExactly(Condition.LAUNDRY);
         assertThat(pushes.getFirst().notificationId()).isEqualTo(saved.notificationId());
+        assertThat(pushes.getFirst().type()).isEqualTo(PushSender.Type.WEATHER);
+        assertThat(pushes.getFirst().url()).isEqualTo("/me");
         String json = jdbc.queryForObject("SELECT notices FROM weather_notifications", String.class);
         assertThat(new ObjectMapper().readTree(json)).isEqualTo(new ObjectMapper().readTree("""
                 [{"condition":"LAUNDRY","message":"오늘은 비 예보가 없고 습도가 낮아요. 빨래하기 괜찮겠어요!"}]
@@ -157,6 +173,40 @@ class WeatherNotificationIntegrationTest {
         mvc.perform(post("/api/members/me/weather-notifications/test").header("Authorization", bearer(2)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(false));
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM weather_notifications", Integer.class)).isZero();
+    }
+
+    @Test
+    void internalTestPushRejectsMissingOrWrongKey() throws Exception {
+        mvc.perform(post("/internal/weather-notifications/test").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"memberId\":1}")).andExpect(status().isNotFound());
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", "wrong-key")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":1}")).andExpect(status().isNotFound());
+        verifyNoInteractions(sender);
+    }
+
+    @Test
+    void internalTestPushSendsFixedTextOnlyToTheGivenMembersDevice() throws Exception {
+        when(sender.send(any())).thenReturn(true);
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":1}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(true));
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":2}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.sent").value(false));
+        ArgumentCaptor<Push> push = ArgumentCaptor.forClass(Push.class);
+        verify(sender).send(push.capture());
+        assertThat(push.getValue().token()).isEqualTo(device.token());
+        assertThat(push.getValue().title()).isEqualTo("날씨 알림 테스트");
+        assertThat(push.getValue().type()).isEqualTo(PushSender.Type.TEST);
+        assertThat(notificationCount()).isZero();
+    }
+
+    @Test
+    void internalTestPushReportsUnknownMember() throws Exception {
+        mvc.perform(post("/internal/weather-notifications/test").header("X-Test-Push-Key", TEST_PUSH_KEY)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":999}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("MEMBER_NOT_FOUND"));
+        verifyNoInteractions(sender);
     }
 
     @Test
@@ -263,9 +313,9 @@ class WeatherNotificationIntegrationTest {
 
     @Test
     void oneMemberKeepsOneRegistrationAndUpdatesOrRevokesIt() {
-        WeatherDevice replacement = register(1);
+        NotificationDevice replacement = register(1);
         assertThat(settings.device(1).orElseThrow().installationId()).isEqualTo(replacement.installationId());
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM weather_notification_devices WHERE member_id=1", Integer.class)).isOne();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM notification_devices WHERE member_id=1", Integer.class)).isOne();
         settings.register(1, replacement.installationId(), SECRET, "new-fcm-token-1234567890");
         settings.register(1, replacement.installationId(), SECRET, "new-fcm-token-1234567890");
         assertThat(settings.device(1).orElseThrow().token()).isEqualTo("new-fcm-token-1234567890");
@@ -275,7 +325,7 @@ class WeatherNotificationIntegrationTest {
 
     @Test
     void tokenAloneCannotTakeAnotherMembersRegistrationAndFailureRollsBackReplacement() {
-        WeatherDevice second = register(2);
+        NotificationDevice second = register(2);
         assertThatThrownBy(() -> settings.register(2, UUID.randomUUID(), SECRET, device.token()))
                 .isInstanceOf(InvalidInputException.class);
         assertThat(settings.device(1).orElseThrow().installationId()).isEqualTo(device.installationId());
@@ -312,16 +362,16 @@ class WeatherNotificationIntegrationTest {
     void apiUsesOnePrivateRegistrationAndOwnedNotificationDetails() throws Exception {
         String body = "{\"installationId\":\"" + device.installationId() + "\",\"installationSecret\":\"" + SECRET
                 + "\",\"token\":\"updated-fcm-token-1234567890\"}";
-        mvc.perform(put("/api/members/me/weather-devices/current").header("Authorization", bearer(1)).contentType(MediaType.APPLICATION_JSON).content(body))
+        mvc.perform(put("/api/members/me/notification-devices/current").header("Authorization", bearer(1)).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.token").doesNotExist()).andExpect(jsonPath("$.data.installationSecret").doesNotExist());
-        mvc.perform(get("/api/members/me/weather-devices/current")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/members/me/notification-devices/current")).andExpect(status().isUnauthorized());
         dispatch.dispatch(NotificationSlot.MORNING);
         mvc.perform(get("/api/members/me/weather-notifications/" + notification().notificationId()).header("Authorization", bearer(2)))
                 .andExpect(status().isNotFound());
-        mvc.perform(delete("/api/members/me/weather-devices/current").header("Authorization", bearer(1))).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/members/me/notification-devices/current").header("Authorization", bearer(1))).andExpect(status().isNoContent());
         assertThat(settings.device(1)).isEmpty();
         mvc.perform(get("/v3/api-docs"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.paths['/api/members/me/weather-devices/current']").exists())
+                .andExpect(status().isOk()).andExpect(jsonPath("$.paths['/api/members/me/notification-devices/current']").exists())
                 .andExpect(jsonPath("$.paths['/api/members/me/weather-notifications/{notificationId}/receipts/{installationId}']").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/members/me/weather-notifications']").doesNotExist())
                 .andExpect(jsonPath("$.components.schemas.WeatherNotificationResponse.properties.notices").exists())
@@ -340,7 +390,7 @@ class WeatherNotificationIntegrationTest {
         String body = """
                 {"installationId": %s, "installationSecret": "%s", "token": %s}
                 """.formatted(id, secret, token);
-        mvc.perform(put("/api/members/me/weather-devices/current").header("Authorization", bearer(1))
+        mvc.perform(put("/api/members/me/notification-devices/current").header("Authorization", bearer(1))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
@@ -371,10 +421,10 @@ class WeatherNotificationIntegrationTest {
     @Test
     void sensitiveObjectsDoNotExposeCredentialsOrLocation() {
         String token = "sensitive-fcm-token";
-        var request = new com.jachwisunbae.notification.controller.dto.WeatherDeviceRequest(device.installationId(), SECRET, token);
+        var request = new com.jachwisunbae.notification.controller.dto.NotificationDeviceRequest(device.installationId(), SECRET, token);
         assertThat(request.toString()).doesNotContain(SECRET, token);
         assertThat(device.toString()).doesNotContain(SECRET, device.secretHash(), device.token());
-        var push = new Push(UUID.randomUUID(), token, "제목", "본문");
+        var push = new Push(UUID.randomUUID(), PushSender.Type.WEATHER, token, "제목", "본문");
         assertThat(push.toString()).doesNotContain(token);
         dispatch.dispatch(NotificationSlot.MORNING);
         assertThat(notification().toString()).isEqualTo("WeatherNotification[notificationId=" + notification().notificationId() + "]");
@@ -385,21 +435,21 @@ class WeatherNotificationIntegrationTest {
         for (String token : List.of("", " ", "x".repeat(4097))) {
             String body = new ObjectMapper().writeValueAsString(java.util.Map.of(
                     "installationId", device.installationId(), "installationSecret", SECRET, "token", token));
-            mvc.perform(put("/api/members/me/weather-devices/current").header("Authorization", bearer(1))
+            mvc.perform(put("/api/members/me/notification-devices/current").header("Authorization", bearer(1))
                             .contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
         }
         for (String token : List.of("x", "토큰", "x".repeat(4096))) {
             String body = new ObjectMapper().writeValueAsString(java.util.Map.of(
                     "installationId", device.installationId(), "installationSecret", SECRET, "token", token));
-            mvc.perform(put("/api/members/me/weather-devices/current").header("Authorization", bearer(1))
+            mvc.perform(put("/api/members/me/notification-devices/current").header("Authorization", bearer(1))
                             .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
             assertThat(settings.device(1).orElseThrow().token()).isEqualTo(token);
         }
     }
 
     private WeatherNotificationDispatchService newDispatch(final LifeWeatherAnalysisService analyzer) {
-        WeatherPushSender sender = push -> {
+        PushSender sender = push -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             pushes.add(push);
             return outcome.apply(push);
@@ -407,7 +457,7 @@ class WeatherNotificationIntegrationTest {
         return new WeatherNotificationDispatchService(settingsRepository, notifications, locations, analyzer, sender, CLOCK);
     }
 
-    private WeatherDevice register(final long member) {
+    private NotificationDevice register(final long member) {
         UUID id = UUID.randomUUID();
         return settings.register(member, id, SECRET, "fake-fcm-token-" + id);
     }

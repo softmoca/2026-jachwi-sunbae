@@ -33,6 +33,7 @@ const meta = {
     onEdit: fn(),
     onSaved: fn(),
     onCancel: fn(),
+    onEditLocation: fn(),
     editingField: null,
     savedField: null,
   },

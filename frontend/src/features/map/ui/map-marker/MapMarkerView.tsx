@@ -25,15 +25,17 @@ const pinImageSrc = (marker: MapMarker): string =>
     ? mapCategoryMarkerSrc(marker.category, marker.variant)
     : propertyMarkerSrc;
 
-/** 군집은 핀 위 숫자 배지로 개별 마커와 구분한다. */
-const usesCountBadge = (marker: MapMarker): boolean =>
-  marker.count !== undefined && (marker.category !== undefined || marker.tone === 'propertyCluster');
+/** 군집은 핀 오른쪽 위 숫자 배지로 개별 마커와 구분한다. 겹친 매물 군집은 매물 핀 그대로에 배지를 단다. */
+const usesCountBadge = (marker: MapMarker): boolean => marker.count !== undefined && marker.category !== undefined;
 
 const markerClassName = (marker: MapMarker, selectedMarkerId: string | null | undefined): string =>
   [
     styles.marker,
     isPinMarker(marker) ? styles.pinMarker : '',
     marker.image ? styles.imageMarker : '',
+    marker.photo !== undefined && (marker.tone === 'property' || marker.tone === 'propertyCluster')
+      ? styles.photoMarker
+      : '',
     marker.appear ? styles.appearMarker : '',
     marker.pop ? styles.popMarker : '',
     marker.tone === 'property' || marker.tone === 'propertyCluster' ? styles.propertyMarker : '',
@@ -52,9 +54,10 @@ const markerClassName = (marker: MapMarker, selectedMarkerId: string | null | un
 /** 지도 SDK와 데모 지도 양쪽에서 재사용하는 마커의 순수 시각 UI. */
 const MapMarkerView = ({ marker, selectedMarkerId = null, onSelectMarker }: MapMarkerViewProps) => {
   const canSelect = marker.actionable === true && onSelectMarker !== undefined;
+  const isPhotoMarker = marker.photo !== undefined && (marker.tone === 'property' || marker.tone === 'propertyCluster');
   const markerContent = (
     <>
-      {marker.summary && (
+      {marker.summary && !isPhotoMarker && (
         <span className={styles.markerSummaryCard}>
           <strong title={marker.label}>{marker.label}</strong>
           <small title={marker.summary.amount}>{marker.summary.amount}</small>
@@ -88,6 +91,19 @@ const MapMarkerView = ({ marker, selectedMarkerId = null, onSelectMarker }: MapM
           </span>
           <span className={styles.destinationTail} aria-hidden="true" />
         </>
+      ) : isPhotoMarker ? (
+        // 사진 오른쪽에 이름과 월세를 두 줄로 붙인 파란 카드. 흰 바탕과 테두리는 두지 않는다.
+        <span className={styles.photoCard} data-has-text={marker.summary ? '' : undefined}>
+          <img className={styles.photoPin} src={marker.photo} alt="" draggable={false} decoding="async" />
+          {/* 겹친 매물은 사진 카드 오른쪽 위 모서리에 걸친 흰 배지에 파란 숫자로 개수를 적는다. */}
+          {marker.count !== undefined && <strong className={styles.photoCount}>{marker.count}</strong>}
+          {marker.summary && (
+            <span className={styles.photoText}>
+              <strong title={marker.label}>{marker.label}</strong>
+              <small title={marker.summary.amount}>{marker.summary.amount}</small>
+            </span>
+          )}
+        </span>
       ) : isCurrentLocationDot(marker) ? null : isPinMarker(marker) ? (
         <img className={styles.pinImage} src={pinImageSrc(marker)} alt="" draggable={false} decoding="async" />
       ) : (
@@ -95,7 +111,7 @@ const MapMarkerView = ({ marker, selectedMarkerId = null, onSelectMarker }: MapM
           {markerSymbol(marker)}
         </span>
       )}
-      {usesCountBadge(marker) && <strong className={styles.markerCount}>{marker.count}</strong>}
+      {usesCountBadge(marker) && !isPhotoMarker && <strong className={styles.markerCount}>{marker.count}</strong>}
     </>
   );
   const commonProps = {
@@ -231,7 +247,7 @@ const styles = {
     border: 2px solid white;
     border-radius: 50%;
     background: #64748b;
-    box-shadow: 0 0.28rem 0.8rem rgb(44 50 39 / 28%);
+    box-shadow: none;
     color: white;
     cursor: default;
     place-items: center;
@@ -260,7 +276,7 @@ const styles = {
         border-radius: 0;
         background: transparent;
         box-shadow: none;
-        filter: drop-shadow(0 0.2rem 0.35rem rgb(25 30 40 / 26%));
+        filter: none;
         transform-origin: 50% 100%;
       }
     `,
@@ -308,6 +324,133 @@ const styles = {
     pointer-events: none;
   `,
 
+  /* 대표 사진이 있는 매물 마커: 사진을 모서리 둥근 네모로 잘라 흰 테두리와 파란 고리로 두른다. */
+  photoMarker: css`
+    label: MapMarkerView-photoMarker;
+
+    /* 지도 SDK의 오버레이 칸은 폭이 0에 가깝게 잡혀, 폭이 auto면 마커가 가장 좁은 폭으로 줄어 글자가 잘린다. 내용 폭을 그대로 쓴다. */
+    &&& {
+      width: max-content;
+      height: auto;
+      min-width: 0;
+      padding-bottom: 0.75rem;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+
+      /* 사진, 글자, 꼬리가 한꺼번에 같은 배율로 커지고 작아지게 마커 전체를 꼬리 끝(아래 가운데)을 기준으로 줄인다. */
+      scale: var(--map-marker-scale, 1);
+      transform-origin: 50% 100%;
+    }
+
+    /* 고른 마커는 배율에 1.12배를 더 곱한다. */
+    &&&.MapMarkerView-activeMarker {
+      scale: calc(var(--map-marker-scale, 1) * 1.12);
+    }
+
+    /* 카드 아래 가운데에 붙는 파란 꼬리(핀). 카드 안쪽으로 겹쳐 붙이고 그림자를 줘서 따로 떠 보이지 않게 한다. 꼭짓점이 지도 좌표를 가리킨다. */
+    &::after {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-top: 0.5rem solid #3f82f7;
+      border-right: 0.38rem solid transparent;
+      border-left: 0.38rem solid transparent;
+      content: '';
+      filter: drop-shadow(0 1px 1px rgb(0 0 0 / 18%));
+      transform: translateX(-50%);
+    }
+  `,
+
+  /* 사진은 테두리 없이 카드 왼쪽 끝에 붙이고, 이름과 월세는 흰 바탕에 파란 글씨로 둔다. 글이 없는 겹친 매물은 사진만 둔다. */
+  photoCard: css`
+    label: MapMarkerView-photoCard;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    position: relative;
+    width: max-content;
+    padding: 0;
+    border-radius: 0.9rem;
+    background: transparent;
+    color: #3f82f7;
+    white-space: nowrap;
+
+    &[data-has-text] {
+      padding-right: 0.8rem;
+      background: #fff;
+      box-shadow: 0 1px 5px rgb(0 0 0 / 18%);
+    }
+  `,
+
+  photoCount: css`
+    label: MapMarkerView-photoCount;
+    position: absolute;
+    top: -0.55rem;
+    right: -0.55rem;
+    display: grid;
+    min-width: 1.45rem;
+    height: 1.45rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 0 0 2px #3f82f7;
+    color: #3f82f7;
+    font-size: 0.78rem;
+    font-weight: 850;
+    line-height: 1;
+    place-items: center;
+  `,
+
+  photoPin: css`
+    label: MapMarkerView-photoPin;
+    display: block;
+    flex: none;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 0.9rem;
+    background: #e5e7ea;
+
+    /* 글이 붙은 카드에서는 사진이 카드 왼쪽 끝에 맞닿으므로 오른쪽 모서리는 직각이다. */
+    [data-has-text] > & {
+      border-radius: 0.9rem 0 0 0.9rem;
+    }
+    object-fit: cover;
+    pointer-events: none;
+  `,
+
+  /* 사진 오른쪽의 이름(위)과 월세(아래). 숫자가 길어도 카드가 넓어지지 않게 줄인다. */
+  photoText: css`
+    label: MapMarkerView-photoText;
+    display: grid;
+    max-width: 8.5rem;
+    gap: 0.1rem;
+    text-align: left;
+
+    & strong,
+    & small {
+      overflow: hidden;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    & strong {
+      color: #1f2328;
+      font-size: 0.8rem;
+      font-weight: 750;
+    }
+
+    & small {
+      color: #7a828c;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+  `,
+
   placeMarker: css`
     label: MapMarkerView-placeMarker;
 
@@ -337,9 +480,7 @@ const styles = {
       width: 1.95rem;
       height: 1.95rem;
       background: #212124;
-      box-shadow:
-        0 0 0 0.22rem rgb(0 0 0 / 12%),
-        0 0.3rem 0.9rem rgb(0 0 0 / 18%);
+      box-shadow: 0 0 0 0.22rem rgb(0 0 0 / 12%);
     }
 
     &.MapMarkerView-pinMarker {
@@ -379,7 +520,7 @@ const styles = {
     border: 1px solid #d8dbe0;
     border-radius: 1.05rem;
     background: #fff;
-    box-shadow: 0 0.3rem 0.85rem rgb(25 30 40 / 24%);
+    box-shadow: none;
     color: #25282d;
     text-align: center;
     transform: translateX(-50%);
@@ -460,9 +601,7 @@ const styles = {
     border: 3px solid white;
     border-radius: 50%;
     background: #1a73e8;
-    box-shadow:
-      0 0 0 0.45rem rgb(26 115 232 / 16%),
-      0 0.15rem 0.5rem rgb(20 60 120 / 38%);
+    box-shadow: 0 0 0 0.45rem rgb(26 115 232 / 16%);
   `,
 
   markerCount: css`
@@ -491,7 +630,16 @@ const styles = {
       bottom: auto;
       min-width: 1.2rem;
       height: 1.2rem;
-      font-size: 0.62rem;
+      /* 매물 군집 배지는 흰 바탕에 파란 숫자와 파란 고리로, 파란 카드 위에서도 잘 보이게 한다. */
+      top: -0.55rem;
+      right: -0.55rem;
+      min-width: 1.45rem;
+      height: 1.45rem;
+      border: 0;
+      background: #fff;
+      box-shadow: 0 0 0 2px #3f82f7;
+      color: #3f82f7;
+      font-size: 0.78rem;
       font-weight: 850;
     }
   `,
@@ -512,7 +660,7 @@ const styles = {
     border: 1px solid var(--color-border, #eaebed);
     border-radius: var(--radius-sm, 0.35rem);
     background: rgb(255 255 255 / 96%);
-    box-shadow: 0 0.15rem 0.5rem rgb(0 0 0 / 12%);
+    box-shadow: none;
     color: var(--color-ink, #212124);
     font-size: 0.68rem;
     font-weight: 750;
@@ -539,7 +687,7 @@ const styles = {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    filter: drop-shadow(0 0.2rem 0.45rem rgb(25 30 40 / 28%));
+    filter: none;
 
     /* 말풍선(거리 메모 등)은 눌러도 테두리를 두지 않는다. 고른 메모는 옆 칸이나 시트에서 보여 준다. */
     &.MapMarkerView-activeMarker {
@@ -611,6 +759,18 @@ const styles = {
       padding: 0.4rem 0.7rem;
       text-align: center;
     }
+
+    /* 데스크탑은 화면이 넓어 묶음 말풍선이 작아 보이므로 칸과 글자를 키운다. */
+    @media (min-width: 1024px) {
+      &[data-tally] .MapMarkerView-destinationLabel {
+        font-size: 1.05rem;
+      }
+
+      &[data-tally] .MapMarkerView-destinationLabel > span {
+        min-width: 3rem;
+        padding: 0.6rem 1rem;
+      }
+    }
   `,
 
   /* 순위 알약은 동네 가운데에 띄운다. 바탕 없는 틀만 두고 모양은 안쪽 알약이 맡는다. */
@@ -622,7 +782,7 @@ const styles = {
     border-radius: 999px;
     background: transparent;
     box-shadow: none;
-    filter: drop-shadow(0 0.15rem 0.4rem rgb(25 30 40 / 25%));
+    filter: none;
 
     &.MapMarkerView-activeMarker {
       outline: 0;

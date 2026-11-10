@@ -1,5 +1,6 @@
 package com.jachwisunbae.property.service.pdf;
 
+import com.jachwisunbae.checklist.type.CheckStage;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
@@ -86,6 +87,7 @@ public class PropertyComparisonPdfService {
         PropertyChecklistOverviewResponse overview = PropertyChecklistOverviewResponse.from(propertyId,
                 propertyChecklistService.findOverview(memberId, propertyId));
         return overview.stages().stream()
+                .filter(stage -> stage.stage() == CheckStage.ON_SITE)
                 .map(stage -> collectStage(memberId, propertyId, stage))
                 .toList();
     }

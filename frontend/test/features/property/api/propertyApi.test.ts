@@ -139,9 +139,9 @@ describe('FE-2 API 경계', () => {
       maxMinutes: 60,
       maxTransfers: 2,
       properties: [
-        { propertyId: 10, status: 'REACHABLE', commuteMinutes: 27 },
-        { propertyId: 11, status: 'UNREACHABLE', commuteMinutes: null },
-        { propertyId: 12, status: 'NO_LOCATION', commuteMinutes: null },
+        { propertyId: 10, propertyName: '신림역 원룸', status: 'REACHABLE', commuteMinutes: 27 },
+        { propertyId: 11, propertyName: '망원동 투룸', status: 'UNREACHABLE', commuteMinutes: null },
+        { propertyId: 12, propertyName: '주소 없는 방', status: 'NO_LOCATION', commuteMinutes: null },
       ],
     });
   });
@@ -458,7 +458,7 @@ describe('FE-2 API 경계', () => {
     );
 
     const error = await fetchPropertyPhotos(config, 10).catch((caught: unknown) => caught);
-    expect(getPropertyErrorMessage(error)).toBe('사진을 불러오지 못했습니다. 다시 시도해 주세요.');
+    expect(getPropertyErrorMessage(error)).toBe('사진을 불러오지 못했어요. 다시 시도해 주세요.');
     expect(getPropertyErrorMessage(error)).not.toContain('서버 내부 상세 메시지');
   });
 });

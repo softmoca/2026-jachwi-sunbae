@@ -9,11 +9,10 @@ type PropertyMemoQuery = ReturnType<typeof usePropertyMemo>;
 type PropertyMemoContentProps = {
   memo: PropertyMemoQuery;
   onEdit: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
 };
 
 /** 상세 안 메모 칸. 빠른 응답에는 로딩 문구 없이 바로 메모를 보여 주고, 오래 걸릴 때만 알린다. */
-const PropertyMemoContent = ({ memo, onEdit, triggerRef }: PropertyMemoContentProps) => (
+const PropertyMemoContent = ({ memo, onEdit }: PropertyMemoContentProps) => (
   <DelayedFallback
     isPending={memo.isPending}
     fallback={
@@ -28,7 +27,7 @@ const PropertyMemoContent = ({ memo, onEdit, triggerRef }: PropertyMemoContentPr
           매물 메모를 불러오지 못했어요. 다시 시도
         </button>
       ) : (
-        <button ref={triggerRef} type="button" className={styles.field} onClick={onEdit}>
+        <button type="button" className={styles.field} onClick={onEdit}>
           {memo.data.freeMemo || '탭해서 메모를 입력해 주세요.'}
         </button>
       )

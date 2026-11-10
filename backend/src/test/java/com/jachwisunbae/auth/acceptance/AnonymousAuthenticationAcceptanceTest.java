@@ -160,7 +160,7 @@ class AnonymousAuthenticationAcceptanceTest {
                 VALUES (?, 60, 127, NOW(6))
                 """, source.memberId());
         jdbcTemplate.update("""
-                INSERT INTO member_weather_notification_settings (member_id, enabled, updated_at)
+                INSERT INTO member_notification_settings (member_id, enabled, updated_at)
                 VALUES (?, TRUE, NOW(6)), (?, FALSE, NOW(6))
                 """, source.memberId(), target.memberId());
 
@@ -182,7 +182,7 @@ class AnonymousAuthenticationAcceptanceTest {
                 "SELECT grid_x FROM member_weather_locations WHERE member_id = ?", Integer.class, target.memberId()))
                 .isEqualTo(60);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT enabled FROM member_weather_notification_settings WHERE member_id = ?", Boolean.class,
+                "SELECT enabled FROM member_notification_settings WHERE member_id = ?", Boolean.class,
                 target.memberId())).isFalse();
     }
 

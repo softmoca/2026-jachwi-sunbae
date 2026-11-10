@@ -75,6 +75,22 @@ export const searchAddress = (config: PublicConfig, query: string, signal?: Abor
     },
   });
 
+/** 동네 찾기와 동네 검색에서 건물명이나 장소 이름을 네이버로 바로 검색한다. */
+export const searchAddressWithNaver = (
+  config: PublicConfig,
+  query: string,
+  signal?: AbortSignal,
+): Promise<MapAddress[]> =>
+  apiRequest({
+    config,
+    path: `/api/maps/search?query=${encodeURIComponent(query)}`,
+    signal,
+    parseData: (value) => {
+      if (!Array.isArray(value)) throw new Error('주소 검색 응답이 올바르지 않습니다.');
+      return value.map(parseAddress);
+    },
+  });
+
 export const reverseGeocode = (config: PublicConfig, latitude: number, longitude: number): Promise<MapAddress> =>
   apiRequest({
     config,

@@ -1,5 +1,6 @@
 package com.jachwisunbae.weather.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.jachwisunbae.weather.domain.GridPoint;
 import com.jachwisunbae.weather.provider.kma.KmaGridConverter;
 import com.jachwisunbae.weather.repository.WeatherForecastQueryRepository;
@@ -23,25 +24,36 @@ public class WeatherForecastQueryService {
     private final WeatherForecastQueryRepository repository;
     private final KmaGridConverter converter;
     private final Clock clock;
+    private final Cache<ForecastCacheKey, WeatherForecastResult> cache;
 
     public WeatherForecastQueryService(final WeatherForecastQueryRepository repository, final KmaGridConverter converter,
-                                       final Clock clock) {
+                                       final Clock clock, final Cache<ForecastCacheKey, WeatherForecastResult> cache) {
         this.repository = repository;
         this.converter = converter;
         this.clock = clock;
+        this.cache = cache;
     }
 
     public WeatherForecastResult find(final double latitude, final double longitude, final LocalDate date) {
         return findByGrid(converter.convert(latitude, longitude), date);
     }
 
+    // Cache-Aside: 같은 격자·날짜는 캐시를 재사용하고, 없을 때만 DB에서 읽어 저장한다.
+    // 같은 키를 동시에 조회해도 DB 조회는 한 번만 실행된다. find()도 이 메서드를 거치므로 API·알림 모두 캐시를 쓴다.
     public WeatherForecastResult findByGrid(final GridPoint grid, final LocalDate requestedDate) {
         LocalDate date = requestedDate == null ? LocalDate.now(clock.withZone(KST)) : requestedDate;
+        return cache.get(new ForecastCacheKey(grid, date), key -> load(key.grid(), key.date()));
+    }
+
+    private WeatherForecastResult load(final GridPoint grid, final LocalDate date) {
         Map<LocalDateTime, Hour> stored = repository.findHourly(grid, date).stream()
                 .collect(Collectors.toMap(Hour::forecastAt, Function.identity()));
         // 미수집 시각도 24칸의 nullable 숫자로 표현한다. 정상 0을 결측으로 바꾸지 않는다.
         var hours = IntStream.range(0, 24).mapToObj(hour -> date.atTime(hour, 0))
                 .map(at -> stored.getOrDefault(at, Hour.missing(at))).toList();
         return new WeatherForecastResult(grid, date, hours, repository.findDaily(grid, date));
+    }
+
+    public record ForecastCacheKey(GridPoint grid, LocalDate date) {
     }
 }

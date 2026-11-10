@@ -4,6 +4,7 @@ import { useMember } from '@/features/auth/api/useCurrentMember';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
+import { formatAppVersionLabel } from '../lib/appVersionLabel';
 import AccountLinkCard from '../ui/account-link-card/AccountLinkCard';
 import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
@@ -22,11 +23,11 @@ const MyMobilePage = () => {
         <div className={styles.links}>
           <AccountLinkCard memberId={member.memberId} />
           <PrivacyLinkCard />
-          <AccountResetCard memberId={member.memberId} />
+          <AccountResetCard />
         </div>
       </div>
       <footer className={`${shared.footer} ${styles.footer}`}>
-        <span>자취선배 MVP2 · {config.mapProviderMode === 'demo' ? 'DEMO MAP' : 'LIVE MAP'}</span>
+        <span>{formatAppVersionLabel(config)}</span>
       </footer>
     </main>
   );

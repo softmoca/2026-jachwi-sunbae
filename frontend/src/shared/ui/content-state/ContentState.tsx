@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { Button } from '@/shared/ui/button/Button';
+import RefreshIcon from '@/shared/ui/icon/icons/RefreshIcon';
 import StateIllustration from '@/shared/ui/state-illustration/StateIllustration';
 
 type ContentStateProps = {
@@ -26,16 +28,17 @@ const ContentState = ({
 }: ContentStateProps) => {
   const body = (
     <div
-      className={`content-state ${tone === 'error' ? 'content-state--error' : ''}`.trim()}
+      className={`content-state ${tone === 'error' ? 'content-state--error' : ''} ${page ? 'content-state--page' : ''}`.trim()}
       role={tone === 'error' ? 'alert' : undefined}
     >
-      {tone === 'error' && <StateIllustration name="error" size={5.5} />}
+      {tone === 'error' && <StateIllustration name="error" size={page ? 13 : 9} />}
       {title !== undefined && <strong>{title}</strong>}
       {description !== undefined && <span>{description}</span>}
       {onRetry !== undefined && (
-        <button type="button" className="inline-button" onClick={onRetry}>
+        <Button variant="secondary" onClick={onRetry}>
+          <RefreshIcon size={16} />
           {retryLabel}
-        </button>
+        </Button>
       )}
       {children}
     </div>
@@ -44,7 +47,8 @@ const ContentState = ({
   if (!page) return body;
 
   return (
-    <main className="property-page">
+    // 화면 전체를 차지하는 안내는 카드에 담지 않고 화면의 가로, 세로 가운데에 둔다.
+    <main className="property-page content-state-screen">
       <div className="page-container">{body}</div>
     </main>
   );

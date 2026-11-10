@@ -4,6 +4,7 @@ import { queryClient } from '@/shared/api/queryClient';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
+import { rememberRecentEdit } from '../lib/recentEdit';
 import type { PropertyChecklistDetail, PropertyChecklistItemStatus } from '../model/Property';
 import { updatePropertyChecklistItemMemo, updatePropertyChecklistItemStatus } from './propertyApi';
 import { propertyQueryKeys } from './propertyQueryKeys';
@@ -21,7 +22,11 @@ const updateChecklistItem = (
         ? current
         : { ...current, items: current.items.map((item) => (item.itemId === itemId ? update(item) : item)) },
   );
-  void queryClient.invalidateQueries({ queryKey: propertyQueryKeys.checklists(propertyId), exact: true });
+  rememberRecentEdit(propertyId, 'checklist');
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: propertyQueryKeys.checklists(propertyId), exact: true }),
+    queryClient.invalidateQueries({ queryKey: propertyQueryKeys.lists() }),
+  ]);
 };
 
 export const usePropertyChecklistItemStatusMutation = (propertyId: number, propertyChecklistId: number) => {
@@ -30,7 +35,7 @@ export const usePropertyChecklistItemStatusMutation = (propertyId: number, prope
     mutationFn: ({ itemId, status }: { itemId: number; status: PropertyChecklistItemStatus }) =>
       updatePropertyChecklistItemStatus(config, propertyId, propertyChecklistId, itemId, status),
     onSuccess: ({ itemId, status }) => {
-      updateChecklistItem(propertyId, propertyChecklistId, itemId, (item) => ({ ...item, status }));
+      const refresh = updateChecklistItem(propertyId, propertyChecklistId, itemId, (item) => ({ ...item, status }));
       if (status !== 'UNCONFIRMED') {
         trackPostHogEvent('checklist_item_checked', {
           property_id: propertyId,
@@ -39,6 +44,7 @@ export const usePropertyChecklistItemStatusMutation = (propertyId: number, prope
           status,
         });
       }
+      return refresh;
     },
   });
 };
@@ -49,7 +55,7 @@ export const usePropertyChecklistItemMemoMutation = (propertyId: number, propert
     mutationFn: ({ itemId, memo }: { itemId: number; memo: string }) =>
       updatePropertyChecklistItemMemo(config, propertyId, propertyChecklistId, itemId, memo),
     onSuccess: ({ itemId, memo }) => {
-      updateChecklistItem(propertyId, propertyChecklistId, itemId, (item) => ({ ...item, memo }));
+      return updateChecklistItem(propertyId, propertyChecklistId, itemId, (item) => ({ ...item, memo }));
     },
   });
 };

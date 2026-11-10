@@ -42,7 +42,10 @@ const MobileSkeleton = () => {
   return (
     <main className={mobileStyles.page}>
       <div className={mobileStyles.frame}>
-        <RecordsMobileHeader view={view} onViewChange={setView} />
+        {/* 지도 보기는 실제 화면처럼 뼈대 위에 헤더를 띄워, 흰 띠가 생겼다 사라지지 않게 한다. */}
+        <div className={view === 'map' ? mobileStyles.mapChrome : undefined}>
+          <RecordsMobileHeader view={view} onViewChange={setView} />
+        </div>
         <div className={mobileStyles.body}>
           <AreaSkeleton area={view === 'map' ? 'map' : 'list'} label={RECORDS_LOADING_LABEL} />
         </div>

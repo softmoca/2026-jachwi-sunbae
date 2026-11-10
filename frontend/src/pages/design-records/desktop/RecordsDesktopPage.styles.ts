@@ -40,14 +40,6 @@ export const list = css`
   background: white;
 `;
 
-/* 매물 등록·상세는 자체 여백을 가지므로 칸에는 스크롤만 둔다. */
-export const detail = css`
-  label: RecordsDesktopPage-detail;
-  min-height: 0;
-  overflow-y: auto;
-  background: white;
-`;
-
 export const headerSearch = css`
   label: RecordsDesktopPage-headerSearch;
   max-width: 32rem;

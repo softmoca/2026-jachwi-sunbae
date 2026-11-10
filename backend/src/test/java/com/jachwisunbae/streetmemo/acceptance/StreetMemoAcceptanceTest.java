@@ -294,7 +294,8 @@ class StreetMemoAcceptanceTest {
     private void assertPublicFields(final JsonNode memo) {
         List<String> fields = new ArrayList<>();
         memo.fieldNames().forEachRemaining(fields::add);
-        assertThat(fields).containsExactlyInAnyOrder("streetMemoId", "latitude", "longitude", "memo", "preference", "isMine");
+        assertThat(fields).containsExactlyInAnyOrder("streetMemoId", "latitude", "longitude", "memo", "adminDongCode",
+                "preference", "isMine");
     }
 
     private record MemberSession(long memberId, String accessToken) {

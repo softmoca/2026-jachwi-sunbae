@@ -12,6 +12,7 @@ import {
   resetPostHogIdentity,
   setPostHogAuthenticationReader,
   setPostHogSessionContext,
+  startPostHogWebVitals,
   trackPostHogPageView,
 } from '@/shared/lib/analytics/posthog';
 
@@ -25,7 +26,7 @@ const PostHogTracker = () => {
     setPostHogAuthenticationReader(() =>
       getAuthenticationSnapshot().session === null ? 'anonymous' : 'authenticated',
     );
-    initPostHog(config.posthogProjectToken ?? '', config.posthogHost ?? '');
+    if (initPostHog(config.posthogProjectToken ?? '', config.posthogHost ?? '')) startPostHogWebVitals();
   }, [config.posthogProjectToken, config.posthogHost]);
 
   useLayoutEffect(() => {

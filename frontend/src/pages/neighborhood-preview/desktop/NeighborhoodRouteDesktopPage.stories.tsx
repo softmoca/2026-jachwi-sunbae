@@ -90,6 +90,7 @@ const preview: NeighborhoodPreviewContext = {
   moveToCurrentLocation: noopAsync,
   missingBoundaryCount: 0,
   topAreas: [area],
+  resultAreas: [area],
   selectedStation: area.stations[0],
   route,
   isRouteLoading: false,
@@ -136,11 +137,19 @@ const preview: NeighborhoodPreviewContext = {
   matchedAreaCount: 1,
   selected: area,
   selectRegion: noop,
-  focusResultPoint: noop,
+  focusRoute: noop,
+  zoomResultBy: noop,
   selectStation: noop,
   openAreaDetails: noop,
   closeAreaDetails: fn(),
   openListing: () => true,
+  toggleMapCategory: () => true,
+  focusPoint: noop,
+  fitPoints: noop,
+  rememberSelectionCenter: noop,
+  rememberSelectionLevel: noop,
+  zoomSelectionBy: noop,
+  setMapViewportReader: () => undefined,
 };
 
 /** 데스크탑 대중교통 상세. 앱에서는 동네 찾기 화면이 만든 상태(`preview`)와 고른 동네(`area`)를 받아 목록 옆 상세 칸을 채운다. */

@@ -1,10 +1,9 @@
 import { css, cx } from '@emotion/css';
 
-import { formatManwon } from '@/features/property/lib/propertyFormat';
 import type { PropertySummary } from '@/features/property/model/Property';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
-import mascotImage from '@/shared/assets/jachwi-sunbae-goose.webp';
-import mascotImage2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
+import PropertyPlaceholderPhoto from '@/features/property/ui/property-placeholder-photo/PropertyPlaceholderPhoto';
+import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
 import SelectionControl from '@/shared/ui/selection-control/SelectionControl';
 
 type ComparePropertyOptionProps = {
@@ -14,16 +13,23 @@ type ComparePropertyOptionProps = {
   onToggle: () => void;
 };
 
-/** 단계별 체크리스트 적용·진행 칩. 휴대폰 리스트와 데스크탑 표가 함께 쓴다. */
-export const StageOverview = ({ property }: { property: PropertySummary }) => (
-  <span className={styles.stageOverview}>
-    {property.stages.map((stage, index) => (
-      <span key={stage.stage} data-applied={stage.applied || undefined}>
-        {index + 1}단계 {stage.applied ? `${stage.progress.completedCount}/${stage.progress.totalCount}` : '미적용'}
-      </span>
-    ))}
-  </span>
-);
+/** 적용된 체크리스트의 전체 진행률. 휴대폰과 데스크탑이 함께 쓴다. */
+export const StageOverview = ({ property }: { property: PropertySummary }) => {
+  const progress = property.stages
+    .filter((stage) => stage.applied)
+    .reduce(
+      (total, stage) => ({
+        completed: total.completed + stage.progress.completedCount,
+        count: total.count + stage.progress.totalCount,
+      }),
+      { completed: 0, count: 0 },
+    );
+  return (
+    <span className={styles.stageOverview} aria-label={`전체 ${progress.count}개 중 ${progress.completed}개 확인`}>
+      {progress.completed}/{progress.count}
+    </span>
+  );
+};
 
 const ComparePropertyOption = ({ property, isSelected, isDisabled, onToggle }: ComparePropertyOptionProps) => (
   <SelectionControl
@@ -35,12 +41,7 @@ const ComparePropertyOption = ({ property, isSelected, isDisabled, onToggle }: C
   >
     <span className={styles.thumbnail}>
       {property.representativePhoto === null ? (
-        <img
-          src={mascotImage}
-          srcSet={`${mascotImage} 1x, ${mascotImage2x} 2x`}
-          alt=""
-          className={styles.emptyThumbnailMascot}
-        />
+        <PropertyPlaceholderPhoto className={styles.emptyThumbnailMascot} />
       ) : (
         <AuthenticatedPhoto
           propertyId={property.propertyId}
@@ -52,9 +53,11 @@ const ComparePropertyOption = ({ property, isSelected, isDisabled, onToggle }: C
     </span>
     <span className={styles.propertyInfo}>
       <strong>{property.name}</strong>
-      <span>
-        보증금 {formatManwon(property.depositAmount)} / 월세 {formatManwon(property.monthlyRentAmount)}
-      </span>
+      <PropertyPrice
+        depositAmount={property.depositAmount}
+        monthlyRentAmount={property.monthlyRentAmount}
+        variant="labeled"
+      />
       {property.discoverySource.value.length > 0 && <span>발견 경로 · {property.discoverySource.value}</span>}
       <StageOverview property={property} />
     </span>
@@ -103,12 +106,17 @@ const styles = {
   checkmark: css`
     label: ComparePropertyOption-checkmark;
     display: grid;
+    flex: none;
+    box-sizing: border-box;
     width: 1.1rem;
     height: 1.1rem;
     border: 1px solid var(--color-border-strong);
     border-radius: 50%;
     background: var(--color-surface);
     color: var(--color-on-primary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1;
     place-items: center;
 
     .ComparePropertyOption-option[data-selected='true'] & {
@@ -175,33 +183,10 @@ const styles = {
 
   stageOverview: css`
     label: ComparePropertyOption-stageOverview;
-
-    .ComparePropertyOption-propertyInfo > span:not(&) {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    & {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.25rem;
-      margin-top: 0.15rem;
-    }
-
-    & span {
-      padding: 0.16rem 0.28rem;
-      border-radius: 999px;
-      background: var(--color-surface-muted);
-      color: var(--color-muted);
-      font-size: 0.52rem;
-      font-weight: 750;
-    }
-
-    & span[data-applied='true'] {
-      background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-      color: var(--color-primary-dark);
-    }
+    display: inline-block;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
   `,
 };
 

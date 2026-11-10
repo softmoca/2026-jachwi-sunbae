@@ -1,18 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-import PropertyChecklistItemControl from '@/pages/property-checklist/ui/property-checklist-item-control/PropertyChecklistItemControl';
 import { useAssignActiveChecklist } from '@/features/checklist/api/useChecklistMutations';
 import { clearLastSelectedChecklist, readLastSelectedChecklist } from '@/features/checklist/model/lastChecklistStore';
 import ChecklistProgressRing from '@/features/checklist/ui/checklist-progress-ring/ChecklistProgressRing';
 import { fetchPropertyChecklistDetail } from '@/features/property/api/propertyApi';
 import { propertyQueryKeys } from '@/features/property/api/propertyQueryKeys';
 import { usePropertyChecklistOverview } from '@/features/property/api/useProperties';
-import type {
-  PropertyChecklistDetail,
-  PropertyChecklistItem,
-  PropertyChecklistProgress,
-} from '@/features/property/model/Property';
+import type { PropertyChecklistDetail, PropertyChecklistProgress } from '@/features/property/model/Property';
+import PropertyChecklist from '@/features/property/ui/property-checklist/PropertyChecklist';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
@@ -29,7 +25,6 @@ const PropertyChecklistSection = ({ propertyId }: PropertyChecklistSectionProps)
   const checklists = usePropertyChecklistOverview(propertyId);
   const assignDefaultChecklist = useAssignActiveChecklist(propertyId, 'ON_SITE');
   const assignmentStarted = useRef(false);
-  const [editingMemoItemId, setEditingMemoItemId] = useState<number | null>(null);
   const onSiteChecklist = checklists.data?.stages.find((item) => item.stage === 'ON_SITE');
   const propertyChecklistId = onSiteChecklist?.applied ? onSiteChecklist.propertyChecklistId : null;
   const config = usePublicConfig();
@@ -100,9 +95,6 @@ const PropertyChecklistSection = ({ propertyId }: PropertyChecklistSectionProps)
                   propertyChecklistId={propertyChecklistId}
                   detail={checklist.data}
                   progress={onSiteChecklist?.progress}
-                  editingMemoItemId={editingMemoItemId}
-                  onStartMemoEdit={setEditingMemoItemId}
-                  onFinishMemoEdit={() => setEditingMemoItemId(null)}
                 />
               )
             ) : (
@@ -136,24 +128,32 @@ const ChecklistSkeleton = ({ isPlaceholder = false }: { isPlaceholder?: boolean 
     aria-hidden={isPlaceholder || undefined}
   >
     {!isPlaceholder && <span className="sr-only">체크리스트를 불러오는 중이에요.</span>}
-    <div className={styles.skeletonSummary} aria-hidden="true">
-      <span className={`${styles.skeleton} ${styles.skeletonRing}`} />
-      <span className={styles.skeletonLegend}>
-        <span className={styles.skeleton} />
-        <span className={styles.skeleton} />
-        <span className={styles.skeleton} />
-      </span>
-    </div>
-    <div className={styles.expandedChecklist} aria-hidden="true">
-      <span className={`${styles.skeleton} ${styles.skeletonTitle}`} />
-      <ul className={styles.skeletonItems}>
-        {[0, 1, 2, 3].map((index) => (
-          <li key={index}>
+    {/* 회색 탭 바탕 위의 흰 카드들(머리와 진행 링, 카테고리)과 같은 구조로 그린다. */}
+    <div className={styles.skeletonStack} aria-hidden="true">
+      <div className={styles.skeletonCard}>
+        <span className={`${styles.skeleton} ${styles.skeletonTitle}`} />
+        <div className={styles.skeletonSummary}>
+          <span className={`${styles.skeleton} ${styles.skeletonRing}`} />
+          <span className={styles.skeletonLegend}>
             <span className={styles.skeleton} />
-            <span className={`${styles.skeleton} ${styles.skeletonAction}`} />
-          </li>
-        ))}
-      </ul>
+            <span className={styles.skeleton} />
+            <span className={styles.skeleton} />
+          </span>
+        </div>
+      </div>
+      {[0, 1].map((card) => (
+        <div key={card} className={styles.skeletonCard}>
+          <span className={`${styles.skeleton} ${styles.skeletonCategory}`} />
+          <ul className={styles.skeletonItems}>
+            {[0, 1].map((index) => (
+              <li key={index}>
+                <span className={styles.skeleton} />
+                <span className={`${styles.skeleton} ${styles.skeletonAction}`} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   </div>
 );
@@ -164,51 +164,22 @@ const AppliedChecklistItems = ({
   propertyChecklistId,
   detail,
   progress,
-  editingMemoItemId,
-  onStartMemoEdit,
-  onFinishMemoEdit,
 }: {
   propertyId: number;
   propertyChecklistId: number;
   detail: PropertyChecklistDetail;
   progress: PropertyChecklistProgress | undefined;
-  editingMemoItemId: number | null;
-  onStartMemoEdit: (itemId: number) => void;
-  onFinishMemoEdit: () => void;
 }) => {
-  const completedCount = detail.items.filter((item) => item.status !== 'UNCONFIRMED').length;
-
   return (
     <>
-      {progress !== undefined && progress.totalCount > 0 && <ChecklistProgressRing progress={progress} />}
-      <div className={styles.expandedChecklist}>
-        <header className={styles.expandedHeader}>
-          <h3>{detail.checklistName}</h3>
-          {/* 항목을 평가하면 바뀐 개수를 이어서 읽는다. 화면의 "2 / 3"은 "2 슬래시 3"으로 읽혀 문장으로 따로 둔다. */}
-          <span role="status">
-            <span aria-hidden="true">
-              {completedCount} / {detail.items.length} 평가
-            </span>
-            <span className="sr-only">
-              {detail.items.length}개 중 {completedCount}개 평가
-            </span>
-          </span>
-        </header>
-        <ol className={styles.items}>
-          {detail.items.map((item: PropertyChecklistItem) => (
-            <PropertyChecklistItemControl
-              key={item.itemId}
-              propertyId={propertyId}
-              propertyChecklistId={propertyChecklistId}
-              item={item}
-              isMemoEditing={editingMemoItemId === item.itemId}
-              isMemoEditDisabled={editingMemoItemId !== null && editingMemoItemId !== item.itemId}
-              onStartMemoEdit={() => onStartMemoEdit(item.itemId)}
-              onFinishMemoEdit={onFinishMemoEdit}
-            />
-          ))}
-        </ol>
-      </div>
+      <PropertyChecklist
+        key={propertyChecklistId}
+        propertyId={propertyId}
+        detail={detail}
+        summary={
+          progress !== undefined && progress.totalCount > 0 ? <ChecklistProgressRing progress={progress} /> : undefined
+        }
+      />
     </>
   );
 };

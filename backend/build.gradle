@@ -5,8 +5,8 @@ plugins {
 }
 
 group = 'com.jachwisunbae'
-version = '3.1.0'
-description = 'Jachwi Sunbae MVP2 backend application'
+version = '4.1.0'
+description = 'Jachwi Sunbae backend application'
 
 def sourceCommitId = providers.environmentVariable('SOURCE_COMMIT_ID')
 		.orElse(providers.environmentVariable('CODEBUILD_RESOLVED_SOURCE_VERSION'))
@@ -39,6 +39,7 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.apache.commons:commons-csv:1.14.1'
 	implementation 'com.nimbusds:nimbus-jose-jwt:10.9'
@@ -59,6 +60,7 @@ dependencies {
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'com.tngtech.archunit:archunit:1.5.1'
 	testImplementation 'org.testcontainers:junit-jupiter'
 	testImplementation 'org.testcontainers:mysql'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

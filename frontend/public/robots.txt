@@ -1,0 +1,14 @@
+# 운영(www) 사이트 기준. dev 배포는 deploy/publish.sh가 전체 차단으로 바꿔 올린다.
+User-agent: *
+Allow: /
+# 회원별 기록 화면이라 검색 결과에 나올 내용이 없다.
+Disallow: /properties
+Disallow: /checklists
+Disallow: /compare
+Disallow: /me
+Disallow: /map
+Disallow: /export
+Disallow: /tips
+Disallow: /login
+
+Sitemap: https://www.jachwi-sunbae.kr/sitemap.xml

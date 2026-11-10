@@ -14,13 +14,15 @@ import {
 } from './propertyApi';
 import { propertyQueryKeys } from './propertyQueryKeys';
 
-export const usePropertyList = () => {
+/** `enabled`를 끄면 부르지 않는다. 동네 찾기는 `My`를 켰을 때만 기록한 매물을 받는다. */
+export const usePropertyList = (enabled = true) => {
   const config = usePublicConfig();
   return useInfiniteQuery({
     queryKey: propertyQueryKeys.list(''),
     initialPageParam: 0,
     queryFn: ({ pageParam, signal }) => fetchProperties(config, { query: '', page: pageParam, size: 20 }, signal),
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),
+    enabled,
   });
 };
 

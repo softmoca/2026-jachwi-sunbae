@@ -7,6 +7,7 @@ import SearchField from '@/shared/ui/search-field/SearchField';
 
 import type { AddressSearchStatus } from '../../hooks/useAddressSearch';
 import type { PropertyLocationStatus } from '../../hooks/usePropertyLocation';
+import PropertyAddress from '../property-address/PropertyAddress';
 
 type PropertyLocationPickerProps = {
   location: {
@@ -77,11 +78,14 @@ const PropertyLocationPicker = ({ location, search }: PropertyLocationPickerProp
       />
     </div>
     <p className={styles.selectedAddress} aria-live="polite">
-      {location.status === 'loading'
-        ? '주소를 확인하는 중이에요.'
-        : (location.selected.roadAddress ?? location.selected.jibunAddress ?? '주소를 확인하지 못했어요.')}
+      {location.status === 'loading' ? (
+        '주소를 확인하는 중이에요.'
+      ) : (
+        <PropertyAddress
+          address={location.selected.roadAddress ?? location.selected.jibunAddress ?? location.selected.address}
+        />
+      )}
     </p>
-    {location.status === 'error' && <p className={styles.errorNotice}>지도를 움직여 위치를 다시 선택해 주세요.</p>}
   </section>
 );
 

@@ -2,13 +2,16 @@ package com.jachwisunbae.map.provider.publicdata.sgis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.queryParam;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.exception.server.UpstreamServiceException;
+import java.net.SocketTimeoutException;
 import java.time.Instant;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +78,22 @@ class SgisAuthClientTest {
                 .andRespond(withServerError());
 
         assertProviderUnavailable();
+    }
+
+    @Test
+    @DisplayName("네트워크 오류로 실패해도 예외 메시지에 인증 키를 남기지 않는다")
+    void doesNotExposeConsumerKeysOnNetworkFailure() {
+        server.expect(requestTo(Matchers.containsString(AUTH)))
+                .andRespond(withException(new SocketTimeoutException("Read timed out")));
+
+        Throwable failure = catchThrowable(() -> client.issue());
+
+        StringBuilder messages = new StringBuilder();
+        for (Throwable error = failure; error != null; error = error.getCause()) {
+            messages.append(error.getMessage());
+        }
+        assertThat(failure).isInstanceOf(UpstreamServiceException.class);
+        assertThat(messages.toString()).doesNotContain("consumer-key", "consumer-secret");
     }
 
     @Test

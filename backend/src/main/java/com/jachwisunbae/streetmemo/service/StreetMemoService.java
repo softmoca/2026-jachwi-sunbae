@@ -5,9 +5,11 @@ import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.member.service.MemberService;
 import com.jachwisunbae.streetmemo.domain.StreetMemo;
+import com.jachwisunbae.streetmemo.domain.StreetMemoLocation;
 import com.jachwisunbae.streetmemo.domain.StreetMemoPreference;
 import com.jachwisunbae.streetmemo.repository.StreetMemoRepository;
 import com.jachwisunbae.streetmemo.service.dto.result.StreetMemoResult;
+import com.jachwisunbae.transit.service.AdminDongFinder;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -21,21 +23,25 @@ public class StreetMemoService {
 
     private final StreetMemoRepository streetMemoRepository;
     private final MemberService memberService;
+    private final AdminDongFinder adminDongFinder;
     private final Clock clock;
 
     public StreetMemoService(final StreetMemoRepository streetMemoRepository, final MemberService memberService,
-                             final Clock clock) {
+                             final AdminDongFinder adminDongFinder, final Clock clock) {
         this.streetMemoRepository = streetMemoRepository;
         this.memberService = memberService;
+        this.adminDongFinder = adminDongFinder;
         this.clock = clock;
     }
 
     @Transactional
     public StreetMemoResult create(final Long memberId, final BigDecimal latitude, final BigDecimal longitude,
                                     final String memo, final StreetMemoPreference preference) {
-        StreetMemo streetMemo = StreetMemo.create(memberId, latitude, longitude, memo, preference,
-                LocalDateTime.now(clock));
+        StreetMemoLocation location = new StreetMemoLocation(latitude, longitude);
         memberService.requireActiveMemberForUpdate(memberId);
+        String adminDongCode = adminDongFinder.findCode(location.latitude(), location.longitude()).orElse(null);
+        StreetMemo streetMemo = StreetMemo.create(memberId, latitude, longitude, adminDongCode, memo, preference,
+                LocalDateTime.now(clock));
         return StreetMemoResult.from(streetMemoRepository.save(streetMemo), memberId);
     }
 

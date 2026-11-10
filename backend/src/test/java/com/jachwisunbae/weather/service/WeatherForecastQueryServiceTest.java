@@ -3,16 +3,22 @@ package com.jachwisunbae.weather.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
+import com.jachwisunbae.weather.config.WeatherForecastCacheConfig;
 import com.jachwisunbae.weather.domain.GridPoint;
 import com.jachwisunbae.weather.provider.kma.KmaGridConverter;
 import com.jachwisunbae.weather.repository.WeatherForecastQueryRepository;
+import com.jachwisunbae.weather.service.WeatherForecastQueryService.ForecastCacheKey;
+import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult;
 import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult.Daily;
 import com.jachwisunbae.weather.service.dto.result.WeatherForecastResult.Hour;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,8 +30,9 @@ class WeatherForecastQueryServiceTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 25);
     private static final GridPoint GRID = new GridPoint(60, 127);
     private final WeatherForecastQueryRepository repository = mock(WeatherForecastQueryRepository.class);
+    private final Cache<ForecastCacheKey, WeatherForecastResult> cache = newCache();
     private final WeatherForecastQueryService service = new WeatherForecastQueryService(repository, new KmaGridConverter(),
-            Clock.fixed(Instant.parse("2026-10-25T13:00:00Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-10-25T13:00:00Z"), ZoneOffset.UTC), cache);
 
     @Test
     void fillsMissingHoursWithoutInventingZero() {
@@ -77,8 +84,48 @@ class WeatherForecastQueryServiceTest {
     @Test
     void usesKstDateAtUtcDateBoundary() {
         var boundary = new WeatherForecastQueryService(repository, new KmaGridConverter(),
-                Clock.fixed(Instant.parse("2026-12-31T15:00:00Z"), ZoneOffset.UTC));
+                Clock.fixed(Instant.parse("2026-12-31T15:00:00Z"), ZoneOffset.UTC), newCache());
         assertThat(boundary.findByGrid(GRID, null).date()).isEqualTo(LocalDate.of(2027, 1, 1));
         assertThat(boundary.findByGrid(GRID, LocalDate.of(2027, 1, 2)).hourly()).hasSize(24);
+    }
+
+    @Test
+    void reusesCachedForecastForSameGridAndDate() {
+        var first = service.findByGrid(GRID, TODAY);
+        var second = service.findByGrid(GRID, TODAY);
+
+        assertThat(second).isSameAs(first);
+        verify(repository, times(1)).findHourly(GRID, TODAY);
+        verify(repository, times(1)).findDaily(GRID, TODAY);
+        assertThat(cache.stats().hitCount()).isEqualTo(1);
+        assertThat(cache.stats().missCount()).isEqualTo(1);
+    }
+
+    @Test
+    void keepsSeparateEntriesForDifferentGridOrDate() {
+        GridPoint otherGrid = new GridPoint(61, 127);
+        LocalDate tomorrow = TODAY.plusDays(1);
+
+        service.findByGrid(GRID, TODAY);
+        service.findByGrid(otherGrid, TODAY);
+        service.findByGrid(GRID, tomorrow);
+
+        verify(repository).findHourly(GRID, TODAY);
+        verify(repository).findHourly(otherGrid, TODAY);
+        verify(repository).findHourly(GRID, tomorrow);
+        assertThat(cache.estimatedSize()).isEqualTo(3);
+    }
+
+    @Test
+    void sharesEntryBetweenOmittedDateAndKstToday() {
+        service.find(37.5665, 126.978, null);
+        service.findByGrid(GRID, TODAY);
+
+        verify(repository, times(1)).findHourly(GRID, TODAY);
+        assertThat(cache.stats().hitCount()).isEqualTo(1);
+    }
+
+    private static Cache<ForecastCacheKey, WeatherForecastResult> newCache() {
+        return new WeatherForecastCacheConfig().weatherForecastCache(new SimpleMeterRegistry());
     }
 }

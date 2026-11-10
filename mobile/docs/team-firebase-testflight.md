@@ -12,7 +12,7 @@
 ## 검증 명령
 
 ```bash
-FIREBASE_PROJECT_ID=jachwi-sunbae-de npm run check:firebase
+npm run check:firebase -- dev
 npm run check:versions
 npm run typecheck
 npm run lint
@@ -20,7 +20,7 @@ npm test -- --runInBand
 npm --prefix server test
 ```
 
-검사 기본 프로젝트는 기존 `jachwi-sunbae`다. 팀 설정 파일을 사용하는 동안에는 명시적으로 `FIREBASE_PROJECT_ID`를 지정한다. 나중에 운영 Firebase 프로젝트가 달라지면 그 프로젝트의 두 앱 설정 파일로 다시 빌드해야 한다.
+검사는 dev 환경을 `jachwi-sunbae-de`, prod 환경을 `jachwi-sunbae-prod`로 기대한다. 다른 프로젝트로 검사하려면 `FIREBASE_DEV_PROJECT_ID`, `FIREBASE_PROD_PROJECT_ID`를 지정한다. 파일 위치는 [README](../README.md#실행)를 따른다.
 
 ## 서버 키와 발송 경계
 

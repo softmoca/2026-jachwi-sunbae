@@ -49,25 +49,15 @@ export const topAreaRail = css`
 
 export const locationControls = css`
   label: NeighborhoodPreviewPage-locationControls;
-
-  .NeighborhoodPreviewPage-page[data-public-explore='true'] &[data-result='true'] {
-    bottom: calc(env(safe-area-inset-bottom) + 15rem);
-  }
-
-  & {
-    position: absolute;
-    bottom: calc(var(--map-sheet-bottom, 0px) + 10.5rem);
-    right: 0.85rem;
-    z-index: 30;
-  }
-
-  &[data-result='true'] {
-    bottom: calc(var(--map-sheet-bottom, 0px) + 13rem);
-  }
-
-  /* 조건 칸 아래 피커(132px)와 그 간격만큼 카드가 높아진다. */
-  &[data-filter-open='true'] {
-    bottom: calc(var(--map-sheet-bottom, 0px) + 10.5rem + 132px + 0.75rem);
+  position: absolute;
+  top: 5rem;
+  right: 0.85rem;
+  z-index: 30;
+  .NeighborhoodPreviewPage-page &[data-docked='true'] {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
   }
 `;
 
@@ -102,14 +92,14 @@ export const mapBack = cx(
     border: 1px solid #e3e5e9;
     border-radius: 50%;
     background: white;
-    box-shadow: 0 2px 10px #00000018;
+    box-shadow: 0 1px 6px rgb(0 0 0 / 8%);
     color: #383c43;
     cursor: pointer;
   `,
   'NeighborhoodPreviewPage-mapBack',
 );
 
-/* 데스크탑 헤더 안에서는 그림자 없이 회색 칸으로 둔다. */
+/* 데스크탑 헤더 안의 검색창은 본 방 기록과 같은 흰 칸에 그림자를 쓴다(`activeSearchField`). */
 export const headerMapSearch = css`
   label: NeighborhoodPreviewPage-headerMapSearch;
   display: flex;
@@ -120,8 +110,6 @@ export const headerMapSearch = css`
 
   & > :last-child {
     flex: 1;
-    background: var(--color-card-surface);
-    box-shadow: none;
   }
 
   & .NeighborhoodPreviewPage-mapBack {
@@ -771,11 +759,11 @@ export const activeSearchField = css`
   label: NeighborhoodPreviewPage-activeSearchField;
   min-width: 0;
   background: white;
-  box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
 
   &:focus-within {
     border-color: var(--color-border);
-    box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
   }
 `;
 
@@ -877,34 +865,13 @@ export const criteriaBadges = css`
   label: NeighborhoodPreviewPage-criteriaBadges;
   display: flex;
   gap: 0.3rem;
-  /* 좁은 화면에서도 월세 버튼이 아래 줄로 내려가지 않게 한 줄로 두고, 넘치면 옆으로 민다. */
+  /* 좁은 화면에서도 칩이 아래 줄로 내려가지 않게 한 줄로 두고, 넘치면 옆으로 민다. 칩 모양은 공용 Chip이 정한다. */
   overflow-x: auto;
+  padding-bottom: 0.3rem;
   scrollbar-width: none;
 
-  & > * {
-    flex: none;
-  }
-
-  & > span {
-    padding: 0.45rem 0.5rem;
-    white-space: nowrap;
-    border: 1px solid var(--color-border);
-    border-radius: 999px;
-    background: white;
-    font-size: 0.72rem;
-
-    @media (max-width: 370px) {
-      padding: 0.45rem 0.4rem;
-      font-size: 0.66rem;
-    }
-    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
-  }
-
-  /* 결과에서 바꿀 수 없는 조건은 회색으로 흐리게 둔다. */
-  & > span[aria-disabled='true'] {
-    border-color: #e6e8eb;
-    background: #f1f2f4;
-    color: #9a9ea6;
+  &::-webkit-scrollbar {
+    display: none;
   }
 `;
 
@@ -1008,29 +975,6 @@ export const filterCellValue = css`
   white-space: nowrap;
 `;
 
-export const filterBadge = css`
-  label: NeighborhoodPreviewPage-filterBadge;
-  flex: none;
-  padding: 0.5rem 0.6rem;
-  border-radius: 2rem;
-  border-color: var(--color-border-strong);
-  font-size: 0.75rem;
-  font-weight: 600;
-  min-height: 2.25rem;
-  white-space: nowrap;
-
-  & > span {
-    width: 100%;
-    justify-content: space-between;
-    gap: 0.25rem;
-  }
-
-  @media (max-width: 370px) {
-    padding: 0.5rem 0.45rem;
-    font-size: 0.66rem;
-  }
-`;
-
 export const emptyResult = css`
   label: NeighborhoodPreviewPage-emptyResult;
   position: absolute;
@@ -1054,14 +998,9 @@ export const mapOverlay = css`
 `;
 
 /* 지도 색상 기준 아래 정류장·부동산 안내. */
-export const placesHint = css`
-  label: NeighborhoodPreviewPage-placesHint;
-  flex-basis: 100%;
-  color: var(--color-muted);
-  font-size: 0.65rem;
-`;
 
-/* 휴대폰에서 위치를 고르면 아래에 올리는 찾기 버튼. 버튼 글자에 고른 장소 이름을 넣는다. */
+/* 휴대폰에서 위치를 고르면 아래에 올리는 찾기 버튼. 버튼 글자에 고른 장소 이름을 넣는다.
+   공용 바텀시트처럼 태블릿(1023px까지)도 화면 폭을 채운다. 1024px부터는 데스크탑 화면이라 이 시트를 쓰지 않는다. */
 export const searchCard = css`
   label: NeighborhoodPreviewPage-searchCard;
   position: absolute;
@@ -1071,8 +1010,6 @@ export const searchCard = css`
   z-index: 20;
   display: grid;
   gap: 0.75rem;
-  max-width: 30rem;
-  margin: 0 auto;
   padding: 1.25rem 1rem calc(env(safe-area-inset-bottom) + 1rem);
   border-radius: 1.25rem 1.25rem 0 0;
   background: white;

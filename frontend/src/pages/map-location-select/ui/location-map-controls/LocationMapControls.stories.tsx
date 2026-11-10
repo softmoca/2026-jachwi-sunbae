@@ -18,12 +18,10 @@ const meta = {
   ],
   argTypes: {
     isLocating: { description: '현재 위치를 찾는 중인지. 찾는 동안 위치 버튼을 막는다.' },
-    onOpenSearch: { description: '주소 검색 열기' },
     onMoveToCurrentLocation: { description: '현재 위치로 지도 옮기기' },
   },
   args: {
     isLocating: false,
-    onOpenSearch: fn(),
     onMoveToCurrentLocation: fn(),
   },
 } satisfies Meta<typeof LocationMapControls>;

@@ -160,7 +160,7 @@ const styles = {
       left: var(--action-card-text-inset, 1.15rem);
       z-index: 1;
       display: grid;
-      gap: 0.35rem;
+      gap: var(--action-card-text-gap, 0.35rem);
     `,
     'ActionCard-text',
   ),
@@ -170,7 +170,7 @@ const styles = {
     css`
       label: ActionCard-title;
       font-size: var(--action-card-title-size, 1rem);
-      line-height: 1.25;
+      line-height: var(--action-card-title-line-height, 1.25);
       letter-spacing: -0.04em;
     `,
     'ActionCard-title',
@@ -184,7 +184,7 @@ const styles = {
       opacity: 0.8;
 
       @media (max-width: 360px) {
-        font-size: 0.6rem;
+        font-size: 0.72rem;
       }
     `,
     'ActionCard-description',

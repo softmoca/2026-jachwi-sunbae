@@ -1,7 +1,8 @@
 import { css } from '@emotion/css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { MapAddress } from '@/features/map/model/Map';
+import AddressSearchResults from '@/features/map/ui/address-search-results/AddressSearchResults';
 import useAddressSearch from '@/features/property/hooks/useAddressSearch';
 import SearchField from '@/shared/ui/search-field/SearchField';
 
@@ -32,6 +33,8 @@ const RecordAddressSearch = ({
   className,
 }: Props) => {
   const search = useAddressSearch();
+  // 검색창에서 손을 떼(포커스가 밖으로 나가) 결과 목록을 닫는다. 다시 눌러 입력하면 다시 열린다.
+  const [isOpen, setIsOpen] = useState(true);
   const { query } = search;
   // 결과를 고르면 검색어가 그 주소로 바뀐다. 이때는 다시 검색하지 않는다.
   const pickedRef = useRef<string | null>(null);
@@ -47,7 +50,13 @@ const RecordAddressSearch = ({
   }, [query]);
 
   return (
-    <div className={`${styles.root} ${className ?? ''}`.trim()}>
+    <div
+      className={`${styles.root} ${className ?? ''}`.trim()}
+      onFocus={() => setIsOpen(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+      }}
+    >
       <SearchField
         className={styles.field}
         shape="pill"
@@ -61,32 +70,19 @@ const RecordAddressSearch = ({
         onSubmit={() => void search.submit()}
         onClear={search.clear}
       />
-      {(search.status !== 'idle' || search.results.length > 0) && (
-        <div className={styles.dropdown}>
-          {search.status === 'loading' && <p className={styles.status}>주소를 찾는 중이에요.</p>}
-          {search.status === 'error' && (
-            <p className={styles.status} role="alert">
-              주소를 찾지 못했어요. 다시 시도해 주세요.
-            </p>
-          )}
-          {search.results.length > 0 && (
-            <ul className={styles.results} aria-label="주소 검색 결과">
-              {search.results.map((result) => (
-                <li key={`${result.latitude}-${result.longitude}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      pickedRef.current = formatAddress(result);
-                      search.pick(result);
-                      onSelect(result);
-                    }}
-                  >
-                    {formatAddress(result)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      {isOpen && (
+        // 결과를 누를 때 입력창의 포커스가 먼저 빠져 목록이 닫히지 않게 한다.
+        <div onMouseDown={(event) => event.preventDefault()}>
+          <AddressSearchResults
+            results={search.results}
+            dropdown
+            status={search.status === 'idle' && search.results.length > 0 ? 'success' : search.status}
+            onSelect={(result) => {
+              pickedRef.current = formatAddress(result);
+              search.pick(result);
+              onSelect(result);
+            }}
+          />
         </div>
       )}
     </div>
@@ -106,54 +102,15 @@ const styles = {
   field: css`
     label: RecordAddressSearch-field;
     min-width: 0;
+    /* 입력칸 높이를 평소 헤더 버튼과 같은 2.5rem으로 고정한다. */
+    height: 2.5rem;
+    box-sizing: border-box;
     background: white;
-    box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 8%);
-  `,
+    box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
 
-  dropdown: css`
-    label: RecordAddressSearch-dropdown;
-    position: absolute;
-    top: calc(100% + 0.4rem);
-    right: 0;
-    left: 0;
-    z-index: 40;
-    max-height: 16rem;
-    overflow-y: auto;
-    border: 1px solid #e3e5e9;
-    border-radius: 1rem;
-    background: white;
-    box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 14%);
-  `,
-
-  status: css`
-    label: RecordAddressSearch-status;
-    margin: 0;
-    padding: 0.85rem 1rem;
-    color: #868b94;
-    font-size: 0.82rem;
-  `,
-
-  results: css`
-    label: RecordAddressSearch-results;
-    margin: 0;
-    padding: 0.3rem 0;
-    list-style: none;
-
-    & button {
-      display: block;
-      width: 100%;
-      padding: 0.7rem 1rem;
-      border: 0;
-      background: transparent;
-      color: #25282d;
-      font: inherit;
-      font-size: 0.85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    & button:hover {
-      background: #f5f6f8;
+    & input {
+      min-height: 0;
+      height: 100%;
     }
   `,
 };

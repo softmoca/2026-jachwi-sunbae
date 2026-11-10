@@ -8,6 +8,8 @@ export type MapRadiusCircle = {
 export type MapTapAction = {
   id: string;
   label: string;
+  /** 글자 앞에 둘 작은 그림 주소. 이모지 대신 쓴다. */
+  icon?: string;
   onSelect: () => void;
 };
 
@@ -51,6 +53,8 @@ export type MapCanvasProps = {
   onCenterChange?: (latitude: number, longitude: number) => void;
   onLevelChange?: (level: number) => void;
   onBoundsChange?: (bounds: MapBounds) => void;
+  /** 사용자가 손가락이나 마우스로 지도를 끌기 시작할 때. 화면이 시점을 옮길 때는 부르지 않는다. */
+  onDragStart?: () => void;
   radiusCenter?: { latitude: number; longitude: number };
   /** 지도 좌표에 고정된 선택 가능 구역. */
   regions?: MapRegion[];

@@ -91,6 +91,7 @@ const preview: NeighborhoodPreviewContext = {
   moveToCurrentLocation: noopAsync,
   missingBoundaryCount: 0,
   topAreas: [area],
+  resultAreas: [area],
   selectedStation: area.stations[0],
   route,
   isRouteLoading: false,
@@ -137,11 +138,19 @@ const preview: NeighborhoodPreviewContext = {
   matchedAreaCount: 1,
   selected: area,
   selectRegion: noop,
-  focusResultPoint: noop,
+  focusRoute: noop,
+  zoomResultBy: noop,
   selectStation: noop,
   openAreaDetails: noop,
   closeAreaDetails: noop,
   openListing: () => true,
+  toggleMapCategory: () => true,
+  focusPoint: noop,
+  fitPoints: noop,
+  rememberSelectionCenter: noop,
+  rememberSelectionLevel: noop,
+  zoomSelectionBy: noop,
+  setMapViewportReader: () => undefined,
 };
 
 /** 이 본문이 `preview`에서 읽는 값만 컨트롤로 펼친다. 나머지는 위 기본값을 그대로 쓴다. */

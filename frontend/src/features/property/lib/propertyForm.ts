@@ -130,10 +130,10 @@ export const toPropertyInputDto = (values: PropertyFormValues): PropertyInputDto
 
 export const propertyFieldErrorMessage = (field: PropertyFormField): string => {
   const messages: Record<PropertyFormField, string> = {
-    name: '서버에서 매물 이름을 확인하지 못했습니다.',
-    depositAmount: '서버에서 보증금 값을 확인하지 못했습니다.',
-    monthlyRentAmount: '서버에서 월세 값을 확인하지 못했습니다.',
-    discoverySource: '서버에서 확인한 곳을 확인하지 못했습니다.',
+    name: '매물 이름을 다시 확인해 주세요.',
+    depositAmount: '보증금을 다시 확인해 주세요.',
+    monthlyRentAmount: '월세를 다시 확인해 주세요.',
+    discoverySource: '확인한 곳을 다시 확인해 주세요.',
     address: '주소를 확인해 주세요.',
     latitude: '선택한 위치의 위도를 확인해 주세요.',
     longitude: '선택한 위치의 경도를 확인해 주세요.',

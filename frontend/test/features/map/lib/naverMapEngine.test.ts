@@ -77,3 +77,41 @@ it('ready 이후 인증 실패가 도착하면 다음 지도 로드를 거절한
   window.navermap_authFailure?.();
   await expect(isolatedEngine('test').load()).rejects.toThrow('인증에 실패');
 });
+
+const isolatedModule = async () => {
+  vi.resetModules();
+  delete window.naver;
+  return import('@/features/map/lib/naverMapEngine');
+};
+const scripts = () => document.querySelectorAll('script[data-jachwi-naver-map]');
+const preloads = () => [...document.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="script"]')];
+afterEach(() => preloads().forEach((link) => link.remove()));
+
+it('미리 받기는 SDK 두 파일을 받기만 하고 실행은 지도를 그릴 때 한다', async () => {
+  const { naverEngine: isolatedEngine, preloadNaverSdk } = await isolatedModule();
+  preloadNaverSdk('test');
+  expect(preloads().map((link) => link.href)).toEqual([
+    'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=test&submodules=gl&callback=jachwiNaverSdkReady',
+    'https://oapi.map.naver.com/openapi/v3/maps-gl.js',
+  ]);
+  expect(scripts()).toHaveLength(0);
+  void isolatedEngine('test').load();
+  // 지도가 붙이는 스크립트는 미리 받은 주소와 같아야 받아 둔 응답을 쓴다.
+  expect(scripts()[0].getAttribute('src')).toBe(preloads()[0].href);
+});
+
+it('미리 받기를 여러 번 불러도 링크는 한 번만 넣는다', async () => {
+  const { preloadNaverSdk } = await isolatedModule();
+  preloadNaverSdk('test');
+  preloadNaverSdk('test');
+  expect(preloads()).toHaveLength(2);
+});
+
+it('Client ID가 없거나 SDK를 이미 받았으면 미리 받지 않는다', async () => {
+  const { preloadNaverSdk } = await isolatedModule();
+  preloadNaverSdk('');
+  expect(preloads()).toHaveLength(0);
+  mockSdk();
+  preloadNaverSdk('test');
+  expect(preloads()).toHaveLength(0);
+});

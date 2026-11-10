@@ -62,8 +62,8 @@ class MemberDeletionAcceptanceTest {
 
     @BeforeEach
     void clearData() {
-        jdbc.update("DELETE FROM weather_notification_devices");
-        jdbc.update("DELETE FROM member_weather_notification_settings");
+        jdbc.update("DELETE FROM notification_devices");
+        jdbc.update("DELETE FROM member_notification_settings");
         jdbc.update("DELETE FROM street_memos");
         jdbc.update("DELETE FROM property_photos");
         jdbc.update("DELETE FROM properties");
@@ -104,11 +104,11 @@ class MemberDeletionAcceptanceTest {
                 VALUES (?, 37.5, 127.0, '내 거리 메모', 'LIKE', ?, ?)
                 """, memberId, now, now);
         jdbc.update("""
-                INSERT INTO member_weather_notification_settings (member_id, enabled, updated_at)
+                INSERT INTO member_notification_settings (member_id, enabled, updated_at)
                 VALUES (?, TRUE, ?)
                 """, memberId, now);
         jdbc.update("""
-                INSERT INTO weather_notification_devices
+                INSERT INTO notification_devices
                     (installation_id, member_id, installation_secret_hash, token, token_hash, updated_at)
                 VALUES ('00000000-0000-0000-0000-000000000001', ?, REPEAT('a', 64), 'push-token', REPEAT('b', 64), ?)
                 """, memberId, now);
@@ -135,9 +135,9 @@ class MemberDeletionAcceptanceTest {
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE member_id = ? AND deleted_at IS NULL",
                     Long.class, memberId)).isZero();
         }
-        assertThat(jdbc.queryForObject("SELECT enabled FROM member_weather_notification_settings WHERE member_id = ?",
+        assertThat(jdbc.queryForObject("SELECT enabled FROM member_notification_settings WHERE member_id = ?",
                 Boolean.class, memberId)).isFalse();
-        assertThat(jdbc.queryForObject("SELECT token FROM weather_notification_devices WHERE member_id = ?",
+        assertThat(jdbc.queryForObject("SELECT token FROM notification_devices WHERE member_id = ?",
                 String.class, memberId)).isNull();
 
         mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))

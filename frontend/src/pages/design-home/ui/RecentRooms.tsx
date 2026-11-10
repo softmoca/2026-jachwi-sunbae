@@ -1,15 +1,17 @@
 import { css, cx } from '@emotion/css';
 
 import { usePropertyList } from '@/features/property/api/useProperties';
-import { formatRentSummary } from '@/features/property/lib/propertyFormat';
 import AuthenticatedPhoto from '@/features/property/ui/authenticated-photo/AuthenticatedPhoto';
+import PropertyAddress from '@/features/property/ui/property-address/PropertyAddress';
+import PropertyPlaceholderPhoto from '@/features/property/ui/property-placeholder-photo/PropertyPlaceholderPhoto';
+import PropertyPrice from '@/features/property/ui/property-price/PropertyPrice';
 import { HOME_PATH, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 import { Button } from '@/shared/ui/button/Button';
 import DelayedFallback from '@/shared/ui/delayed-fallback/DelayedFallback';
 import HorizontalRail from '@/shared/ui/horizontal-rail/HorizontalRail';
-import Icon from '@/shared/ui/icon/Icon';
 import ProgressCircle from '@/shared/ui/progress-circle/ProgressCircle';
 import RailCard from '@/shared/ui/rail-card/RailCard';
+import StateIllustration from '@/shared/ui/state-illustration/StateIllustration';
 
 const RECENT_ROOM_LIMIT = 5;
 
@@ -38,8 +40,7 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
           {() =>
             properties.isError ? (
               <div className={styles.loadError} role="alert">
-                {/* 불러오기 실패 이미지는 준비되면 이 자리에 넣는다. */}
-                <span className={styles.loadErrorImage} aria-hidden="true" />
+                <StateIllustration name="error" size={7} />
                 <p>기록을 불러오지 못했어요.</p>
                 <Button variant="secondary" isLoading={properties.isFetching} onClick={() => void properties.refetch()}>
                   다시 시도
@@ -68,16 +69,20 @@ const RecentRooms = ({ inSideColumn = false }: RecentRoomsProps) => {
                       />
                     ) : (
                       <span className={`${styles.roomPicture} ${styles.photoFallback}`} aria-label="대표 사진 없음">
-                        <Icon name="image" size={18} />
+                        <PropertyPlaceholderPhoto className={styles.fallbackImage} />
                       </span>
                     )}
                     <div className={styles.roomInfo}>
                       <strong>{property.name}</strong>
-                      <span className={styles.rent}>
-                        {property.monthlyRentAmount > 0 ? '월세 ' : ''}
-                        {formatRentSummary(property.depositAmount, property.monthlyRentAmount)}
-                      </span>
-                      <p>{property.location.address ?? '주소 미등록'}</p>
+                      <PropertyPrice
+                        className={styles.rent}
+                        depositAmount={property.depositAmount}
+                        monthlyRentAmount={property.monthlyRentAmount}
+                        variant="summary"
+                      />
+                      <p>
+                        <PropertyAddress address={property.location.address} />
+                      </p>
                     </div>
                   </RailCard>
                 ))}
@@ -137,15 +142,6 @@ const styles = {
       color: var(--color-muted);
       font-size: 0.85rem;
     }
-  `,
-
-  /* 이미지가 들어올 자리. 크기만 잡아 둔다. */
-  loadErrorImage: css`
-    label: RecentRooms-loadErrorImage;
-    width: 6rem;
-    height: 6rem;
-    border-radius: var(--radius-tile);
-    background: var(--color-card-surface);
   `,
 
   rooms: css`
@@ -218,6 +214,17 @@ const styles = {
       font-size: 0.58rem;
       text-decoration: none;
     }
+  `,
+
+  /* 사진이 없는 방은 목록, 상세와 같은 기본 이미지(집 그림)로 채운다. */
+  fallbackImage: css`
+    label: RecentRooms-fallbackImage;
+    /* 칸 높이(7rem)를 꽉 채우고 넘치는 좌우는 잘라, 위아래에 회색 띠가 남지 않게 한다. */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   `,
 
   photoFallback: css`

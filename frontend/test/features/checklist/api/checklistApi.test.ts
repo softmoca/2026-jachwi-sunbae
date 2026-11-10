@@ -26,7 +26,7 @@ const config: PublicConfig = {
 const authenticate = () => setAuthentication({ accessToken: 'memory-token', tokenType: 'Bearer', expiresIn: 60 });
 
 const checkItemsResponse = [
-  { id: 101, stage: 'ON_SITE', itemType: 'CORE', question: '관리비를 확인했나요?' },
+  { id: 101, stage: 'ON_SITE', itemType: 'CORE', category: 'SECURITY', question: '관리비를 확인했나요?' },
   { id: 102, stage: 'ON_SITE', itemType: 'OPTIONAL', question: '입주일을 확인했나요?' },
 ];
 
@@ -39,6 +39,7 @@ const checklistDetailResponse = {
     {
       id: 701,
       systemCheckItemId: 101,
+      category: 'SECURITY',
       itemType: 'CORE',
       question: '관리비를 확인했나요?',
       displayOrder: 1,
@@ -67,7 +68,7 @@ describe('최종 체크리스트 API 계약', () => {
     );
 
     await expect(fetchCheckItems(config, { stage: 'ON_SITE', query: '  관리비  ', page: 3 })).resolves.toMatchObject({
-      content: [{ checkItemId: 101, itemType: 'CORE' }],
+      content: [{ checkItemId: 101, itemType: 'CORE', category: 'SECURITY' }],
       hasNext: false,
     });
   });

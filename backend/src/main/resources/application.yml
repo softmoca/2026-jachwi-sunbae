@@ -57,6 +57,10 @@ map:
   sgis:
     consumer-key: ${SGIS_CONSUMER_KEY:}
     consumer-secret: ${SGIS_CONSUMER_SECRET:}
+  naver:
+    search:
+      client-id: ${NAVER_SEARCH_CLIENT_ID:}
+      client-secret: ${NAVER_SEARCH_CLIENT_SECRET:}
   kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:}
   connect-timeout-millis: ${MAP_CONNECT_TIMEOUT_MILLIS:2000}
@@ -69,11 +73,17 @@ promotion:
       # 하루 1회 연동 조건이 있어 운영 주체를 정한 환경에서만 켠다.
       enabled: false
 
+delivery-discount:
+  notification:
+    enabled: true
+
 weather:
   kma:
     api-key: ${KMA_API_KEY:}
   notification:
     enabled: false
+    # 운영자 테스트 알림 API의 비밀키. 비어 있으면 API가 항상 거부한다.
+    test-push-key: ${WEATHER_TEST_PUSH_KEY:}
   collection:
     enabled: false
   cleanup:

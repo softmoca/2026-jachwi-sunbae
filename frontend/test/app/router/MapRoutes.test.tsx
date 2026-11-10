@@ -200,20 +200,17 @@ describe('지도 주소', () => {
     );
 
     renderAuthenticated('/map/select-location', { returnTo: '/properties/1/edit' });
-    const openSearchButton = await screen.findByRole('button', { name: '주소 검색 열기' });
+    const searchInput = await screen.findByRole('textbox', { name: '주소 검색' });
     expect(navigator.geolocation.getCurrentPosition).not.toHaveBeenCalled();
-    expect(screen.queryByRole('textbox', { name: '주소 검색' })).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
 
-    await user.click(openSearchButton);
-    await user.type(await screen.findByRole('textbox', { name: '주소 검색' }), '신림');
-    await user.click(screen.getByRole('button', { name: '검색' }));
+    await user.type(searchInput, '신림{Enter}');
 
     const results = await screen.findByRole('list', { name: '주소 검색 결과' });
     expect(within(results).getByText(mapAddress.roadAddress)).toBeInTheDocument();
     expect(within(results).getByText(mapAddress.jibunAddress)).toBeInTheDocument();
     await user.click(within(results).getByRole('button'));
-    expect(screen.getByRole('button', { name: '이 위치 적용하기' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeEnabled();
   });
 
   it('돌아갈 수정 화면 없이 위치 선택 주소로 들어오면 본 방 기록으로 보낸다', async () => {

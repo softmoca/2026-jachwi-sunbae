@@ -1,29 +1,38 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import PropertyActiveChecklistPage from '@/pages/property-active-checklist/PropertyActiveChecklistPage';
 import PropertyDetailPage from '@/pages/property-detail/PropertyDetailPage';
+import usePreloadMapSdk from '@/features/map/hooks/usePreloadMapSdk';
 import type { MapAddress } from '@/features/map/model/Map';
 import { RECORDS_PATH } from '@/shared/lib/navigation/appPaths';
 import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
 import DesktopHeader from '@/shared/ui/desktop-header/DesktopHeader';
 import DesktopHeaderSlot, { DesktopHeaderSlotProvider } from '@/shared/ui/desktop-header/DesktopHeaderSlot';
+import DetailHeader from '@/shared/ui/detail-header/DetailHeader';
 import ListDetailLayout from '@/shared/ui/list-detail-layout/ListDetailLayout';
 
 import useQuickCreateProperty from '../hooks/useQuickCreateProperty';
 import useRecords from '../hooks/useRecords';
 import useRecordsMapLayers from '../hooks/useRecordsMapLayers';
+import { recordNeighbors } from '../model/recordNavigation';
 import { RECORDS_LOADING_LABEL } from '../RecordsPageSkeleton';
 import RecordAddressSearch from '../ui/record-address-search/RecordAddressSearch';
 import RecordDistricts from '../ui/record-districts/RecordDistricts';
+import RecordGroupList from '../ui/record-group/RecordGroupList';
 import RecordList from '../ui/record-list/RecordList';
 import RecordLoadError from '../ui/record-load-error/RecordLoadError';
 import RecordNotice from '../ui/record-notice/RecordNotice';
+import RecordStepper from '../ui/record-stepper/RecordStepper';
 import RecordsDesktopMap from './RecordsDesktopMap';
 
+import * as detailStyles from './RecordsDesktopDetail.styles';
 import * as styles from './RecordsDesktopPage.styles';
 
 /**
  * 데스크탑 본 방 기록. 왼쪽 칸에 리스트, 오른쪽에 지도를 두고 보기 전환 없이 함께 본다.
+ * 리스트 위 `통근 시간`과 통근거리 줄은 휴대폰 리스트와 같이 둔다.
+ * 리스트에서 방을 고르면 지도도 그 방 핀 자리로 옮긴다.
  * 리스트나 지도에서 고른 방(`/properties/:propertyId`)은 동네 찾기처럼 리스트 옆 칸에 연다.
  * 리스트를 덮지 않으므로 상세를 연 채로 다른 방을 바로 고를 수 있고, 지도 왼쪽 위 닫기 버튼으로 칸을 접는다.
  * 새 매물은 지도에서 위치를 찍어 등록 화면 없이 바로 만들고(이름은 `새 매물`), 만든 매물의 상세를 옆 칸에 연다.
@@ -31,11 +40,15 @@ import * as styles from './RecordsDesktopPage.styles';
  */
 const RecordsDesktopPage = () => {
   const navigate = useNavigate();
+  const params = useParams();
+  const isReplacingChecklist = params.stage !== undefined;
   const records = useRecords({
-    selectedId: useParams().propertyId ?? null,
+    selectedId: params.propertyId ?? null,
     setSelectedId: (id) => navigate(id === null ? RECORDS_PATH : `${RECORDS_PATH}/${id}`),
   });
   const { selected, setSelectedId, setNotice } = records;
+  // 데스크탑은 늘 지도를 함께 그린다. 매물 목록을 기다리는 동안 지도 SDK를 먼저 받기 시작한다.
+  usePreloadMapSdk(true);
   // 지도에서 찍어 매물을 만드는 중인 위치. 만드는 동안 그 자리에 등록 핀을 둔다.
   const [creatingAt, setCreatingAt] = useState<MapAddress | null>(null);
   const quickCreate = useQuickCreateProperty({
@@ -50,11 +63,14 @@ const RecordsDesktopPage = () => {
       setNotice('매물을 만들지 못했어요. 다시 시도해 주세요.');
     },
   });
-  // 휴대폰처럼 처음 들어오면 거리 메모를 켠 채로 연다.
   const layers = useRecordsMapLayers(records, {
-    initialCategory: 'MEMO',
     registeringAt: creatingAt,
-    groupAction: 'zoom',
+    // 겹친 매물 마커를 누르면 갈라질 때까지 다가가지 않고, 맨 왼쪽 리스트를 그 자리 매물 목록(뒤로가기가 있는 목록)으로 바꾼다.
+    groupAction: 'list',
+    // 목록이나 상세를 열어 둔 채 지도 빈 곳을 눌러도 닫히지 않는다.
+    keepSelectionOnMapTap: true,
+    // 데스크탑은 화면이 넓어 거리 메모를 한 단계 더 멀리까지 낱개로 보여 준다.
+    memoLevelBoost: 1,
     onRegister: (location) => {
       if (quickCreate.isCreating) return;
       setCreatingAt(location);
@@ -72,23 +88,64 @@ const RecordsDesktopPage = () => {
       error={records.properties.error}
       onRetry={() => void records.properties.refetch()}
     />
+  ) : layers.groupRecords.length > 0 ? (
+    // 겹친 매물 마커를 누르면 맨 왼쪽 리스트가 그 자리 매물 목록으로 바뀌고, 뒤로가기로 원래 리스트로 돌아간다.
+    <div className={styles.list}>
+      <DetailHeader
+        title={`이 자리 매물 ${layers.groupRecords.length}개`}
+        backLabel="전체 리스트로 돌아가기"
+        onBack={layers.closeGroup}
+      />
+      <RecordGroupList records={layers.groupRecords} onOpen={records.showRecord} onNotice={setNotice} />
+    </div>
+  ) : records.district !== '전체' ? (
+    // 동네 뱃지를 고르면 맨 왼쪽 리스트가 그 동네 목록으로 바뀌고, 뒤로가기로 전체 리스트로 돌아간다. 옆으로 나오는 칸은 상세만 쓴다.
+    <div className={styles.list}>
+      <DetailHeader
+        title={`${records.district} 매물 ${records.records.length}개`}
+        backLabel="전체 리스트로 돌아가기"
+        onBack={() => records.selectDistrict('전체')}
+      />
+      <RecordList
+        records={records.records}
+        district={records.district}
+        onOpen={records.showRecord}
+        onNotice={setNotice}
+      />
+    </div>
   ) : (
     <RecordList
       className={styles.list}
       records={records.records}
       district={records.district}
-      onOpen={setSelectedId}
+      onOpen={records.showRecord}
       onNotice={setNotice}
     />
   );
 
+  // 상세 칸 머리의 이전, 다음은 리스트 순서대로 넘기고, 지도도 그 매물 자리로 옮긴다.
+  const neighbors = selected !== undefined ? recordNeighbors(records.records, selected.id) : null;
   const detail =
     selected !== undefined ? (
-      <aside className={styles.detail} aria-label="선택한 매물 상세">
-        <PropertyDetailPage
-          key={selected.id}
-          panel={{ propertyId: Number(selected.id), onClose: () => setSelectedId(null) }}
-        />
+      <aside
+        className={detailStyles.detail}
+        aria-label="선택한 매물 상세"
+        data-checklist-replacement={isReplacingChecklist || undefined}
+      >
+        <div className={detailStyles.detailScroll} key={`${selected.id}:${isReplacingChecklist}`}>
+          {isReplacingChecklist ? (
+            <PropertyActiveChecklistPage embedded />
+          ) : (
+            <PropertyDetailPage
+              key={selected.id}
+              panel={{
+                propertyId: Number(selected.id),
+                onClose: () => setSelectedId(null),
+                headerEnd: neighbors && <RecordStepper neighbors={neighbors} onStep={records.showRecord} />,
+              }}
+            />
+          )}
+        </div>
       </aside>
     ) : undefined;
 
@@ -122,6 +179,7 @@ const RecordsDesktopPage = () => {
                 districts={
                   <RecordDistricts
                     districts={records.districts}
+                    counts={records.districtCounts}
                     district={records.district}
                     onSelect={records.selectDistrict}
                     overMap

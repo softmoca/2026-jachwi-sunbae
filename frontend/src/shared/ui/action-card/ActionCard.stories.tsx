@@ -3,10 +3,11 @@ import { fn } from 'storybook/test';
 
 import iconHome from '@/shared/assets/illustrations/icon-home.webp';
 import iconMap from '@/shared/assets/illustrations/icon-map.webp';
-import goose from '@/shared/assets/jachwi-sunbae-goose.webp';
-import goose2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
+import { LOGO_DUCK } from '@/shared/assets/imageAssets';
 
 import ActionCard, { ActionCardIllustration } from './ActionCard';
+
+const { src: goose, src2x: goose2x } = LOGO_DUCK;
 
 /** 컨트롤에서 고르는 그림. 값은 이름으로 두고 그릴 때 그림으로 바꾼다. */
 const illustrations = {

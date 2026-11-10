@@ -26,12 +26,10 @@ const meta = {
       control: false,
       description: '메모 조회 결과(usePropertyMemo). 불러오는 중·실패·빈 메모·메모 있음 상태를 나눠 그린다.',
     },
-    triggerRef: { control: false, description: '수정 시트를 닫은 뒤 포커스를 돌려줄 수정 버튼 ref.' },
     onEdit: { description: '메모 수정 버튼을 누르면 부른다.' },
   },
   args: {
     memo: createMemoQuery({}),
-    triggerRef: { current: null },
     onEdit: fn(),
   },
   decorators: [

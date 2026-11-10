@@ -55,6 +55,19 @@ export const details = cx(
   'NeighborhoodPlacePanel-details',
 );
 
+/** 시트 높이를 채우고 동작 버튼을 맨 아래에 둔다. */
+export const fill = css`
+  label: NeighborhoodPlacePanel-fill;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  & > .NeighborhoodPlacePanel-actions {
+    margin-top: auto;
+  }
+`;
+
 // 다른 요소의 선택자에서 `.NeighborhoodPlacePanel-actions`로 가리킨다.
 export const actions = cx(
   css`
@@ -144,5 +157,24 @@ export const phone = css`
   & span {
     color: var(--color-muted);
     font-size: 0.75rem;
+  }
+`;
+
+/** 장소 정보의 항목과 값(주소, 거리 등). */
+export const facts = css`
+  label: NeighborhoodPlacePanel-facts;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+
+  & dt {
+    color: var(--color-muted);
+  }
+
+  & dd {
+    margin: 0;
+    color: var(--color-ink);
   }
 `;

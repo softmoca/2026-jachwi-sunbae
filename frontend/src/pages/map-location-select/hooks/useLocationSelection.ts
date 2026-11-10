@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { reverseGeocode } from '@/features/map/api/mapApi';
+import { hasAddress, isAddressNotFound } from '@/features/map/lib/mapAddress';
 import {
   coordinatesAreClose,
   DEFAULT_MAP_CENTER,
@@ -12,7 +13,8 @@ import type { MapAddress } from '@/features/map/model/Map';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
-export type LocationSelectionStatus = 'locating' | 'geocoding' | 'ready' | 'error';
+/** `unsupported`는 그 자리에 주소가 없다는 응답(바다, 산 등), `error`는 위치나 네트워크의 일시 실패다. */
+export type LocationSelectionStatus = 'locating' | 'geocoding' | 'ready' | 'unsupported' | 'error';
 
 const CENTER_RESOLVE_DELAY_MS = 450;
 
@@ -49,9 +51,9 @@ const useLocationSelection = (initialLocation: MapAddress | undefined) => {
         if (requestSequenceRef.current !== sequence) return;
         setSelected(address);
         writeLastMapCenter(address);
-        setStatus('ready');
-      } catch {
-        if (requestSequenceRef.current === sequence) setStatus('error');
+        setStatus(hasAddress(address) ? 'ready' : 'unsupported');
+      } catch (error) {
+        if (requestSequenceRef.current === sequence) setStatus(isAddressNotFound(error) ? 'unsupported' : 'error');
       }
     },
     [config],
@@ -86,6 +88,8 @@ const useLocationSelection = (initialLocation: MapAddress | undefined) => {
   const handleCenterChange = (latitude: number, longitude: number) => {
     if (coordinatesAreClose(selected, { latitude, longitude })) return;
     if (centerTimerRef.current !== null) window.clearTimeout(centerTimerRef.current);
+    // 주소를 묻기 전에도 옮기는 중으로 알려, 그 사이 저장이 옮기기 전 위치로 닫히지 않게 한다.
+    setStatus('geocoding');
     centerTimerRef.current = window.setTimeout(
       () => void selectCoordinates(latitude, longitude),
       CENTER_RESOLVE_DELAY_MS,

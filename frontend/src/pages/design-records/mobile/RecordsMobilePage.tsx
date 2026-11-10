@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import usePreloadMapSdk from '@/features/map/hooks/usePreloadMapSdk';
 import type { MapAddress } from '@/features/map/model/Map';
 import AreaSkeleton from '@/shared/ui/area-skeleton/AreaSkeleton';
 
@@ -42,7 +43,6 @@ const RecordsMobilePage = () => {
     },
   });
   const layers = useRecordsMapLayers(records, {
-    initialCategory: 'MEMO',
     registeringAt: creatingAt,
     onRegister: (location) => {
       if (quickCreate.isCreating) return;
@@ -52,10 +52,13 @@ const RecordsMobilePage = () => {
   });
   const [view, setView] = useRecordsView();
   const showsMap = view === 'map';
+  // 지도는 매물 목록이 온 뒤에 붙으므로, 목록을 기다리는 동안 지도 SDK를 먼저 받기 시작한다.
+  usePreloadMapSdk(showsMap);
   // 오른쪽 위 검색 버튼을 누르면 헤더 자리를 주소 검색창으로 바꾼다.
   const [isSearching, setIsSearching] = useState(false);
-  // 헤더·동네 뱃지는 지도가 실제로 보일 때만 지도 위에 띄운다. 불러오는 중·실패 안내를 가리지 않게 한다.
-  const overMap = showsMap && records.properties.isSuccess;
+  // 헤더·동네 뱃지는 지도 보기에서 지도(불러오는 중 뼈대 포함) 위에 띄워, 지도가 나오기 전에도 헤더만 흰 띠로 남지 않게 한다.
+  // 실패 안내는 가리지 않도록 제외한다.
+  const overMap = showsMap && !records.properties.isError;
 
   return (
     <main className={styles.page}>
@@ -80,12 +83,13 @@ const RecordsMobilePage = () => {
           ) : (
             <RecordsMobileHeader view={view} onViewChange={setView} onSearchOpen={() => setIsSearching(true)} />
           )}
-          {/* 목적지 모드에서는 동네 뱃지도 거둬 목적지 고르기만 남긴다. 기록을 받는 동안은 뼈대처럼 칩 줄을 두지 않는다. */}
-          {!records.properties.isPending && !(showsMap && layers.destination.isPicking) && (
+          {/* 기록을 받는 동안은 뼈대처럼 칩 줄을 두지 않는다. */}
+          {!records.properties.isPending && (
             <RecordDistricts
               districts={records.districts}
+              counts={records.districtCounts}
               district={records.district}
-              onSelect={records.selectDistrict}
+              onSelect={(next) => records.selectDistrict(next, { open: true })}
               overMap={overMap}
             />
           )}
@@ -108,8 +112,6 @@ const RecordsMobilePage = () => {
               className={styles.list}
               records={records.records}
               district={records.district}
-              commute={records.commute}
-              distance={records.distance}
               onNotice={setNotice}
             />
           )}

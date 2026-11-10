@@ -2,26 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import {
-  type CommuteDestination,
-  readCommuteDestination,
-  writeCommuteDestination,
-} from '@/features/map/lib/commuteDestinationStore';
-import {
   DEFAULT_MAP_CENTER,
   type MapCoordinate,
   MapLocationError,
   requestCurrentMapLocation,
 } from '@/features/map/lib/mapLocation';
-import { distanceMeters } from '@/features/map/lib/mapViewportQuery';
 import type { MapMarker } from '@/features/map/model/Map';
-import { usePropertyCommuteTimes, usePropertyList } from '@/features/property/api/useProperties';
+import { usePropertyList } from '@/features/property/api/useProperties';
+import usePropertyMarkerPhotos from '@/features/property/hooks/usePropertyMarkerPhotos';
+import { takeMovedProperty } from '@/features/property/model/movedProperty';
+import { PROPERTY_PLACEHOLDER } from '@/shared/assets/propertyImageAssets';
 
-import {
-  commuteDistanceLabel,
-  commuteLabel,
-  recordPresentation,
-  shortDistanceLabel,
-} from '../model/recordPresentation';
+import { recordPresentation } from '../model/recordPresentation';
 
 type RecordsLocationState = { focusHeading?: boolean } | null;
 
@@ -47,57 +39,14 @@ const useRecords = (selection?: RecordsSelection) => {
     () => properties.data?.pages.flatMap((page) => page.content).map(recordPresentation) ?? [],
     [properties.data],
   );
-  // 동네 찾기에서 마지막으로 고른 출퇴근 장소까지 매물마다 통근 시간을 붙인다.
-  // 들어오자마자 계산하지 않고, 리스트 위 `통근 시간` 버튼을 눌렀을 때만 부른다. 장소가 없으면 버튼도 없다.
-  // 지도 레일의 `통근`에서 정하거나 바꿀 수 있고, 정하면 동네 찾기와 같은 자리에 기억한다.
-  const [destination, setDestinationState] = useState(readCommuteDestination);
-  const [showsCommute, setShowsCommute] = useState(false);
-  const commuteTimes = usePropertyCommuteTimes(showsCommute ? destination : null);
-  const commuteLabels = useMemo(() => {
-    const labels = new Map<string, string>();
-    if (!showsCommute || !destination || !commuteTimes.data) return labels;
-    for (const commute of commuteTimes.data.properties)
-      labels.set(String(commute.propertyId), commuteLabel(commute, destination.name, commuteTimes.data.maxMinutes));
-    return labels;
-  }, [showsCommute, destination, commuteTimes.data]);
-  // 통근 장소까지 직선거리(통근거리). 지도 레일의 `통근`을 켜면 지도 핀의 가격 자리와 리스트 카드 맨 위에 붙인다.
-  const [showsDistance, setShowsDistance] = useState(false);
-  const distanceLabels = useMemo(() => {
-    const labels = new Map<string, string>();
-    if (!showsDistance || !destination) return labels;
-    for (const record of allRecords)
-      labels.set(
-        record.id,
-        record.latitude === null || record.longitude === null
-          ? '위치가 없어 거리를 몰라요'
-          : commuteDistanceLabel(
-              distanceMeters(destination, { latitude: record.latitude, longitude: record.longitude }),
-            ),
-      );
-    return labels;
-  }, [showsDistance, destination, allRecords]);
-  const distance = {
-    destination,
-    labels: distanceLabels,
-    isShown: showsDistance,
-    toggle: () => setShowsDistance((current) => !current),
-    hide: () => setShowsDistance(false),
-    /** 목적지를 정하거나 바꾸고 거리를 바로 보여 준다. 통근 시간도 이 목적지로 다시 구한다. */
-    setDestination: (next: CommuteDestination) => {
-      writeCommuteDestination(next);
-      setDestinationState(next);
-      setShowsDistance(true);
-    },
-  };
-  const commute = {
-    destinationName: destination?.name ?? null,
-    labels: commuteLabels,
-    isError: commuteTimes.isError,
-    isShown: showsCommute,
-    isLoading: showsCommute && commuteTimes.isFetching,
-    toggle: () => setShowsCommute((current) => !current),
-  };
+  // 주소가 없는 매물도 `주소 미등록` 뱃지로 모아 보여 준다.
   const districts = ['전체', ...new Set(allRecords.map((record) => record.district))];
+  /** 뱃지 오른쪽에 두는 동네별 매물 수. */
+  const districtCounts = useMemo(() => {
+    const counts: Record<string, number> = { 전체: allRecords.length };
+    for (const record of allRecords) counts[record.district] = (counts[record.district] ?? 0) + 1;
+    return counts;
+  }, [allRecords]);
   const [district, setDistrict] = useState('전체');
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const selectedId = selection ? selection.selectedId : localSelectedId;
@@ -113,9 +62,22 @@ const useRecords = (selection?: RecordsSelection) => {
   );
   const selected = records.find((record) => record.id === selectedId);
 
+  // 상세에서 위치를 바꿔 저장한 매물이 새 좌표로 목록에 들어오면, 그 자리로 지도를 옮기고 매물을 골라 새 핀을 보인다.
+  // 처음 그릴 때(휴대폰은 상세에서 돌아오며 새로 그린다)도 첫 기록 대신 그 매물로 간다.
+  const hasCentered = useRef(false);
+  useEffect(() => {
+    const moved = takeMovedProperty((propertyId) => allRecords.find((record) => record.id === String(propertyId)));
+    if (moved === null) return;
+    const movedId = String(moved.propertyId);
+    hasCentered.current = true;
+    setDistrict('전체');
+    if (selectedId !== movedId) setSelectedId(movedId);
+    setCenter({ latitude: moved.latitude, longitude: moved.longitude });
+    setLevel((current) => Math.min(current, 4));
+  }, [allRecords, selectedId, setSelectedId]);
+
   // 기록을 처음 받았을 때만 첫 기록 자리로 지도를 옮긴다. 매물을 만들거나 지워 목록을 다시 받을 때마다 옮기면
   // 방금 만든 매물로 다가간 지도가 다른 자리로 튄다.
-  const hasCentered = useRef(false);
   useEffect(() => {
     if (hasCentered.current) return;
     const first = allRecords.find((record) => record.latitude !== null && record.longitude !== null);
@@ -125,6 +87,7 @@ const useRecords = (selection?: RecordsSelection) => {
     }
   }, [allRecords]);
 
+  const photoUrls = usePropertyMarkerPhotos(records);
   const markers = useMemo<MapMarker[]>(
     () =>
       records.flatMap((record) =>
@@ -135,22 +98,17 @@ const useRecords = (selection?: RecordsSelection) => {
                 latitude: record.latitude,
                 longitude: record.longitude,
                 label: record.name,
-                summary: {
-                  amount:
-                    showsDistance && destination
-                      ? shortDistanceLabel(
-                          distanceMeters(destination, { latitude: record.latitude, longitude: record.longitude }),
-                        )
-                      : record.price,
-                },
+                summary: { amount: record.rent },
                 tone: 'property',
                 actionable: true,
                 appear: record.id === createdId || undefined,
+                // 대표 사진이 있으면 그 사진, 없으면 기본 매물 이미지를 네모 마커로 올려 모든 매물 마커를 같은 모양으로 둔다.
+                photo: photoUrls.get(record.id) ?? PROPERTY_PLACEHOLDER.src2x,
               },
             ]
           : [],
       ),
-    [records, createdId, showsDistance, destination],
+    [records, createdId, photoUrls],
   );
 
   /**
@@ -165,16 +123,48 @@ const useRecords = (selection?: RecordsSelection) => {
     setLevel((current) => Math.min(current, 4));
   };
 
-  const selectDistrict = (next: string) => {
+  /**
+   * 동네 뱃지를 누른다. 다른 뱃지면 그 동네로 옮기고, 이미 고른 뱃지를 다시 누르면 그 동네 매물을
+   * 목록 순서대로 하나씩 넘기며 지도를 그 매물로 옮긴다(마지막 다음은 처음으로 돌아간다).
+   * `open`이면 다른 뱃지를 눌러도 그 동네 첫 매물을 바로 열어 보인다(휴대폰 시트).
+   * 같은 뱃지를 다시 눌러 매물을 넘기는 것은 `open`일 때(휴대폰)만 한다. 데스크탑은 아무 일도 하지 않는다.
+   */
+  const selectDistrict = (next: string, options?: { open?: boolean }) => {
+    if (next === district && options?.open !== true) return;
+    if (next === district) {
+      const inDistrict = allRecords.filter(
+        (record) =>
+          (next === '전체' || record.district === next) && record.latitude !== null && record.longitude !== null,
+      );
+      if (inDistrict.length === 0) return;
+      const current = inDistrict.findIndex((record) => record.id === selectedId);
+      const target = inDistrict[(current + 1) % inDistrict.length];
+      setSelectedId(target.id);
+      setCenter({ latitude: target.latitude as number, longitude: target.longitude as number });
+      setLevel((currentLevel) => Math.min(currentLevel, 5));
+      return;
+    }
     setDistrict(next);
     const first = allRecords.find(
       (record) =>
         (next === '전체' || record.district === next) && record.latitude !== null && record.longitude !== null,
     );
-    setSelectedId(null);
+    const opened = options?.open === true && first !== undefined;
+    setSelectedId(opened ? first.id : null);
     if (first && first.latitude !== null && first.longitude !== null)
       setCenter({ latitude: first.latitude, longitude: first.longitude });
     setLevel(next === '전체' ? 8 : 5);
+  };
+
+  /**
+   * 리스트에서 고른 매물을 열고 지도를 그 매물 핀 자리로 옮긴다. 배율은 그대로 두어 주변을 함께 본다.
+   * 위치가 없는 매물은 고르기만 한다.
+   */
+  const showRecord = (recordId: string) => {
+    setSelectedId(recordId);
+    const record = records.find((item) => item.id === recordId);
+    if (record !== undefined && record.latitude !== null && record.longitude !== null)
+      setCenter({ latitude: record.latitude, longitude: record.longitude });
   };
 
   /** 주소 검색 결과처럼 고른 자리로 지도를 옮기고 동네 수준으로 확대한다. */
@@ -196,7 +186,7 @@ const useRecords = (selection?: RecordsSelection) => {
       (error: unknown) =>
         setNotice(
           error instanceof MapLocationError && error.reason === 'denied'
-            ? '위치 권한이 꺼져 있어요. 브라우저 설정에서 위치 권한을 켜 주세요.'
+            ? '위치 권한이 꺼져 있어요. 설정에서 켜 주세요.'
             : '현재 위치를 확인하지 못했어요.',
         ),
     );
@@ -206,6 +196,7 @@ const useRecords = (selection?: RecordsSelection) => {
     headingRef,
     properties,
     districts,
+    districtCounts,
     district,
     setDistrict,
     selectDistrict,
@@ -221,10 +212,9 @@ const useRecords = (selection?: RecordsSelection) => {
     moveTo,
     moveToCurrentLocation,
     revealCreated,
+    showRecord,
     notice,
     setNotice,
-    commute,
-    distance,
   };
 };
 

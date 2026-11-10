@@ -63,6 +63,7 @@ export type PropertySummary = {
 export type PropertyCommuteStatus = 'REACHABLE' | 'UNREACHABLE' | 'NO_LOCATION';
 export type PropertyCommuteTime = {
   propertyId: number;
+  propertyName: string;
   status: PropertyCommuteStatus;
   commuteMinutes: number | null;
 };
@@ -159,6 +160,17 @@ export type PropertyChecklistOverview = {
 
 export type PropertyChecklistItemStatus = 'UNCONFIRMED' | 'GOOD' | 'CAUTION';
 
+export const PROPERTY_CHECKLIST_CATEGORIES = [
+  'SECURITY',
+  'WINDOW_LIGHT',
+  'WATER_BATHROOM',
+  'ROOM_CONDITION',
+  'BASIC_OPTIONS',
+  'OTHER',
+] as const;
+
+export type PropertyChecklistCategory = (typeof PROPERTY_CHECKLIST_CATEGORIES)[number];
+
 export type PropertyChecklistItem = {
   itemId: number;
   systemCheckItemId: number | null;
@@ -166,6 +178,8 @@ export type PropertyChecklistItem = {
   displayOrder: number;
   status: PropertyChecklistItemStatus;
   memo: string;
+  /** 카테고리를 제공하지 않는 이전 API 응답과도 호환한다. */
+  category?: PropertyChecklistCategory;
 };
 
 export type PropertyChecklistDetail = {

@@ -197,7 +197,7 @@ describe('매물 입력 검증', () => {
   });
 
   it('서버 필드 오류는 필드별 안내 문구로 바꾼다', () => {
-    expect(propertyFieldErrorMessage('name')).toBe('서버에서 매물 이름을 확인하지 못했습니다.');
+    expect(propertyFieldErrorMessage('name')).toBe('매물 이름을 다시 확인해 주세요.');
     expect(propertyFieldErrorMessage('address')).toBe('주소를 확인해 주세요.');
     expect(propertyFieldErrorMessage('latitude')).toBe('선택한 위치의 위도를 확인해 주세요.');
   });

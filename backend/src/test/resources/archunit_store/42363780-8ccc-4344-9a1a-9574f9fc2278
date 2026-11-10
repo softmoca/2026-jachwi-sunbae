@@ -1,0 +1,215 @@
+규칙: 서비스는 Controller와 Controller DTO에 의존하지 않는다
+
+선언: 메서드 <com.jachwisunbae.property.service.PropertyService.create(java.lang.Long, com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest)>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest 타입을 매개변수로 사용합니다.\
+    위치: (PropertyService.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.address() 메서드를 호출합니다.\
+    위치: (PropertyService.java:85)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.address()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.availableMoveInDate() 메서드를 호출합니다.\
+    위치: (PropertyService.java:86)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.availableMoveInDate()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.depositAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:84)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.depositAmount()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.discoverySource() 메서드를 호출합니다.\
+    위치: (PropertyService.java:87)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.discoverySource()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.latitude() 메서드를 호출합니다.\
+    위치: (PropertyService.java:85)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.latitude()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.longitude() 메서드를 호출합니다.\
+    위치: (PropertyService.java:85)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.longitude()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.maintenanceFeeAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:86)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.maintenanceFeeAmount()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.monthlyRentAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:84)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.monthlyRentAmount()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.name() 메서드를 호출합니다.\
+    위치: (PropertyService.java:84)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.name()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.roomOptions() 메서드를 호출합니다.\
+    위치: (PropertyService.java:87)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.roomOptions()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.utilityOptions() 메서드를 호출합니다.\
+    위치: (PropertyService.java:87)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.utilityOptions()>
+  - 문제: PropertyService.create()에서 Controller DTO CreatePropertyRequest.visitScheduledAt() 메서드를 호출합니다.\
+    위치: (PropertyService.java:86)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.CreatePropertyRequest.visitScheduledAt()>
+
+선언: 메서드 <com.jachwisunbae.property.service.PropertyService.findDetail(java.lang.Long, java.lang.Long)>
+  - 문제: PropertyService.findDetail()에서 Controller DTO PropertyDetailResponse 타입을 반환합니다.\
+    위치: (PropertyService.java:0)\
+    상세: 의존 유형: 반환 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyDetailResponse>
+  - 문제: PropertyService.findDetail()에서 Controller DTO PropertyDetailResponse.from() 메서드를 호출합니다.\
+    위치: (PropertyService.java:69)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyDetailResponse.from(com.jachwisunbae.property.entity.Property, java.util.List, java.lang.Long, com.jachwisunbae.property.controller.dto.response.PropertyProgress)>
+  - 문제: PropertyService.findDetail()에서 Controller DTO PropertyProgress.from() 메서드를 호출합니다.\
+    위치: (PropertyService.java:71)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.from(com.jachwisunbae.property.repository.query.PropertyProgressSummary)>
+
+선언: 메서드 <com.jachwisunbae.property.service.PropertyService.findList(java.lang.Long)>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyChecklistOverviewResponse.from() 메서드를 호출합니다.\
+    위치: (PropertyService.java:57)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistOverviewResponse.from(java.lang.Long, java.util.List)>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyChecklistOverviewResponse.overallProgress() 메서드를 호출합니다.\
+    위치: (PropertyService.java:59)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistOverviewResponse.overallProgress()>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyChecklistOverviewResponse.stages() 메서드를 호출합니다.\
+    위치: (PropertyService.java:59)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistOverviewResponse.stages()>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyListItemResponse.from() 메서드를 호출합니다.\
+    위치: (PropertyService.java:59)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyListItemResponse.from(com.jachwisunbae.property.repository.query.PropertyListItemQuery, com.jachwisunbae.property.controller.dto.response.PropertyRepresentativePhoto, com.jachwisunbae.property.controller.dto.response.PropertyProgress, java.util.List)>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyListResponse 타입을 반환합니다.\
+    위치: (PropertyService.java:0)\
+    상세: 의존 유형: 반환 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyListResponse>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyListResponse() 생성자를 호출합니다.\
+    위치: (PropertyService.java:62)\
+    상세: 의존 유형: 생성자 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyListResponse.<init>(int, java.util.List)>
+  - 문제: PropertyService.findList()에서 Controller DTO PropertyRepresentativePhoto() 생성자를 호출합니다.\
+    위치: (PropertyService.java:56)\
+    상세: 의존 유형: 생성자 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyRepresentativePhoto.<init>(java.lang.Long, java.lang.String, java.lang.String)>
+
+선언: 메서드 <com.jachwisunbae.property.service.PropertyService.update(java.lang.Long, java.lang.Long, com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest)>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest 타입을 매개변수로 사용합니다.\
+    위치: (PropertyService.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.address() 메서드를 호출합니다.\
+    위치: (PropertyService.java:108)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.address()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.availableMoveInDate() 메서드를 호출합니다.\
+    위치: (PropertyService.java:110)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.availableMoveInDate()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.depositAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:107)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.depositAmount()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.discoverySource() 메서드를 호출합니다.\
+    위치: (PropertyService.java:111)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.discoverySource()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.latitude() 메서드를 호출합니다.\
+    위치: (PropertyService.java:109)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.latitude()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.longitude() 메서드를 호출합니다.\
+    위치: (PropertyService.java:109)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.longitude()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.maintenanceFeeAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:110)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.maintenanceFeeAmount()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.monthlyRentAmount() 메서드를 호출합니다.\
+    위치: (PropertyService.java:108)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.monthlyRentAmount()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.name() 메서드를 호출합니다.\
+    위치: (PropertyService.java:107)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.name()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.roomOptions() 메서드를 호출합니다.\
+    위치: (PropertyService.java:111)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.roomOptions()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.utilityOptions() 메서드를 호출합니다.\
+    위치: (PropertyService.java:111)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.utilityOptions()>
+  - 문제: PropertyService.update()에서 Controller DTO UpdatePropertyRequest.visitScheduledAt() 메서드를 호출합니다.\
+    위치: (PropertyService.java:110)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyRequest.visitScheduledAt()>
+
+선언: 메서드 <com.jachwisunbae.property.service.PropertyService.updateMemoByMemberIdAndPropertyId(java.lang.Long, java.lang.Long, com.jachwisunbae.property.controller.dto.request.UpdatePropertyMemoRequest)>
+  - 문제: PropertyService.updateMemoByMemberIdAndPropertyId()에서 Controller DTO UpdatePropertyMemoRequest 타입을 매개변수로 사용합니다.\
+    위치: (PropertyService.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyMemoRequest>
+  - 문제: PropertyService.updateMemoByMemberIdAndPropertyId()에서 Controller DTO UpdatePropertyMemoRequest.freeMemo() 메서드를 호출합니다.\
+    위치: (PropertyService.java:123)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.request.UpdatePropertyMemoRequest.freeMemo()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfService.collectStage(java.lang.Long, java.lang.Long, com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse)>
+  - 문제: PropertyComparisonPdfService.collectStage()에서 Controller DTO PropertyChecklistStageResponse 타입을 매개변수로 사용합니다.\
+    위치: (PropertyComparisonPdfService.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse>
+  - 문제: PropertyComparisonPdfService.collectStage()에서 Controller DTO PropertyChecklistStageResponse.applied() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfService.java:100)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.applied()>
+  - 문제: PropertyComparisonPdfService.collectStage()에서 Controller DTO PropertyChecklistStageResponse.propertyChecklistId() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfService.java:102)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.propertyChecklistId()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfService.collectStages(java.lang.Long, java.lang.Long)>
+  - 문제: PropertyComparisonPdfService.collectStages()에서 Controller DTO PropertyChecklistOverviewResponse.from() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfService.java:87)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistOverviewResponse.from(java.lang.Long, java.util.List)>
+  - 문제: PropertyComparisonPdfService.collectStages()에서 Controller DTO PropertyChecklistOverviewResponse.stages() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfService.java:89)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistOverviewResponse.stages()>
+  - 문제: PropertyComparisonPdfService.collectStages()에서 Controller DTO PropertyChecklistStageResponse.stage() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfService.java:90)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.stage()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfViewMapper.createPropertyView(com.jachwisunbae.property.service.pdf.model.PropertyComparisonRecord, int, int)>
+  - 문제: PropertyComparisonPdfViewMapper.createPropertyView()에서 Controller DTO PropertyChecklistStageResponse.stage() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:97)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.stage()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfViewMapper.createStageView(com.jachwisunbae.property.service.pdf.model.PropertyComparisonStage, int)>
+  - 문제: PropertyComparisonPdfViewMapper.createStageView()에서 Controller DTO PropertyChecklistStageResponse.applied() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:126)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.applied()>
+  - 문제: PropertyComparisonPdfViewMapper.createStageView()에서 Controller DTO PropertyChecklistStageResponse.checklistName() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:133)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.checklistName()>
+  - 문제: PropertyComparisonPdfViewMapper.createStageView()에서 Controller DTO PropertyChecklistStageResponse.progress() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:134)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.progress()>
+  - 문제: PropertyComparisonPdfViewMapper.createStageView()에서 Controller DTO PropertyChecklistStageResponse.stage() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:132)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.stage()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfViewMapper.progress(com.jachwisunbae.property.controller.dto.response.PropertyProgress)>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress 타입을 매개변수로 사용합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.cautionCount() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:154)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.cautionCount()>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.completedCount() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:153)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.completedCount()>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.goodCount() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:153)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.goodCount()>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.progressRate() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:155)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.progressRate()>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.totalCount() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:153)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.totalCount()>
+  - 문제: PropertyComparisonPdfViewMapper.progress()에서 Controller DTO PropertyProgress.unconfirmedCount() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:154)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyProgress.unconfirmedCount()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.PropertyComparisonPdfViewMapper.stageProgress(com.jachwisunbae.property.service.pdf.model.PropertyComparisonRecord, com.jachwisunbae.checklist.type.CheckStage)>
+  - 문제: PropertyComparisonPdfViewMapper.stageProgress()에서 Controller DTO PropertyChecklistStageResponse.applied() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:147)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.applied()>
+  - 문제: PropertyComparisonPdfViewMapper.stageProgress()에서 Controller DTO PropertyChecklistStageResponse.progress() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:148)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.progress()>
+  - 문제: PropertyComparisonPdfViewMapper.stageProgress()에서 Controller DTO PropertyChecklistStageResponse.stage() 메서드를 호출합니다.\
+    위치: (PropertyComparisonPdfViewMapper.java:145)\
+    상세: 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse.stage()>
+
+선언: 메서드 <com.jachwisunbae.property.service.pdf.model.PropertyComparisonStage.summary()>
+  - 문제: PropertyComparisonStage.summary()에서 Controller DTO PropertyChecklistStageResponse 타입을 반환합니다.\
+    위치: (PropertyComparisonStage.java:0)\
+    상세: 의존 유형: 반환 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse>
+
+선언: 생성자 <com.jachwisunbae.property.service.pdf.model.PropertyComparisonStage.<init>(com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse, com.jachwisunbae.property.repository.query.PropertyChecklistApplicationQuery)>
+  - 문제: PropertyComparisonStage()에서 Controller DTO PropertyChecklistStageResponse 타입을 매개변수로 사용합니다.\
+    위치: (PropertyComparisonStage.java:0)\
+    상세: 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse>
+
+선언: 필드 <com.jachwisunbae.property.service.pdf.model.PropertyComparisonStage.summary>
+  - 문제: PropertyComparisonStage.summary에서 Controller DTO PropertyChecklistStageResponse 타입을 필드로 보관합니다.\
+    위치: (PropertyComparisonStage.java:0)\
+    상세: 의존 유형: 필드 타입 | 대상: <com.jachwisunbae.property.controller.dto.response.PropertyChecklistStageResponse>

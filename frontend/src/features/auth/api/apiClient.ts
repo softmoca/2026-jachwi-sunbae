@@ -65,6 +65,8 @@ type ApiRequestOptions<T> = {
    * OAuth 시작 API는 Refresh 쿠키를 확인하지 못하면 `401 OAUTH_AUTHENTICATION_FAILED`를 준다.
    */
   nonSessionUnauthorizedCodes?: readonly string[];
+  /** 비동기 기기 권한 확인 중 회원이 바뀌면 새 회원에게 이전 동의를 적용하지 않는다. */
+  expectedMemberId?: number;
   parseData: (value: unknown) => T;
 };
 
@@ -177,6 +179,7 @@ type ExecuteRequestOptions = {
   requiresAuthentication: boolean;
   includeCredentials?: boolean;
   nonSessionUnauthorizedCodes?: readonly string[];
+  expectedMemberId?: number;
 };
 
 /** 401 응답이 Access Token 문제가 아니라 그 API의 업무 오류인지 본다. 본문은 복제해 읽어 원래 응답을 그대로 둔다. */
@@ -447,10 +450,22 @@ const getOrStartAuthentication = (config: PublicConfig): Promise<string> => {
 const executeRequest = async (options: ExecuteRequestOptions): Promise<Response> => {
   if (!options.requiresAuthentication) return sendRequest(options, null);
 
+  const assertMember = () => {
+    if (
+      options.expectedMemberId !== undefined &&
+      getAuthenticationSnapshot().session?.memberId !== options.expectedMemberId
+    ) {
+      throw new ApiError({ kind: 'authentication-ended' });
+    }
+  };
+  assertMember();
+
   const accessToken = await getOrStartAuthentication(options.config);
+  assertMember();
   // 요청 도중 다른 회원으로 바뀌거나 인증이 끝나면 늦게 온 응답을 버린다. 같은 회원의 토큰 갱신은 버리지 않는다.
   const authenticationRevision = getAuthenticationRevision();
   const throwIfAuthenticationEnded = () => {
+    assertMember();
     if (authenticationRevision !== getAuthenticationRevision()) throw new ApiError({ kind: 'authentication-ended' });
   };
 
@@ -507,6 +522,7 @@ const apiRequestInternal = async <T>({
   requiresAuthentication = true,
   includeCredentials = false,
   nonSessionUnauthorizedCodes,
+  expectedMemberId,
   parseData,
 }: ApiRequestOptions<T>): Promise<T> => {
   if (body !== undefined && formData !== undefined) {
@@ -529,6 +545,7 @@ const apiRequestInternal = async <T>({
     requiresAuthentication,
     includeCredentials,
     nonSessionUnauthorizedCodes,
+    expectedMemberId,
   });
 
   if (response.status === 204 && response.ok) {
@@ -631,7 +648,7 @@ export const apiBlobRequest = async (options: Parameters<typeof apiBlobRequestIn
 
 export const getSafeApiErrorMessage = (error: unknown): string => {
   if (!(error instanceof ApiError)) {
-    return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
   }
 
   if (error.kind === 'network') {
@@ -639,10 +656,10 @@ export const getSafeApiErrorMessage = (error: unknown): string => {
   }
 
   if (error.status === 401) {
-    return '인증이 만료되었습니다. 다시 로그인해 주세요.';
+    return '접속이 만료됐어요. 화면을 새로 고쳐 주세요.';
   }
 
-  return '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  return '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 };
 
 export const isApiErrorCode = (error: unknown, code: string): error is ApiError =>

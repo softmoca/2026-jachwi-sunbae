@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mockStatic;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
-import com.jachwisunbae.notification.provider.WeatherPushSender;
+import com.jachwisunbae.notification.provider.PushSender;
 import java.time.Clock;
 import java.util.Date;
 import org.junit.jupiter.api.Test;
@@ -19,26 +19,37 @@ import org.springframework.core.env.StandardEnvironment;
 class WeatherNotificationConfigTest {
     @Test
     void offNeedsNoFirebaseCredentials() {
-        new ApplicationContextRunner().withUserConfiguration(DisabledWeatherPushConfig.class, FirebaseWeatherPushConfig.class)
+        new ApplicationContextRunner().withUserConfiguration(DisabledPushConfig.class, FirebasePushConfig.class)
                 .run(context -> {
-                    assertThat(context).hasNotFailed().hasSingleBean(WeatherPushSender.class).doesNotHaveBean(FirebaseApp.class);
-                    assertThat(context.getBean(WeatherPushSender.class).send(null)).isFalse();
+                    assertThat(context).hasNotFailed().hasSingleBean(PushSender.class).doesNotHaveBean(FirebaseApp.class);
+                    assertThat(context.getBean(PushSender.class).send(null)).isFalse();
                 });
     }
 
     @Test
     void onRequiresProjectIdBeforeLoadingCredentials() {
-        new ApplicationContextRunner().withUserConfiguration(FirebaseWeatherPushConfig.class)
+        new ApplicationContextRunner().withUserConfiguration(FirebasePushConfig.class)
                 .withPropertyValues("weather.notification.enabled=true").withBean(Clock.class, Clock::systemUTC)
                 .run(context -> assertThat(context.getStartupFailure()).hasRootCauseMessage("날씨 알림 활성화에는 Firebase project ID가 필요합니다."));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"local", "prod"})
-    void currentProfilesStartWithoutReadingFirebaseCredentials(final String name) {
+    @Test
+    void localProfileStartsWithoutReadingFirebaseCredentials() {
         try (var credentials = mockStatic(GoogleCredentials.class)) {
-            profile(name).run(context -> {
-                assertThat(context).hasNotFailed().hasSingleBean(WeatherPushSender.class).doesNotHaveBean(FirebaseApp.class);
+            profile("local").run(context -> {
+                assertThat(context).hasNotFailed().hasSingleBean(PushSender.class).doesNotHaveBean(FirebaseApp.class);
+                credentials.verifyNoInteractions();
+            });
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"dev", "prod"})
+    void disablingOverridesProfileWithoutReadingFirebaseCredentials(final String name) {
+        // 운영 긴급 중단: app_env의 WEATHER_NOTIFICATION_ENABLED=false가 YAML의 true보다 우선한다.
+        try (var credentials = mockStatic(GoogleCredentials.class)) {
+            profile(name).withPropertyValues("weather.notification.enabled=false").run(context -> {
+                assertThat(context).hasNotFailed().hasSingleBean(PushSender.class).doesNotHaveBean(FirebaseApp.class);
                 credentials.verifyNoInteractions();
             });
         }
@@ -66,7 +77,7 @@ class WeatherNotificationConfigTest {
             credentials.when(GoogleCredentials::getApplicationDefault).thenReturn(testCredentials);
             profile(name).withPropertyValues("weather.notification.enabled=true",
                     "weather.notification.firebase-project-id=" + projectId).run(context -> {
-                assertThat(context).hasNotFailed().hasSingleBean(FirebaseApp.class).hasSingleBean(WeatherPushSender.class);
+                assertThat(context).hasNotFailed().hasSingleBean(FirebaseApp.class).hasSingleBean(PushSender.class);
                 assertThat(context.getBean(FirebaseApp.class).getOptions().getProjectId()).isEqualTo(projectId);
                 credentials.verify(GoogleCredentials::getApplicationDefault);
             });
@@ -75,7 +86,7 @@ class WeatherNotificationConfigTest {
 
     private ApplicationContextRunner profile(final String name) {
         return new ApplicationContextRunner()
-                .withUserConfiguration(DisabledWeatherPushConfig.class, FirebaseWeatherPushConfig.class)
+                .withUserConfiguration(DisabledPushConfig.class, FirebasePushConfig.class)
                 .withBean(Clock.class, Clock::systemUTC)
                 .withInitializer(context -> {
                     context.getEnvironment().getPropertySources().remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME);

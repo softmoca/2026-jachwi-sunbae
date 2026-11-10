@@ -81,21 +81,27 @@ const styles = {
     gap: 0.3rem;
   `,
 
-  /* 읽을 때와 같은 글자 크기로 줄 안에 놓고 밑줄로 입력 중임을 보여 준다. */
+  /* 읽을 때와 같은 글자 크기로 줄 안에 놓는다. */
   input: css`
     label: PropertyNameInput-input;
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
-    padding: 0.15rem 0;
+    padding: 0.2rem 0.4rem;
+    /* 테두리나 밑줄 없이 값이 있던 자리에서 그대로 입력한다. 입력 중임은 옅은 회색 바탕으로만 알린다. */
     border: 0;
-    border-bottom: 1.5px solid var(--color-ink, #212124);
-    border-radius: 0;
+    border-radius: 0.5rem;
     background: transparent;
     color: var(--color-ink, #212124);
     font: inherit;
     text-align: center;
     outline: none;
+    /* 전역 포커스 링(검은 테두리)보다 우선해서, 입력 중에도 테두리 없이 옅은 회색 바탕만 둔다. */
+    &:focus,
+    &:focus-visible {
+      outline: 0;
+      background: #f1f2f4;
+    }
   `,
 
   error: css`

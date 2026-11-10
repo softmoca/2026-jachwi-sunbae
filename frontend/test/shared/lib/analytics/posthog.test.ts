@@ -50,10 +50,21 @@ describe('PostHog 제품 분석', () => {
         before_send: expect.any(Function),
         capture_pageview: false,
         disable_session_recording: false,
+        session_recording: { maskCapturedNetworkRequestFn: expect.any(Function) },
         mask_all_text: true,
         mask_all_element_attributes: true,
       });
     });
+    const options = mockPostHog.init.mock.calls[0][1];
+    const mask = options.session_recording.maskCapturedNetworkRequestFn;
+    expect(
+      mask({
+        name: 'https://api.example.com/api/members/me/notification-devices/current',
+        requestBody: 'fake-private-body',
+      }),
+    ).toBeNull();
+    const ordinary = { name: 'https://api.example.com/api/weather/forecasts' };
+    expect(mask(ordinary)).toBe(ordinary);
   });
 
   it('초기화 이후에만 페이지와 이벤트를 기록하고 같은 경로는 중복 기록하지 않는다', async () => {

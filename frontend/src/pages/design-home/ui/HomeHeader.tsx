@@ -1,10 +1,12 @@
 import { css } from '@emotion/css';
 import { Link } from 'react-router-dom';
 
+import HeaderWeather from '@/features/weather/ui/header-weather/HeaderWeather';
 import iconProfile from '@/shared/assets/icon-profile.webp';
-import logo from '@/shared/assets/jachwi-sunbae-goose.webp';
-import logo2x from '@/shared/assets/jachwi-sunbae-goose@2x.webp';
+import { LOGO_DUCK } from '@/shared/assets/imageAssets';
 import { HOME_PATH, MY_PATH } from '@/shared/lib/navigation/appPaths';
+
+const { src: logo, src2x: logo2x } = LOGO_DUCK;
 
 const HomeHeader = ({ className }: { className?: string }) => {
   return (
@@ -20,6 +22,9 @@ const HomeHeader = ({ className }: { className?: string }) => {
           alt="자취선배"
         />
       </a>
+      <div className={styles.center}>
+        <HeaderWeather />
+      </div>
       <Link className={styles.profile} to={MY_PATH} aria-label="마이페이지">
         <img src={iconProfile} alt="" width={96} height={96} />
       </Link>
@@ -53,6 +58,15 @@ const styles = {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 0.75rem;
+  `,
+
+  center: css`
+    label: HomeHeader-center;
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+    padding: 0 0.5rem;
   `,
 
   profile: css`

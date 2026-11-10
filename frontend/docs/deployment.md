@@ -116,6 +116,8 @@ assets/jachwi-sunbae-logo.2e4dac46707736dbc407.png
 
 파비콘처럼 `index.html`이 직접 가리키는 이미지도 `public/`에 두지 않고 템플릿에서 `require`로 불러와 해시 파일명으로 내보낸다. `public/`은 개발 서버에서만 제공되고 운영 `dist`로 복사되지 않으며, 해시 없는 파일은 위 1년 캐시 때문에 바꿔도 반영되지 않는다.
 
+예외로 검색엔진이 사이트 루트에서 찾는 `public/robots.txt`와 `public/sitemap.xml`은 빌드가 `dist`로 복사한다. `publish.sh`는 두 파일을 `index.html`과 같은 재검증 캐시로 올리고 무효화 경로에 넣는다. dev 배포는 `robots.txt`를 전체 차단(`Disallow: /`)으로 바꿔 올리고 `sitemap.xml`은 올리지 않는다.
+
 개발 빌드에는 해시를 붙이지 않는다. 파일명이 매번 바뀌면 dev-server의 HMR이 불편하다.
 
 ## 배포 성공 판정

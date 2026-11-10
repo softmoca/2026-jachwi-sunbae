@@ -5,7 +5,7 @@ import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import type { WeatherForecastResponse, WeatherHour, WeatherNotificationSettingsResponse } from '../model/weather';
 
-const SETTINGS_PATH = '/api/members/me/weather-notification-settings';
+const SETTINGS_PATH = '/api/members/me/notification-settings';
 
 const readNullableNumber = (record: Record<string, unknown>, key: string): number | null => {
   const value = record[key];
@@ -61,27 +61,60 @@ export const fetchWeatherForecast = (config: PublicConfig, coordinate: MapCoordi
     parseData: parseWeatherForecast,
   });
 
-export const fetchWeatherNotificationSettings = (config: PublicConfig, signal?: AbortSignal) =>
-  apiRequest({ config, path: SETTINGS_PATH, signal, parseData: parseSettings });
+export const fetchWeatherNotificationSettings = (
+  config: PublicConfig,
+  signal?: AbortSignal,
+  expectedMemberId?: number,
+) => apiRequest({ config, path: SETTINGS_PATH, signal, expectedMemberId, parseData: parseSettings });
 
-export const updateWeatherNotificationSettings = (config: PublicConfig, enabled: boolean) =>
-  apiRequest({ config, path: SETTINGS_PATH, method: 'PUT', body: { enabled }, parseData: parseSettings });
+export const updateWeatherNotificationSettings = (config: PublicConfig, enabled: boolean, expectedMemberId?: number) =>
+  apiRequest({
+    config,
+    path: SETTINGS_PATH,
+    method: 'PUT',
+    body: { enabled },
+    expectedMemberId,
+    parseData: parseSettings,
+  });
 
 /** 알림을 보낼 위치를 저장한다. 서버는 정확한 위경도 대신 격자만 저장하고, 이 위치로 알림을 보낸다. */
-export const syncWeatherLocation = (config: PublicConfig, coordinate: MapCoordinate) =>
+export const syncWeatherLocation = (config: PublicConfig, coordinate: MapCoordinate, expectedMemberId?: number) =>
   apiRequest({
     config,
     path: '/api/members/me/weather-location',
     method: 'PUT',
     body: coordinate,
+    expectedMemberId,
     parseData: (value) => ({ available: readBoolean(readRecord(value), 'available') }),
   });
 
-export const weatherQueryKeys = {
-  settings: ['weather', 'notification-settings'] as const,
-  // 같은 동네에서 위치가 조금씩 흔들려도 다시 조회하지 않도록 소수 셋째 자리(약 100m)로 묶는다.
-  forecast: (coordinate: MapCoordinate) =>
-    ['weather', 'forecast', coordinate.latitude.toFixed(3), coordinate.longitude.toFixed(3)] as const,
-  place: (coordinate: MapCoordinate) =>
-    ['weather', 'place', coordinate.latitude.toFixed(3), coordinate.longitude.toFixed(3)] as const,
-};
+const DEVICE_PATH = '/api/members/me/notification-devices/current';
+
+export const registerWeatherDevice = (
+  config: PublicConfig,
+  expectedMemberId: number,
+  body: { installationId: string; installationSecret: string; token: string },
+) =>
+  apiRequest({
+    config,
+    path: DEVICE_PATH,
+    method: 'PUT',
+    expectedMemberId,
+    body,
+    // 등록 응답에서 토큰을 읽거나 Query 캐시에 보관하지 않는다.
+    parseData: (value) => ({ installationId: readString(readRecord(value), 'installationId') }),
+  });
+
+/** 등록된 내 기기로 고정 문구 테스트 알림을 바로 보낸다. 운영 서버에는 이 API가 없다. */
+export const submitWeatherTestPush = (config: PublicConfig, expectedMemberId: number) =>
+  apiRequest({
+    config,
+    path: '/api/members/me/weather-notifications/test',
+    method: 'POST',
+    expectedMemberId,
+    parseData: (value: unknown) =>
+      typeof value === 'object' && value !== null && (value as { sent?: unknown }).sent === true,
+  });
+
+export const revokeWeatherDevice = (config: PublicConfig, expectedMemberId: number) =>
+  apiRequest({ config, path: DEVICE_PATH, method: 'DELETE', expectedMemberId, parseData: () => undefined });

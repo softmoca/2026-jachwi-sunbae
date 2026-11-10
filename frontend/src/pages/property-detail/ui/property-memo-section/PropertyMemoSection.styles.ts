@@ -54,49 +54,27 @@ export const field = css`
   }
 `;
 
-export const dialog = css`
-  label: PropertyMemoSection-dialog;
-  width: min(calc(100% - 2rem), 24rem);
-  margin: auto;
-  padding: 1.1rem;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: 0 0.8rem 2.5rem rgb(0 0 0 / 22%);
+export const editor = css`
+  label: PropertyMemoSection-editor;
+  display: block;
+  width: 100%;
+  min-height: 7.5rem;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.5;
 
-  &::backdrop {
-    background: rgb(20 22 18 / 42%);
-  }
-
-  & form {
-    display: grid;
-    gap: 0.55rem;
-  }
-
-  & h2 {
-    margin: 0 0 0.25rem;
-    color: var(--color-ink);
-    font-size: 1rem;
-  }
-
-  & textarea {
-    width: 100%;
-    min-height: 7.5rem;
-    box-sizing: border-box;
-    resize: vertical;
-    padding: 0.7rem 0.75rem;
-    border: 1px solid var(--color-border-strong);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font: inherit;
-    font-size: 0.8rem;
-    line-height: 1.5;
-  }
-
-  & textarea:focus {
-    outline: 2px solid var(--color-primary-soft);
+  &:focus,
+  &:focus-visible {
     border-color: var(--color-primary);
+    background: var(--color-surface);
+    outline: 0;
   }
 `;
 
@@ -105,12 +83,4 @@ export const error = css`
   margin: 0;
   color: var(--color-danger);
   font-size: 0.7rem;
-`;
-
-export const actions = css`
-  label: PropertyMemoSection-actions;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
 `;

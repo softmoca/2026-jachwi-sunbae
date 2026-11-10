@@ -80,15 +80,15 @@ public class JdbcMemberRepository implements MemberRepository {
                 WHERE source.member_id = ? AND target.member_id IS NULL
                 """, target, target, source);
         jdbcTemplate.update("""
-                UPDATE member_weather_notification_settings source
-                LEFT JOIN member_weather_notification_settings target ON target.member_id = ?
+                UPDATE member_notification_settings source
+                LEFT JOIN member_notification_settings target ON target.member_id = ?
                 SET source.member_id = ?
                 WHERE source.member_id = ? AND target.member_id IS NULL
                 """, target, target, source);
         jdbcTemplate.update("DELETE FROM member_weather_locations WHERE member_id = ?", source);
-        jdbcTemplate.update("DELETE FROM member_weather_notification_settings WHERE member_id = ?", source);
+        jdbcTemplate.update("DELETE FROM member_notification_settings WHERE member_id = ?", source);
         jdbcTemplate.update("""
-                UPDATE weather_notification_devices SET token = NULL, token_hash = NULL, updated_at = ?
+                UPDATE notification_devices SET token = NULL, token_hash = NULL, updated_at = ?
                 WHERE member_id = ?
                 """, mergedAt, source);
         jdbcTemplate.update("""
@@ -119,12 +119,12 @@ public class JdbcMemberRepository implements MemberRepository {
                 WHERE member_id = ? AND deleted_at IS NULL
                 """, deletedAt, deletedAt, memberId);
         jdbcTemplate.update("""
-                UPDATE member_weather_notification_settings
+                UPDATE member_notification_settings
                 SET enabled = FALSE, updated_at = ?
                 WHERE member_id = ?
                 """, deletedAt, memberId);
         jdbcTemplate.update("""
-                UPDATE weather_notification_devices
+                UPDATE notification_devices
                 SET token = NULL, token_hash = NULL, updated_at = ?
                 WHERE member_id = ?
                 """, deletedAt, memberId);

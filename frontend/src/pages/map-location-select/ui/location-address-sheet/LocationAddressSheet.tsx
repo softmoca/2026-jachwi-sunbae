@@ -1,44 +1,64 @@
 import { css } from '@emotion/css';
 
+import { UNSUPPORTED_ADDRESS_MESSAGE } from '@/features/map/lib/mapAddress';
 import type { MapAddress } from '@/features/map/model/Map';
+import { Button } from '@/shared/ui/button/Button';
 
 import type { LocationSelectionStatus } from '../../hooks/useLocationSelection';
 
 type LocationAddressSheetProps = {
   selected: MapAddress;
   status: LocationSelectionStatus;
-  onOpenSearch: () => void;
+  /** 매물에 바로 저장하는 중인지. */
+  isSaving?: boolean;
+  /** 저장에 실패했는지. */
+  saveFailed?: boolean;
   onConfirm: () => void;
 };
 
-const LocationAddressSheet = ({ selected, status, onOpenSearch, onConfirm }: LocationAddressSheetProps) => {
-  const selectedAddress = selected.roadAddress ?? selected.jibunAddress;
+/**
+ * 지도에서 고른 자리의 주소를 보여 주고 적용하는 아래 카드. 도로명 주소를 크게, 지번 주소를 작게 두고,
+ * 지도를 눌러 자리를 바꿀 때마다 주소가 따라 바뀐다. 글자 크기와 버튼은 앱의 공통 스타일을 쓴다.
+ */
+const LocationAddressSheet = ({
+  selected,
+  status,
+  isSaving = false,
+  saveFailed = false,
+  onConfirm,
+}: LocationAddressSheetProps) => {
+  const selectedAddress = selected.roadAddress ?? selected.jibunAddress ?? selected.address;
+  const isResolving = status === 'locating' || status === 'geocoding';
+  // 주소를 찾지 못했거나 조회가 실패한 자리도 좌표만으로 적용할 수 있다.
+  const hasNoAddress = !isResolving && selectedAddress === null;
 
   return (
     <section className={styles.sheet} aria-live="polite">
-      <strong>
-        {selectedAddress ?? (status === 'error' ? '주소를 확인하지 못했어요' : '주소를 확인하는 중이에요')}
+      <strong className={hasNoAddress ? styles.missingAddress : undefined}>
+        {isResolving && selectedAddress === null
+          ? '주소를 확인하는 중이에요'
+          : (selectedAddress ?? UNSUPPORTED_ADDRESS_MESSAGE)}
       </strong>
       <p>
         {selected.roadAddress !== null && selected.jibunAddress !== null
           ? selected.jibunAddress
-          : '지도를 움직이거나 위치를 눌러 주세요.'}
+          : '지도를 눌러 자리를 바꿀 수 있어요.'}
       </p>
-      {status === 'error' ? (
-        <button className={styles.addressNotice} type="button" onClick={onOpenSearch}>
-          주소로 다시 찾아볼까요?
-        </button>
-      ) : (
-        <p className={styles.addressHint}>표시된 주소가 맞는지 확인해 주세요.</p>
+      {saveFailed && (
+        <p className={styles.error} role="alert">
+          저장하지 못했어요. 다시 시도해 주세요.
+        </p>
       )}
-      <button
-        className={styles.confirmButton}
-        type="button"
-        disabled={status !== 'ready' || selectedAddress === null}
+      <Button
+        fullWidth
+        disabled={isResolving}
+        isLoading={isSaving}
+        loadingLabel="저장 중…"
+        className={styles.confirm}
         onClick={onConfirm}
       >
-        이 위치 적용하기
-      </button>
+        이 위치로 저장
+      </Button>
     </section>
   );
 };
@@ -52,73 +72,47 @@ const styles = {
     left: 0;
     z-index: 18;
     display: grid;
-    gap: 0.62rem;
-    padding: 1.15rem 1rem calc(1rem + env(safe-area-inset-bottom));
-    border-radius: 1.2rem 1.2rem 0 0;
-    background: rgb(255 255 255 / 97%);
-    box-shadow: 0 -0.5rem 1.5rem rgb(44 50 39 / 14%);
-    backdrop-filter: blur(10px);
+    gap: 0.4rem;
+    padding: 1.1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-radius: 1.25rem 1.25rem 0 0;
+    background: var(--color-surface);
+    box-shadow: 0 -1px 8px rgb(0 0 0 / 8%);
 
-    & > strong,
-    & > p {
+    & > strong {
       overflow: hidden;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.4;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    & > strong {
-      font-size: 1.05rem;
-      line-height: 1.35;
-    }
-
     & > p {
       margin: 0;
+      overflow: hidden;
       color: var(--color-muted);
-      font-size: 0.7rem;
+      font-size: 0.82rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   `,
 
-  addressNotice: css`
-    label: LocationAddressSheet-addressNotice;
-    min-height: 2.75rem;
-    margin: 0;
-    padding: 0.7rem;
-    border: 0;
-    border-radius: 0.75rem;
-    background: #fff0ee;
-    color: #ee625d !important;
-    font-size: 0.66rem !important;
-    font-weight: 800;
-    text-align: center;
-    cursor: pointer;
+  missingAddress: css`
+    label: LocationAddressSheet-missingAddress;
+    color: var(--color-muted);
   `,
 
-  addressHint: css`
-    label: LocationAddressSheet-addressHint;
-    margin: 0;
-    padding: 0.35rem 0 0;
-    color: var(--color-muted, #868b94);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-align: center;
-  `,
+  error: css`
+    label: LocationAddressSheet-error;
 
-  confirmButton: css`
-    label: LocationAddressSheet-confirmButton;
-    min-height: 3.25rem;
-    padding: 0.8rem 1rem;
-    border: 0;
-    border-radius: 0.85rem;
-    background: #111;
-    color: white;
-    font-size: 0.78rem;
-    font-weight: 850;
-    cursor: pointer;
-
-    &:disabled {
-      background: #d8d8d5;
-      cursor: not-allowed;
+    &&& {
+      color: var(--color-danger);
     }
+  `,
+
+  confirm: css`
+    label: LocationAddressSheet-confirm;
+    margin-top: 0.4rem;
   `,
 };
 

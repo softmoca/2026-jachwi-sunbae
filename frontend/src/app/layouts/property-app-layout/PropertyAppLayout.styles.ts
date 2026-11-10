@@ -20,7 +20,7 @@ export const root = cx(
       box-shadow: 0 0 2rem rgb(59 52 36 / 8%);
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 767px) {
       &[data-wide-property-page='true'] {
         width: 100%;
       }

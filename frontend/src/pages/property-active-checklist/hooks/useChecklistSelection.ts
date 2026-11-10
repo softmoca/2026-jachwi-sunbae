@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { useAssignActiveChecklist } from '@/features/checklist/api/useChecklistMutations';
 import { writeLastSelectedChecklist } from '@/features/checklist/model/lastChecklistStore';
-import { propertyChecklistPath } from '@/shared/lib/navigation/appPaths';
+import { propertyChecklistTabPath } from '@/shared/lib/navigation/appPaths';
 
 type AssignMutation = ReturnType<typeof useAssignActiveChecklist>;
 
@@ -13,48 +13,36 @@ export const SYSTEM_DEFAULT_ID = -1;
 type UseChecklistSelectionOptions = {
   propertyId: number;
   assign: AssignMutation;
-  fromPropertyDetail: boolean;
   initialSelectedId: number | null;
   current: { checklistId: number; name: string } | null;
-  appliedPropertyChecklistId: number | null;
 };
 
-/** 교체할 체크리스트를 고르고 적용한다. 이미 적용된 체크리스트를 다시 고르면 그 화면으로 이동한다. */
-const useChecklistSelection = ({
-  propertyId,
-  assign,
-  fromPropertyDetail,
-  initialSelectedId,
-  current,
-  appliedPropertyChecklistId,
-}: UseChecklistSelectionOptions) => {
+/** 선택과 적용을 분리하고, 확인 버튼을 눌렀을 때만 체크리스트로 이동한다. */
+const useChecklistSelection = ({ propertyId, assign, initialSelectedId, current }: UseChecklistSelectionOptions) => {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<number | null>(initialSelectedId);
-  const detailState = fromPropertyDetail ? { state: { from: 'property-detail' } } : {};
 
   useEffect(() => {
     if (selectedId === null && current !== null) setSelectedId(current.checklistId);
   }, [current, selectedId]);
 
-  const openChecklist = (propertyChecklistId: number, replace: boolean) =>
-    navigate(propertyChecklistPath(propertyId, propertyChecklistId), { replace, ...detailState });
+  const openChecklist = () => navigate(propertyChecklistTabPath(propertyId), { replace: true });
 
   const toggleSelection = (checklistId: number) => {
-    if (current?.checklistId === checklistId && appliedPropertyChecklistId !== null) {
-      // 교체 화면은 체크리스트 화면 기록을 대신한 것이므로, 다시 고른 체크리스트로도 기록을 쌓지 않고 바꿔 연다.
-      openChecklist(appliedPropertyChecklistId, true);
-      return;
-    }
     setSelectedId(checklistId);
   };
 
   const saveSelection = async () => {
     if (selectedId === null) return;
+    if (current?.checklistId === selectedId) {
+      openChecklist();
+      return;
+    }
     const selection = selectedId === SYSTEM_DEFAULT_ID ? ('SYSTEM_DEFAULT' as const) : selectedId;
     try {
-      const applied = await assign.mutateAsync(selection);
+      await assign.mutateAsync(selection);
       writeLastSelectedChecklist(selection);
-      openChecklist(applied.propertyChecklistId, true);
+      openChecklist();
     } catch {
       /* Keep the selected checklist visible for retry. */
     }

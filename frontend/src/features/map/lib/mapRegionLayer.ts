@@ -26,10 +26,16 @@ export const regionAtLevel = (region: MapRegion, level: number): MapRegion => {
   return detail ? { ...region, polygons: detail } : region;
 };
 const regionStyle = (region: MapRegion, selected: boolean) => ({
-  strokeColor: region.appearance?.strokeColor ?? (selected ? '#787b80' : '#a4a7ab'),
-  strokeWeight: region.appearance ? (selected ? 2 : 1.25) : selected ? 2 : 1,
+  strokeColor: region.appearance
+    ? selected
+      ? '#25282d'
+      : region.appearance.strokeColor
+    : selected
+      ? '#787b80'
+      : '#a4a7ab',
+  strokeWeight: region.appearance ? (selected ? 3.5 : 1.25) : selected ? 2 : 1,
   fillColor: region.appearance?.fillColor ?? (region.isRecommended === false && !selected ? '#888888' : '#f5c344'),
-  fillOpacity: region.appearance ? (selected ? 0.38 : 0.28) : selected ? 0.5 : region.isRecommended ? 0.24 : 0.08,
+  fillOpacity: region.appearance ? (selected ? 0.55 : 0.28) : selected ? 0.5 : region.isRecommended ? 0.24 : 0.08,
   zIndex: selected ? 2 : 1,
 });
 type Entry = {
