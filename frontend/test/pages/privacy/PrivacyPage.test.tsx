@@ -77,7 +77,7 @@ describe('개인정보처리방침 뒤로 가기', () => {
   });
 });
 
-describe('개인정보처리방침의 초기화와 파기 안내', () => {
+describe('개인정보처리방침의 회원 탈퇴와 파기 안내', () => {
   const renderPrivacy = () =>
     render(
       <MemoryRouter initialEntries={['/privacy']}>
@@ -85,13 +85,13 @@ describe('개인정보처리방침의 초기화와 파기 안내', () => {
       </MemoryRouter>,
     );
 
-  it('초기화는 삭제가 아니며 이전 기록을 90일 보관 뒤 파기한다고 안내한다', () => {
+  it('회원 탈퇴는 계정과 기록을 삭제하고 연결 계정을 해제하며, 기록은 90일 보관 뒤 파기한다고 안내한다', () => {
     renderPrivacy();
-    const reset = screen.getByRole('region', { name: '초기화' });
-    expect(reset).toHaveTextContent('새 회원 아이디로 다시 시작합니다');
-    expect(reset).toHaveTextContent('더 이상 접근할 수 없습니다');
-    expect(reset).toHaveTextContent('초기화는 계정 삭제가 아닙니다');
-    expect(reset).toHaveTextContent('초기화한 날부터 90일 동안 보관한 뒤 파기합니다');
+    const withdrawal = screen.getByRole('region', { name: '회원 탈퇴' });
+    expect(withdrawal).toHaveTextContent('마이 화면의 회원 탈퇴를 누르면 계정을 삭제합니다');
+    expect(withdrawal).toHaveTextContent('더 이상 접근할 수 없고');
+    expect(withdrawal).toHaveTextContent('연결한 카카오, Apple 계정은 연결을 해제합니다');
+    expect(withdrawal).toHaveTextContent('탈퇴한 날부터 90일 동안 보관한 뒤 완전히 파기합니다');
   });
 
   it('앱에서 삭제한 매물, 체크리스트, 거리 메모도 90일 보관 뒤 완전히 파기한다고 안내한다', () => {
@@ -101,12 +101,12 @@ describe('개인정보처리방침의 초기화와 파기 안내', () => {
     );
   });
 
-  it('메일로 완전 삭제를 요청하면 초기화 전 이전 아이디의 데이터도 함께 파기한다고 안내하고 시행일을 갱신한다', () => {
+  it('메일로 완전 삭제를 요청하면 탈퇴한 이전 아이디의 데이터도 함께 파기한다고 안내하고 시행일을 갱신한다', () => {
     renderPrivacy();
     expect(screen.getByRole('region', { name: '자취선배 계정 및 데이터 삭제 요청' })).toHaveTextContent(
-      '초기화한 적이 있다면 초기화 전 이전 아이디의 데이터도 함께 파기합니다.',
+      '탈퇴한 적이 있다면 탈퇴한 이전 아이디의 데이터도 함께 파기합니다.',
     );
-    expect(screen.getByText('시행일: 2026년 11월 2일')).toBeInTheDocument();
+    expect(screen.getByText('시행일: 2026년 11월 10일')).toBeInTheDocument();
   });
 });
 
