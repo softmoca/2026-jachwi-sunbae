@@ -535,7 +535,7 @@ describe('FE-2 사진과 삭제 확인', () => {
     expect(await screen.findByRole('img', { name: '업로드 순 1번째 사진' })).toBeInTheDocument();
   });
 
-  it('빈 사진 목록과 잘못된 형식·5MiB 초과를 업로드 전에 안내한다', async () => {
+  it('빈 사진 목록과 잘못된 형식·10MiB 초과를 업로드 전에 안내한다', async () => {
     let uploadCalls = 0;
     server.use(
       http.get(`${config.apiBaseUrl}/api/properties/10`, () => HttpResponse.json(successEnvelope(detailWithoutPhotos))),
@@ -558,7 +558,7 @@ describe('FE-2 사진과 삭제 확인', () => {
     ]);
 
     expect(await screen.findByText('JPEG, PNG 또는 WebP 사진을 선택해 주세요.')).toBeInTheDocument();
-    expect(screen.getByText('사진 한 장은 5MB 이하만 올릴 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('사진 한 장은 10MB 이하만 올릴 수 있어요.')).toBeInTheDocument();
     expect(uploadCalls).toBe(0);
   });
 
