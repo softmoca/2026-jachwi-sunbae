@@ -1,6 +1,7 @@
 import {
   createPushReplyScript,
   parsePushRequest,
+  resolvePushOpenUrl,
   resolvePushUrl,
 } from '../src/push/policy';
 
@@ -26,6 +27,46 @@ describe('push policy', () => {
     ]) {
       expect(resolvePushUrl(value, base)).toBeNull();
     }
+  });
+  it('열 주소에 알림 ID와 종류를 쿼리로 붙인다', () => {
+    const id = '0b9a7c1e-2f7d-4b8e-9a51-6f0e1d2c3b4a';
+    expect(
+      resolvePushOpenUrl(
+        {
+          notificationId: id,
+          type: 'delivery_coupon',
+          url: '/cheap-meals?tab=delivery#top',
+        },
+        base,
+      ),
+    ).toBe(
+      `${base}/cheap-meals?tab=delivery&notification_id=${id}&notification_type=delivery_coupon#top`,
+    );
+    // url이 없는 푸시는 기본 화면을 연다.
+    expect(
+      resolvePushOpenUrl({ notificationId: id, type: 'weather' }, base),
+    ).toBe(`${base}/?notification_id=${id}&notification_type=weather`);
+    // 형식에 맞지 않는 종류는 싣지 않는다.
+    expect(
+      resolvePushOpenUrl(
+        { notificationId: id, type: 'Bad Type', url: '/me' },
+        base,
+      ),
+    ).toBe(`${base}/me?notification_id=${id}`);
+  });
+  it('알림 ID가 없거나 서비스 밖 주소면 예전처럼 처리한다', () => {
+    expect(resolvePushOpenUrl({ url: '/me' }, base)).toBe(`${base}/me`);
+    expect(
+      resolvePushOpenUrl({ notificationId: 'a b', url: '/me' }, base),
+    ).toBe(`${base}/me`);
+    expect(
+      resolvePushOpenUrl(
+        { notificationId: '7', url: 'https://evil.com' },
+        base,
+      ),
+    ).toBeNull();
+    expect(resolvePushOpenUrl({}, base)).toBeNull();
+    expect(resolvePushOpenUrl(undefined, base)).toBeNull();
   });
   it('알려진 명령과 요청 ID만 해석한다', () => {
     expect(

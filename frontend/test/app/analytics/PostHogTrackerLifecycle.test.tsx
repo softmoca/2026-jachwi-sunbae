@@ -8,6 +8,7 @@ import PostHogTracker from '@/app/analytics/PostHogTracker';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 import { resetPostHogForTests, trackPostHogEvent } from '@/shared/lib/analytics/posthog';
+import { takePushOpenFromLocation } from '@/shared/lib/analytics/pushOpen';
 const { sdk } = vi.hoisted(() => ({
   sdk: {
     init: vi.fn(),
@@ -72,6 +73,35 @@ describe('PostHogTracker 초기 수집 수명주기', () => {
     });
     expect(sdk.register.mock.invocationCallOrder[0]).toBeLessThan(sdk.capture.mock.invocationCallOrder[0]);
     expect(sdk.reset).not.toHaveBeenCalled();
+  });
+  it('라우터보다 먼저 받은 push_opened도 수집이 초기화된 뒤 공통 속성과 함께 한 번 남긴다', async () => {
+    window.history.replaceState(null, '', '/me?notification_id=n-1&notification_type=weather');
+    takePushOpenFromLocation();
+    render(
+      <StrictMode>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <PublicConfigProvider config={config}>
+              <PostHogTracker />
+            </PublicConfigProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </StrictMode>,
+    );
+    await vi.waitFor(() =>
+      expect(sdk.capture).toHaveBeenCalledWith(
+        'push_opened',
+        expect.objectContaining({
+          notification_id: 'n-1',
+          notification_type: 'weather',
+          app_version: '1.1.0',
+          auth_status: 'anonymous',
+        }),
+      ),
+    );
+    expect(sdk.capture.mock.calls.filter(([name]) => name === 'push_opened')).toHaveLength(1);
+    expect(window.location.search).toBe('');
+    window.history.replaceState(null, '', '/');
   });
   it('StrictMode 재마운트에서도 익명 ID와 동일 경로 페이지뷰를 유지한다', async () => {
     const client = new QueryClient();
