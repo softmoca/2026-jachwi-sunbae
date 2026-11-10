@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { logoutAuthentication } from '@/features/auth/api/apiClient';
-import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
 import appleLogo from '@/features/auth/assets/apple-logo-white.svg';
 import kakaoSymbol from '@/features/auth/assets/kakao-symbol.svg';
+import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
 import {
   getAvailableOAuthProviders,
   isOAuthLinkAvailable,

@@ -6,9 +6,9 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import AppRoutes from '@/app/router/AppRoutes';
+import AccountLinkCard from '@/pages/my/ui/account-link-card/AccountLinkCard';
 import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
 import { saveLinkedProvider, savePendingOAuth, takeStashedOAuthNotice } from '@/features/auth/model/oauthLink';
-import AccountLinkCard from '@/pages/my/ui/account-link-card/AccountLinkCard';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
 import { server } from '../../server';
