@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { reverseGeocode } from '@/features/map/api/mapApi';
@@ -14,7 +14,7 @@ import { requestWeatherLocation } from '../lib/weatherLocation';
 import { readWeatherLocationChoice, writeWeatherLocationEnabled } from '../lib/weatherLocationPreference';
 import { toPlaceName } from '../lib/weatherPlaceName';
 import { useWeatherPushSync } from './useWeatherPushSync';
-import { changeWeatherPush } from './weatherPush';
+import { useWeatherPushToggle } from './useWeatherPushToggle';
 import { weatherQueryKeys } from './weatherQueryKeys';
 
 export type WeatherLocationStatus = 'idle' | 'locating' | 'ready' | 'denied' | 'unavailable';
@@ -32,7 +32,6 @@ type WeatherLocationState = {
  */
 export const useWeatherSubscription = () => {
   const config = usePublicConfig();
-  const queryClient = useQueryClient();
   const platform = isRunningInNativeApp() ? 'app' : 'web';
   const hasSyncedRef = useRef(false);
   // 카드에는 위치 토글이 없다. 직접 끈 적이 없으면 알림과 함께 현재 위치도 쓴다.
@@ -79,22 +78,7 @@ export const useWeatherSubscription = () => {
     if (isEnabled && isLocationOn && !hasSyncedRef.current) void locate().catch(() => setHasLocationFailed(true));
   }, [isEnabled, isLocationOn, locate]);
 
-  const toggle = useMutation({
-    mutationFn: async ({
-      enabled,
-      locating,
-      memberId,
-    }: {
-      enabled: boolean;
-      locating: Promise<MapCoordinate | null> | null;
-      memberId: number;
-    }) => {
-      // 위치를 몰라도 공통 알림은 켠다. 위치는 날씨 알림에만 쓰이고, 위치 토글이 켜져 있을 때만 함께 받는다.
-      const coordinate = locating === null ? null : await locating;
-      return changeWeatherPush(config, memberId, enabled, coordinate);
-    },
-    onSuccess: (data, variables) => queryClient.setQueryData(weatherQueryKeys.settings(variables.memberId), data),
-  });
+  const toggle = useWeatherPushToggle('my');
 
   const pushMessage = !supportsNativePush()
     ? platform === 'web'
@@ -131,7 +115,7 @@ export const useWeatherSubscription = () => {
     platform,
     isEnabled,
     isLoading: settings.isPending,
-    isUpdating: toggle.isPending || settings.isFetching || location.status === 'locating',
+    isUpdating: toggle.isBusy || settings.isFetching || location.status === 'locating',
     // 토글을 누른 뒤 위치를 기다리는 중. 토글이 잠긴 까닭을 진행 표시로 알린다.
     isLocating: toggle.isPending && location.status === 'locating',
     hasUpdateFailed: toggle.isError || hasLocationFailed,
@@ -168,7 +152,7 @@ export const useWeatherSubscription = () => {
     placeName: place.data ?? null,
     forecast,
     toggle: () => {
-      if (memberId === null || toggle.isPending) return;
+      if (memberId === null || toggle.isBusy) return;
       setHasLocationFailed(false);
       toggle.mutate({
         enabled: !isEnabled,

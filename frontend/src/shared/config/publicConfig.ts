@@ -20,10 +20,6 @@ const requireHttpUrl = (value: string, variableName: string): string => {
   return url.toString().replace(/\/$/, '');
 };
 
-/** 앱 WebView에서 네이티브 로그인 브리지로 계정을 연결해도 되는지. 백엔드 API가 배포된 뒤 `NATIVE_OAUTH_ENABLED=true`로 켠다. */
-export const isNativeOAuthEnabled = (): boolean =>
-  typeof __NATIVE_OAUTH_ENABLED__ === 'boolean' && __NATIVE_OAUTH_ENABLED__;
-
 export const getPublicConfig = (): PublicConfig => {
   const mapProviderMode =
     typeof __MAP_PROVIDER_MODE__ === 'string' && __MAP_PROVIDER_MODE__ === 'naver' ? 'naver' : 'demo';
@@ -45,6 +41,5 @@ export const getPublicConfig = (): PublicConfig => {
     posthogHost: typeof __POSTHOG_HOST__ === 'string' ? __POSTHOG_HOST__.trim() : '',
     appVersion: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__.trim() : '',
     appEnvironment: __APP_ENVIRONMENT__ === 'production' ? 'production' : 'development',
-    nativeOAuthEnabled: isNativeOAuthEnabled(),
   };
 };

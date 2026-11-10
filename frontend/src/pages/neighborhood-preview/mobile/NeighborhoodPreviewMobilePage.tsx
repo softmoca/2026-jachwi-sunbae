@@ -1,5 +1,5 @@
 import { css, keyframes } from '@emotion/css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useMatch } from 'react-router-dom';
 
 import MapCanvas from '@/features/map/ui/map-canvas/MapCanvas';
@@ -17,7 +17,7 @@ import type { NeighborhoodPreviewContext } from '../hooks/useNeighborhoodPreview
 import useResultMapViewport from '../hooks/useResultMapViewport';
 import { COMMUTE_COLORS, commuteLegend } from '../model/commuteColors';
 import { criteriaItems, criteriaSummary, rentLabel, transferLabel } from '../model/criteriaLabels';
-import { mobileMapViewport } from '../model/resultMapView';
+import { MOBILE_AREA_SHEET_PERCENT, mobileMapViewport } from '../model/resultMapView';
 import type { NeighborhoodFilterField } from '../NeighborhoodFilters';
 import { NeighborhoodFilterPicker } from '../NeighborhoodFilters';
 import AnalysisOverlay from '../ui/analysis-overlay/AnalysisOverlay';
@@ -71,16 +71,30 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
     const timer = window.setTimeout(() => setIsRentOpen(false), RENT_SLIDER_VISIBLE_MS);
     return () => window.clearTimeout(timer);
   }, [isRentOpen, isRentHeld, rentOpenedAt, maxRent]);
+  // 동네 시트를 닫아도 동네 선택(지도 강조, 주소)은 남긴다. 닫은 동네의 행정동 코드를 두어 그 동네의 시트만 숨긴다.
+  const [dismissedAreaCode, setDismissedAreaCode] = useState<string | null>(null);
+  const selectedAreaCode = preview.selected?.adminDongCode;
+  // 고른 동네가 바뀌면(풀었다가 같은 동네를 다시 골라도) 닫아 둔 기록을 지워, 새로 고른 동네 시트가 열리게 한다.
+  const [lastAreaCode, setLastAreaCode] = useState(selectedAreaCode);
+  if (lastAreaCode !== selectedAreaCode) {
+    setLastAreaCode(selectedAreaCode);
+    setDismissedAreaCode(null);
+  }
+  const isAreaSheetDismissed = dismissedAreaCode !== null && dismissedAreaCode === selectedAreaCode;
+  // 빈 곳을 찍었을 때 할 일은 그때 열린 시트에 따라 다르다. 지도 설정보다 뒤에 정해지므로 렌더마다 새로 넣어 둔다.
+  const emptyTapRef = useRef<() => void>(() => undefined);
   // 정보는 한 단계 시트 하나에만 둔다: 누른 마커 하나, 고른 동네, `My` 매물 목록 가운데 하나.
   const mapView = useNeighborhoodMapView(preview, {
     showAreaAction: false,
-    onEmptyTap: () => setPeekSignal((value) => value + 1),
-    // 시트가 열린 채 지도의 동네를 찍으면 동네 선택을 푼다.
-    deselectOnRegionTap: true,
+    onEmptyTap: () => emptyTapRef.current(),
+    // 동네 시트가 열린 채 지도의 동네를 찍으면 동네 선택을 푼다. 시트를 닫아 둔 뒤에는 다른 동네를 찍으면 그 동네로 바꾼다.
+    deselectOnRegionTap: !isAreaSheetDismissed,
+    // 시트를 닫아 둔 동네 안을 다시 찍으면 그 동네 시트를 다시 연다.
+    onSelectedRegionTap: isAreaSheetDismissed ? () => setDismissedAreaCode(null) : undefined,
   });
   const { isResultMap, mapProps, places, closeLayers, rail, railSelection } = mapView;
   const recordArea = preview.selected ?? preview.topAreas[0];
-  const selectedArea = isRoutePage ? preview.selected : undefined;
+  const selectedArea = isRoutePage && !isAreaSheetDismissed ? preview.selected : undefined;
   const infoSubject: MapInfoSubject | null = places.selectedPlace
     ? { kind: 'place', place: places.selectedPlace }
     : selectedArea
@@ -88,6 +102,13 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
       : railSelection === 'MY'
         ? { kind: 'my' }
         : null;
+  // 고른 동네가 있으면(시트를 닫아 두었어도) 빈 곳을 찍어 선택을 푼다. 마커나 `My` 시트만 열려 있으면 제목만 보이게 내린다.
+  emptyTapRef.current = () => {
+    if (preview.selected && (infoSubject === null || infoSubject.kind === 'area')) {
+      setDismissedAreaCode(null);
+      preview.selectRegion(null);
+    } else setPeekSignal((value) => value + 1);
+  };
   // `My` 목록에서 고른 매물이면 시트에 이전과 다음 이동, 목록으로 돌아가는 뒤로가기를 둔다.
   const myPager = useMyPropertyPager(infoSubject, mapView);
   // 지도는 화면 전체를 쓰고, 위 결과 머리와 아래 시트가 가리는 만큼 비우고 시점을 맞춘다.
@@ -297,13 +318,14 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
               </div>
             )}
             {mapView.needsZoomForFacilities && <p className={styles.zoomHint}>가까이 확대하면 보여요</p>}
-            {/* 정보는 한 단계 높이의 시트 하나에만 둔다. 끝까지 끌어 올리지 않고, 닫으면 그 정보를 닫는다. */}
+            {/* 정보는 시트 하나에만 둔다. 마커와 `My`는 한 단계 높이로 두고, 닫으면 그 정보를 닫는다.
+                동네는 지도와 고른 동이 같이 보이게 낮게 열고 끌어 올리면 더 크게 본다. 닫아도 동네 선택은 그대로 둔다. */}
             {infoSubject && (
               <BottomSheet
                 key={infoSubject.kind === 'area' ? `area:${infoSubject.area.adminDongCode}` : infoSubject.kind}
                 title={mapInfoTitle(infoSubject)}
-                initialHeightPercent={40}
-                resizable={false}
+                initialHeightPercent={infoSubject.kind === 'area' ? MOBILE_AREA_SHEET_PERCENT : 40}
+                resizable={infoSubject.kind === 'area'}
                 fullPage={false}
                 closeLabel="정보 닫기"
                 onBack={myPager?.backToList}
@@ -311,7 +333,7 @@ const NeighborhoodPreviewMobilePage = ({ preview }: Props) => {
                 peekSignal={peekSignal}
                 onClose={() => {
                   if (infoSubject.kind === 'place') closeLayers();
-                  else if (infoSubject.kind === 'area') preview.selectRegion(null);
+                  else if (infoSubject.kind === 'area') setDismissedAreaCode(infoSubject.area.adminDongCode);
                   else mapView.clearRail();
                 }}
               >

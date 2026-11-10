@@ -6,7 +6,6 @@ declare const __POSTHOG_HOST__: string;
 declare const __APP_VERSION__: string;
 declare const __APP_ENVIRONMENT__: 'production' | 'development';
 declare const __ENABLE_MSW__: boolean;
-declare const __NATIVE_OAUTH_ENABLED__: boolean;
 declare const __COMMUTE_DATA_SOURCE__: 'mock' | 'server';
 declare const __ADMIN_BOUNDARY_BASE_URL__: string;
 

@@ -52,8 +52,6 @@ const readBuildEnvironment = ({ isProduction, proxyTarget }) => {
       ? 'naver'
       : (process.env.MAP_PROVIDER_MODE ?? (naverMapClientId === '' ? 'demo' : 'naver')),
     naverMapClientId,
-    // 백엔드에 앱용 네이티브 로그인 API(`/nonce`, `/id-token`)가 배포된 뒤에만 켠다.
-    nativeOAuthEnabled: process.env.NATIVE_OAUTH_ENABLED === 'true',
     posthogHost: process.env.POSTHOG_HOST ?? '',
     posthogProjectToken: process.env.POSTHOG_PROJECT_TOKEN ?? '',
   };
