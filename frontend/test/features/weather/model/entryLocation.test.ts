@@ -1,9 +1,9 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { readLastWeatherCoordinate, writeLastWeatherCoordinate } from '@/features/weather/lib/lastWeatherCoordinate';
 import { writeWeatherLocationEnabled } from '@/features/weather/lib/weatherLocationPreference';
-import { useEntryLocation } from '@/features/weather/model/useEntryLocation';
+import { requestEntryLocation } from '@/features/weather/model/entryLocation';
 
 import { installNativePush } from '../../../helpers/nativePush';
 
@@ -18,11 +18,8 @@ const setPermission = (state: PermissionState) =>
     value: { query: () => Promise.resolve({ state }) },
   });
 
-/** 훅을 띄우고 권한 확인이 끝날 때까지 기다린다. */
-const enter = async () => {
-  renderHook(() => useEntryLocation());
-  await new Promise((resolve) => setTimeout(resolve, 0));
-};
+/** 들어올 때의 위치 받기를 실행하고 끝날 때까지 기다린다. */
+const enter = () => requestEntryLocation();
 
 beforeEach(() => {
   localStorage.clear();
