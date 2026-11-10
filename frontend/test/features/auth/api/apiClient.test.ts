@@ -475,7 +475,7 @@ describe('초기화', () => {
 
     expect(order).toEqual(['refresh-start', 'refresh-end', 'delete Bearer refreshed-token', 'login']);
     expect(getAccessToken()).toBe('new-member-token');
-    // 초기화 전에 시작한 요청은 이전 회원의 갱신 토큰으로 마치거나, 탈퇴가 먼저 끝나면 버려진다. 새 회원 토큰으로는 보내지 않는다.
+    // 탈퇴 전에 시작한 요청은 이전 회원의 갱신 토큰으로 마치거나, 탈퇴가 먼저 끝나면 버려진다. 새 회원 토큰으로는 보내지 않는다.
     const settled = await expiredRequest.catch((error: unknown) => error);
     expect(
       settled === 'Bearer refreshed-token' || (settled instanceof ApiError && settled.kind === 'authentication-ended'),

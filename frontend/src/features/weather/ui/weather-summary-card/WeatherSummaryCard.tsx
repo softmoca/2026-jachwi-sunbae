@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/button/Button';
 import Icon from '@/shared/ui/icon/Icon';
 import IconBase from '@/shared/ui/icon/IconBase';
 
+import { useWeatherCardViewed } from '../../lib/weatherAnalytics';
 import { forecastHour, weatherLabel, weatherValue } from '../../lib/weatherPresentation';
 import { useWeatherSubscription } from '../../model/useWeatherSubscription';
 import { useWeatherTestPush } from '../../model/useWeatherTestPush';
@@ -36,6 +37,7 @@ const WeatherSummaryCard = () => {
   const testPush = useWeatherTestPush(isEnabled);
   const hour = forecast.data?.hourly[Number(forecastHour(new Date().toISOString()))];
   const showsWeather = isEnabled && hour !== undefined && hour.tmp !== null;
+  useWeatherCardViewed(showsWeather);
   // 알림은 켰지만 위치 확인에 실패했고 마지막 위치도 없어 날씨를 그릴 수 없다. 공통 알림이라 배달 할인 알림은 계속 받는다.
   const isLocationOff = isEnabled && !isLocationOn && location.status !== 'denied';
   const hasNoLocation =

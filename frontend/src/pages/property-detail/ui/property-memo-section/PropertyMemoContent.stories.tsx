@@ -53,6 +53,18 @@ export const Empty: Story = {
   },
 };
 
+/** 엔터로 나눈 줄과 빈 줄을 입력한 그대로 보여 준다. */
+export const Multiline: Story = {
+  args: {
+    memo: createMemoQuery({
+      data: {
+        propertyId: 10,
+        freeMemo: '창문이 남향이라 낮에 밝음.\n화장실 환풍기 소리가 조금 큼.\n\n집주인이 도배는 해 준다고 함.',
+      },
+    }),
+  },
+};
+
 export const Loading: Story = {
   args: {
     memo: createMemoQuery({ data: undefined, isPending: true }),

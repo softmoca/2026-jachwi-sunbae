@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { fetchProperties } from '@/features/property/api/propertyApi';
 import { propertyQueryKeys } from '@/features/property/api/propertyQueryKeys';
+import { rememberRecentEdit } from '@/features/property/lib/recentEdit';
 import { queryClient } from '@/shared/api/queryClient';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
@@ -115,6 +116,7 @@ export const useAssignActiveChecklist = (propertyId: number, stage: ChecklistSta
           : { sourceType: 'USER', checklistId },
       ),
     onSuccess: async () => {
+      rememberRecentEdit(propertyId, 'checklist');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: propertyQueryKeys.detail(propertyId), exact: true }),
         queryClient.invalidateQueries({ queryKey: propertyQueryKeys.checklists(propertyId), exact: true }),

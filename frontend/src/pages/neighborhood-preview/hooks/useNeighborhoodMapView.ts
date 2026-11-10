@@ -33,6 +33,8 @@ type MapViewOptions = {
   onEmptyTap?: () => void;
   /** 동네를 고른 채 지도의 동네(같은 동네든 다른 동네든)를 찍으면 동네 선택을 푼다. 휴대폰은 시트를 닫는다. */
   deselectOnRegionTap?: boolean;
+  /** 이미 고른 동네 안을 다시 찍었을 때 빈 곳을 찍은 것으로 치는 대신 할 일. 휴대폰은 닫아 둔 동네 시트를 다시 연다. */
+  onSelectedRegionTap?: () => void;
 };
 
 /** 결과 지도 레일에서 고르는 주변 시설 분류. 학교와 메모는 동네 찾기에 두지 않는다. */
@@ -46,7 +48,7 @@ export const RESULT_RAIL_LABELS: Partial<Record<MapCategory, string>> = { AGENCY
 
 const useNeighborhoodMapView = (
   preview: NeighborhoodPreviewContext,
-  { showAreaAction = true, onEmptyTap, deselectOnRegionTap = false }: MapViewOptions = {},
+  { showAreaAction = true, onEmptyTap, deselectOnRegionTap = false, onSelectedRegionTap }: MapViewOptions = {},
 ) => {
   const isResultMap = !preview.isAnalyzing && !preview.error && !preview.isSelectingOnMap;
   const [railSelection, setRailSelection] = useState<RailSelection | null>(null);
@@ -154,7 +156,8 @@ const useNeighborhoodMapView = (
       return;
     }
     if (id === preview.selected?.adminDongCode) {
-      tapEmpty();
+      if (onSelectedRegionTap) onSelectedRegionTap();
+      else tapEmpty();
       return;
     }
     closeLayers();

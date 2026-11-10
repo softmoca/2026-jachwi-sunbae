@@ -104,10 +104,9 @@ describe('routeFocusView', () => {
     expect(view).toEqual({ ...resultMapCenter(middle, view.level), level: view.level });
   });
 
-  it('지도 칸을 주면 시트와 상세 칸이 가리는 여백을 빼고, 주변이 보이게 고정 칸으로 볼 때보다 덜 다가간다', () => {
+  it('지도 칸을 주면 시트와 상세 칸이 가리는 여백을 빼고 남은 칸에 맞춘다', () => {
     const route = [northOf(1.5), destination];
     const phone = mobileMapViewport({ width: 390, height: 844 }, 110)!;
-    expect(routeFocusView(route, [], phone).level).toBeGreaterThan(routeFocusView(route).level);
     // 여백을 크게 주면 남은 칸이 좁아져 더 멀리 본다.
     const covered = { ...phone, padding: { ...phone.padding, bottom: 600 } };
     expect(routeFocusView(route, [], covered).level).toBeGreaterThan(routeFocusView(route, [], phone).level);

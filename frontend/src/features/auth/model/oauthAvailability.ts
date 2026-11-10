@@ -37,7 +37,7 @@ const isNativeOAuthServerUnsupported = (now = Date.now()): boolean => {
  * - 앱 WebView: 카카오, Apple 로그인 화면을 WebView 안에서 열면 안 되므로(RFC 8252) 네이티브 로그인 브리지(#591)로만 연다.
  *   앱이 `features`에 `auth`를 알리고 `authProviders`에 넣은 제공자만 쓴다. 이 둘이 없는 예전 앱(2.1.x 이하)이나
  *   키가 없는 빌드, 서버에 API가 없다고 확인한 동안에는 빈 목록이라 숨긴다.
- * 출시 순서는 https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/570#issuecomment-6635306937 을 따른다.
+ * 출시 순서: 백엔드 nonce, id-token API(#646)를 웹보다 먼저 배포한다. 뒤집히면 그 사이 누른 앱에서 하루 동안 숨는다.
  */
 export const getAvailableOAuthProviders = (): readonly OAuthProvider[] => {
   if (!isRunningInNativeApp()) return OAUTH_PROVIDERS;

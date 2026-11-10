@@ -218,7 +218,7 @@ const sendRequest = async (
 
 const LOGIN_PATH = '/api/auth/login';
 const REFRESH_PATH = '/api/auth/refresh';
-// 초기화의 첫 단계. 지금 회원을 탈퇴 처리(논리 삭제)하고 Refresh Token을 폐기한다. 새 회원은 이어서 로그인으로 받는다.
+// 회원 탈퇴의 첫 단계. 지금 회원을 탈퇴 처리(논리 삭제)하고 Refresh Token을 폐기한다. 새 회원은 이어서 로그인으로 받는다.
 const MEMBER_PATH = '/api/members/me';
 // 로그아웃의 첫 단계. 이 기기의 Refresh Token만 폐기하고 쿠키를 만료시킨다. 회원과 기록, 다른 기기의 인증은 그대로다.
 const LOGOUT_PATH = '/api/auth/logout';
@@ -295,7 +295,7 @@ const trackLoginFailure = (error: unknown) => {
   });
 };
 
-// 로그인, 갱신, 초기화는 모두 같은 Refresh 쿠키를 읽거나 바꾸므로, 진행 중인 요청 하나를 함께 기다린다.
+// 로그인, 갱신, 탈퇴는 모두 같은 Refresh 쿠키를 읽거나 바꾸므로, 진행 중인 요청 하나를 함께 기다린다.
 let pendingAuthentication: Promise<string> | null = null;
 
 /** 진행 중인 인증 요청으로 등록한다. 끝나면 자기 자신일 때만 지워, 뒤이어 등록된 요청을 지우지 않는다. */
@@ -396,8 +396,9 @@ const endMemberSession = async (
 };
 
 /**
- * 초기화. 지금 회원을 탈퇴 처리한 뒤, Refresh 쿠키 없이 로그인해 새 익명 회원을 받는다.
- * 진행 중인 로그인이나 갱신이 끝난 뒤에 보내고, 탈퇴가 끝날 때까지 뒤이은 로그인과 갱신은 초기화를 함께 기다린다.
+ * 회원 탈퇴. 지금 회원을 탈퇴 처리한 뒤, Refresh 쿠키 없이 로그인해 새 익명 회원을 받는다.
+ * 서버는 회원과 기록을 삭제 처리하고 연결한 OAuth 계정을 해제한다. 이벤트 이름은 이전 이름(`account_reset_*`)을 그대로 쓴다.
+ * 진행 중인 로그인이나 갱신이 끝난 뒤에 보내고, 탈퇴가 끝날 때까지 뒤이은 로그인과 갱신은 탈퇴를 함께 기다린다.
  * 탈퇴가 실패하면 지금 회원과 화면 상태를 그대로 두고 오류를 던진다.
  * 탈퇴 뒤 로그인이 실패해도 세션은 이미 비었으므로, 다음 요청의 자동 로그인이 새 회원을 받는다.
  */

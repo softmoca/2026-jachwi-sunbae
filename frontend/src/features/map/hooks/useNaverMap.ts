@@ -335,12 +335,14 @@ const useNaverMap = ({
     };
   }, [engine, liveMode, mapReady]);
 
-  // 트랙패드 핀치(ctrl+휠)는 Naver 기본 처리가 손가락보다 훨씬 덜 움직여(deltaY -400에 0.64단계) 직접 받는다.
+  // GL 지도에서 트랙패드 핀치(ctrl+휠)는 Naver 기본 처리가 손가락보다 훨씬 덜 움직여(deltaY -400에 0.64단계) 직접 받는다.
   // 손가락을 벌린 비율만큼 확대하고 커서 자리를 제자리에 둔다. ctrl 없는 휠과 터치 핀치는 SDK에 그대로 맡긴다.
   useEffect(() => {
     const container = containerRef.current;
     const map = mapRef.current;
-    if (!liveMode || !mapReady || container === null || map === null) return;
+    // GL이 아닌 지도는 확대 단계가 정수로만 바뀌어 손가락을 따라가는 소수 확대가 의미가 없다.
+    // 직접 받으면 애니메이션 없이 툭툭 끊기므로, 스크롤 확대처럼 Naver 기본 처리(단계 사이 애니메이션)에 맡긴다.
+    if (!liveMode || !mapReady || container === null || map === null || !customStyleId) return;
     let pending = 0;
     let offset = { x: 0, y: 0 };
     let frame: number | null = null;
@@ -368,7 +370,7 @@ const useNaverMap = ({
       container.removeEventListener('wheel', onWheel, { capture: true });
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [engine, liveMode, mapReady]);
+  }, [engine, liveMode, mapReady, customStyleId]);
 
   useEffect(() => {
     const map = mapRef.current;

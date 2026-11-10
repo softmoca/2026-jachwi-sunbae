@@ -1,6 +1,7 @@
 import { propertyChecklistTabPath, propertyDetailPath } from '@/shared/lib/navigation/appPaths';
 
 const STORAGE_KEY = 'jachwi-recent-property-edit';
+/** 헤더에 이미 띄운 기록의 `at`. 같은 수정은 한 번만 띄운다. */
 /** 이 시간 안에 고친 기록만 "이어서 보기"로 보여 준다. */
 export const RECENT_EDIT_WINDOW_MS = 10 * 60 * 1000;
 
@@ -31,3 +32,15 @@ export const readRecentEdit = (now = Date.now()): RecentEdit | null => {
 
 export const recentEditPath = ({ propertyId, kind }: RecentEdit) =>
   kind === 'checklist' ? propertyChecklistTabPath(propertyId) : propertyDetailPath(propertyId);
+
+/** 지금 화면이 그 매물 상세(체크리스트 탭과 하위 화면 포함)이면 참이다. 이미 보고 있으니 다시 안내하지 않는다. */
+export const isOnRecentEditScreen = ({ propertyId }: RecentEdit, pathname: string) => {
+  const detail = propertyDetailPath(propertyId);
+  return pathname === detail || pathname.startsWith(`${detail}/`);
+};
+
+/** 10분 안에 고쳤고 지금 그 화면이 아니면 그 기록을 준다. 클릭했더라도 10분 동안은 계속 준다. */
+export const readActiveRecentEdit = (pathname: string, now = Date.now()): RecentEdit | null => {
+  const edit = readRecentEdit(now);
+  return edit === null || isOnRecentEditScreen(edit, pathname) ? null : edit;
+};

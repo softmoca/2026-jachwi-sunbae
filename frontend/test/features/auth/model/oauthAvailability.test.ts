@@ -6,8 +6,11 @@ import {
   markNativeOAuthServerUnsupported,
 } from '@/features/auth/model/oauthAvailability';
 
+const APPLE_APP = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple'] } as const;
+
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  vi.unstubAllGlobals();
 });
 
 describe('OAuth 계정 연결 노출', () => {
@@ -61,7 +64,7 @@ describe('OAuth 계정 연결 노출', () => {
     markNativeOAuthServerUnsupported(now);
     expect(isOAuthLinkAvailable()).toBe(true);
 
-    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple'] };
+    window.__JACHWI_NATIVE_APP__ = { ...APPLE_APP };
     expect(isOAuthLinkAvailable()).toBe(false);
 
     vi.spyOn(Date, 'now').mockReturnValue(now + 24 * 60 * 60 * 1_000 + 1);

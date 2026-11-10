@@ -14,8 +14,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          // add(MyReactNativePackage())
+          // 앱 전용 TurboModule(웹 auth 브리지의 카카오 로그인, 앱 버전과 빌드 번호)
+          add(JachwiNativePackage())
         },
     )
   }

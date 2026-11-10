@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  readActiveRecentEdit,
   readRecentEdit,
   RECENT_EDIT_WINDOW_MS,
   recentEditPath,
@@ -38,5 +39,27 @@ describe('최근 고친 매물 기록', () => {
   it('체크리스트는 체크리스트 탭으로, 정보와 메모는 상세로 돌아간다', () => {
     expect(recentEditPath({ propertyId: 7, kind: 'checklist', at: 0 })).toBe('/properties/7?tab=checklist');
     expect(recentEditPath({ propertyId: 7, kind: 'info', at: 0 })).toBe('/properties/7');
+  });
+
+  it('10분 안에는 몇 번을 확인해도 계속 주고, 다시 고치면 새 기록을 준다', () => {
+    rememberRecentEdit(7, 'info', 1_000);
+    expect(readActiveRecentEdit('/', 2_000)).toEqual({ propertyId: 7, kind: 'info', at: 1_000 });
+    expect(readActiveRecentEdit('/', 3_000)?.at).toBe(1_000);
+
+    rememberRecentEdit(7, 'checklist', 4_000);
+    expect(readActiveRecentEdit('/', 5_000)?.at).toBe(4_000);
+  });
+
+  it('10분이 지난 기록은 주지 않는다', () => {
+    rememberRecentEdit(7, 'info', 1_000);
+    expect(readActiveRecentEdit('/', 1_000 + RECENT_EDIT_WINDOW_MS + 1)).toBeNull();
+  });
+
+  it('지금 그 매물 상세나 체크리스트 화면이면 띄우지 않는다', () => {
+    rememberRecentEdit(7, 'checklist', 1_000);
+
+    expect(readActiveRecentEdit('/properties/7', 2_000)).toBeNull();
+    expect(readActiveRecentEdit('/properties/7/checklists/3', 2_000)).toBeNull();
+    expect(readActiveRecentEdit('/properties/70', 2_000)?.propertyId).toBe(7);
   });
 });

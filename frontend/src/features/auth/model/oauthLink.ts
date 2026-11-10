@@ -7,13 +7,14 @@
  * - 익명 회원 + 처음 쓰는 계정: 지금 회원에 연결만 한다. 회원 번호와 기록이 그대로다.
  * - 익명 회원 + 이미 연결된 계정: 그 회원으로 기록을 합친다(`mergeOwnedData`). 매물(사진, 메모, 체크 기록 포함),
  *   내가 만든 체크리스트, 거리 메모를 옮기고, 날씨 위치와 알림 설정, 체크리스트 단계 설정은 계정에 이미 있으면 그 값을 쓴다.
- * - 계정을 연결한 회원 + 다른 계정: 합치지 않고 그 계정의 회원으로 바꾼다. 처음 쓰는 계정이면 빈 새 회원이다.
+ * - 계정을 연결한 회원 + 다른 계정: 합치지 않고 그 계정의 회원으로 바꾼다. 화면은 이 전환을 열지 않는다.
+ *   연결한 회원은 로그아웃해 새 익명 회원이 된 뒤 다시 연결한다.
  */
 export type OAuthProvider = 'KAKAO' | 'APPLE';
 export const OAUTH_PROVIDERS: readonly OAuthProvider[] = ['KAKAO', 'APPLE'];
 export const OAUTH_PROVIDER_LABELS: Record<OAuthProvider, string> = { KAKAO: '카카오', APPLE: 'Apple' };
 
-export type OAuthOutcome = 'linked' | 'merged' | 'switched' | 'completed';
+export type OAuthOutcome = 'linked' | 'merged' | 'completed';
 /**
  * - `unfinished`: 제공자 화면으로 갔다가 완료 없이 돌아왔다. #570은 취소와 콜백 실패를 API 도메인의 JSON 오류로 끝내
  *   웹이 둘을 구분할 수 없다.
@@ -33,7 +34,6 @@ const PENDING_TTL_MS = 30 * 60 * 1_000;
 export type PendingOAuth = {
   provider: OAuthProvider;
   previousMemberId: number;
-  previousProvider: OAuthProvider | null;
   startedAt: number;
 };
 
@@ -83,7 +83,6 @@ export const takePendingOAuth = (now = Date.now()): PendingOAuth | null => {
     value === null ||
     !isProvider(value.provider) ||
     !isMemberId(value.previousMemberId) ||
-    !(value.previousProvider === null || isProvider(value.previousProvider)) ||
     typeof value.startedAt !== 'number' ||
     now - value.startedAt > PENDING_TTL_MS ||
     now < value.startedAt
@@ -93,9 +92,24 @@ export const takePendingOAuth = (now = Date.now()): PendingOAuth | null => {
   return {
     provider: value.provider,
     previousMemberId: value.previousMemberId,
-    previousProvider: value.previousProvider,
     startedAt: value.startedAt,
   };
+};
+
+const NOTICE_KEY = 'jachwi:oauth-notice';
+
+/** 페이지를 새로 열기 전에 결과 안내를 남긴다. 새로 연 마이 화면이 한 번 읽어 보여 준다. */
+export const stashOAuthNotice = (notice: OAuthNotice) => writeJson(session, NOTICE_KEY, notice);
+
+/** 한 번 읽으면 지운다. 형식이 다르면 없는 것으로 본다. */
+export const takeStashedOAuthNotice = (): OAuthNotice | null => {
+  const value = readJson(session, NOTICE_KEY);
+  removeItem(session, NOTICE_KEY);
+  if (value === null) return null;
+  const { title, description, tone } = value;
+  return typeof title === 'string' && typeof description === 'string' && (tone === 'success' || tone === 'error')
+    ? { title, description, tone }
+    : null;
 };
 
 /** 이 기기에서 확인한 지금 회원의 연결 계정. 다른 회원으로 바뀌었으면 연결하지 않은 것으로 본다. */
@@ -109,16 +123,15 @@ export const saveLinkedProvider = (memberId: number, provider: OAuthProvider) =>
   writeJson(local, LINK_KEY, { memberId, provider });
 
 /**
- * 인증 전후 회원으로 결과를 정한다(#570 `completeOAuth` 규칙을 따른다).
- * - 같은 회원: 익명 회원에 처음 연결했다(또는 이미 연결한 같은 계정). 기록은 그대로다.
- * - 다른 회원, 시작할 때 이 기기에서 연결 계정을 알고 있었음: 다른 계정으로 바꿨다. 기록은 합치지 않는다.
- * - 다른 회원, 시작할 때 익명이었음: 이미 연결된 회원으로 기록을 합쳤다.
- * 연결 상태는 이 기기의 기억이라, 다른 경로로 잃었으면 전환을 통합으로 잘못 볼 수 있다. 서버가 결과를 주면 그 값으로 바꾼다.
+ * 인증 전후 회원으로 결과를 정한다(#570 `completeOAuth` 규칙을 따른다). 화면은 연결하지 않은 회원에게만 연결을 연다.
+ * - 같은 회원: 익명 회원에 처음 연결했다. 기록은 그대로다.
+ * - 다른 회원: 이미 연결된 회원으로 기록을 합쳤다.
+ * 연결 상태는 이 기기의 기억이라, 다른 경로로 잃은 연결 회원이 다른 계정으로 인증하면 서버의 전환을 통합으로 잘못 볼 수 있다.
+ * 서버가 결과를 주면 그 값으로 바꾼다.
  */
 export const resolveOAuthOutcome = (pending: PendingOAuth | null, memberId: number): OAuthOutcome => {
   if (pending === null) return 'completed';
-  if (pending.previousMemberId === memberId) return 'linked';
-  return pending.previousProvider === null ? 'merged' : 'switched';
+  return pending.previousMemberId === memberId ? 'linked' : 'merged';
 };
 
 export const createOAuthSuccessNotice = (outcome: OAuthOutcome, provider: OAuthProvider | null): OAuthNotice => {
@@ -136,13 +149,6 @@ export const createOAuthSuccessNotice = (outcome: OAuthOutcome, provider: OAuthP
         title: `${label} 계정으로 기록을 합쳤어요`,
         description:
           '이 기기에서 남긴 매물, 체크리스트, 거리 메모를 그 계정으로 옮겼어요. 날씨 위치와 알림 설정은 계정에 있던 설정을 써요.',
-      };
-    case 'switched':
-      return {
-        tone: 'success',
-        title: `${label} 계정으로 바꿨어요`,
-        description:
-          '이전 계정의 기록은 합치지 않고 그 계정에 그대로 남아 있어요. 처음 쓰는 계정이면 빈 기록으로 시작해요.',
       };
     case 'completed':
       return { tone: 'success', title: `${label} 계정 인증을 마쳤어요`, description: '계정의 기록으로 이어서 써요.' };

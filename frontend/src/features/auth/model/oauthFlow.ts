@@ -48,7 +48,6 @@ type StartOptions = {
   config: PublicConfig;
   provider: OAuthProvider;
   memberId: number;
-  linkedProvider: OAuthProvider | null;
   countProperties?: CountProperties;
   /** 제공자 화면으로 페이지를 옮기는 방법. 테스트에서 바꾼다. */
   leavePage?: (url: string) => void;
@@ -67,7 +66,6 @@ export const startOAuthLink = async ({
   config,
   provider,
   memberId,
-  linkedProvider,
   countProperties = unknownCount,
   leavePage = (url) => window.location.assign(url),
 }: StartOptions): Promise<OAuthStartResult> => {
@@ -88,13 +86,11 @@ export const startOAuthLink = async ({
 
   trackOAuthLinkStarted({
     provider: toAnalyticsProvider(provider),
-    already_linked: linkedProvider !== null,
     ...withPropertyCount(await propertyCount),
   });
   const pending: PendingOAuth = {
     provider,
     previousMemberId: memberId,
-    previousProvider: linkedProvider,
     startedAt: 0,
   };
   savePendingOAuth(pending);
@@ -139,6 +135,28 @@ export const completeOAuthLink = (
   countProperties: CountProperties = unknownCount,
 ): Promise<OAuthNotice> =>
   finishOAuthLink(config, { pending: takePendingOAuth(), countProperties, resetCache: () => queryClient.clear() });
+
+/** #646 콜백이 실패하면 복귀 주소에 붙이는 `error` 값. 모르는 값은 `failed`로 본다. */
+const toCallbackFailure = (error: string): Exclude<OAuthFailure, 'unfinished'> => {
+  if (error === 'cancelled' || error === 'session' || error === 'unavailable') return error;
+  return 'failed';
+};
+
+/**
+ * 콜백이 실패해 `/oauth/complete?error=...`로 돌아왔을 때 부른다. 서버는 이때 쿠키와 회원을 바꾸지 않으므로
+ * 다시 로그인하지 않고, 남은 시작 정보만 지운 뒤 취소나 실패를 기록하고 안내를 돌려준다.
+ */
+export const failOAuthLink = async (
+  error: string,
+  countProperties: CountProperties = unknownCount,
+): Promise<OAuthNotice> => {
+  const failure = toCallbackFailure(error);
+  const provider = toAnalyticsProvider(takePendingOAuth()?.provider);
+  const propertyCount = withPropertyCount(await countProperties().catch(() => undefined));
+  if (failure === 'cancelled') trackOAuthLinkEvent('oauth_link_cancelled', { provider, ...propertyCount });
+  else trackOAuthLinkEvent('oauth_link_failed', { provider, reason: failure, ...propertyCount });
+  return createOAuthFailureNotice(failure);
+};
 
 /** 서버에 네이티브 로그인 API가 아직 없을 때의 응답. Spring은 없는 경로에 404를 준다. */
 const isServerUnsupported = (error: unknown): boolean =>
@@ -185,7 +203,6 @@ export const startNativeOAuthLink = async ({
   config,
   provider,
   memberId,
-  linkedProvider,
   countProperties = unknownCount,
   login = requestNativeLogin,
 }: NativeStartOptions): Promise<OAuthNotice> => {
@@ -213,7 +230,6 @@ export const startNativeOAuthLink = async ({
 
   trackOAuthLinkEvent('oauth_link_started', {
     provider: analyticsProvider,
-    already_linked: linkedProvider !== null,
     flow: 'native',
     ...withPropertyCount(await propertyCount),
   });
@@ -240,7 +256,7 @@ export const startNativeOAuthLink = async ({
   }
 
   return finishOAuthLink(config, {
-    pending: { provider, previousMemberId: memberId, previousProvider: linkedProvider, startedAt: Date.now() },
+    pending: { provider, previousMemberId: memberId, startedAt: Date.now() },
     countProperties,
     // 페이지를 떠나지 않으므로 캐시를 비우기만 하면 지금 화면의 조회가 다시 불리지 않는다. 초기화해 다시 불러오게 한다.
     resetCache: () => void queryClient.resetQueries().catch(() => undefined),

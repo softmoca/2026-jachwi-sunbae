@@ -125,7 +125,7 @@ afterEach(() => {
 });
 
 describe('마이 화면', () => {
-  it('생활 날씨, 개인정보 처리방침, 초기화만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
+  it('생활 날씨, 개인정보 처리방침, 회원 탈퇴만 두고, 알림을 켜면 현재 위치를 저장하고 그 위치의 날씨를 보인다', async () => {
     const user = userEvent.setup();
     const weather = useWeatherServer();
     mockGeolocation('allowed');
@@ -136,9 +136,9 @@ describe('마이 화면', () => {
     expect(screen.queryByText(/프로토타입|샘플|시연/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /개인정보 처리방침/ })).toHaveAttribute('href', '/privacy');
 
-    // 마이에는 초기화만 두고, 계정과 데이터 삭제 요청은 개인정보 처리방침의 삭제 요청 안내에서 받는다.
-    expect(screen.getByRole('button', { name: /^초기화/ })).toBeInTheDocument();
-    expect(screen.queryByText(/삭제|지우려면/)).not.toBeInTheDocument();
+    // 마이에는 회원 탈퇴를 두고, 기록을 바로 지우는 삭제 요청은 개인정보 처리방침의 삭제 요청 안내에서 받는다.
+    expect(screen.getByRole('button', { name: /^회원 탈퇴/ })).toHaveTextContent('계정과 기록을 삭제해요.');
+    expect(screen.queryByText(/지우려면/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /메일/ })).not.toBeInTheDocument();
 
     const toggle = screen.getByRole('switch', { name: '알림 받기' });
@@ -159,7 +159,7 @@ describe('마이 화면', () => {
   });
 });
 
-describe('마이 화면의 초기화', () => {
+describe('마이 화면의 회원 탈퇴', () => {
   /** 탈퇴 요청 수를 세고, 성공하면 이어지는 로그인에서 2번 새 회원을 돌려주는 인증 API */
   const useResetServer = (result: 'success' | 'failure') => {
     const state = { resetCalls: 0, isDeleted: false };
@@ -187,11 +187,10 @@ describe('마이 화면의 초기화', () => {
   };
 
   const openResetDialog = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(await screen.findByRole('button', { name: /^초기화/ }));
-    const dialog = screen.getByRole('dialog', { name: '초기화할까요?' });
-    expect(dialog).toHaveTextContent(
-      '새 아이디로 다시 시작해요. 지금까지의 기록은 더 이상 볼 수 없고, 90일 뒤 파기돼요.',
-    );
+    await user.click(await screen.findByRole('button', { name: /^회원 탈퇴/ }));
+    const dialog = screen.getByRole('dialog', { name: '탈퇴할까요?' });
+    expect(dialog).toHaveTextContent('삭제한 기록은 다시 볼 수 없고, 90일 뒤 완전히 파기돼요.');
+    expect(dialog).toHaveTextContent('연결한 카카오나 Apple 계정이 있으면 연결도 끊어요.');
     return dialog;
   };
 
@@ -202,7 +201,7 @@ describe('마이 화면의 초기화', () => {
     renderMyPage();
     const dialog = await openResetDialog(user);
 
-    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+    await user.click(within(dialog).getByRole('button', { name: '탈퇴' }));
 
     await waitFor(() => expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent(/^\/$/));
     expect(reset.resetCalls).toBe(1);
@@ -216,17 +215,17 @@ describe('마이 화면의 초기화', () => {
     renderMyPage();
     const dialog = await openResetDialog(user);
 
-    await user.click(within(dialog).getByRole('button', { name: '초기화' }));
+    await user.click(within(dialog).getByRole('button', { name: '탈퇴' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      '초기화하지 못했어요. 지금 아이디와 기록은 그대로예요.',
+      '탈퇴하지 못했어요. 지금 계정과 기록은 그대로예요.',
     );
     expect(reset.resetCalls).toBe(1);
     expect(screen.getByRole('status', { name: '현재 경로' })).toHaveTextContent('/me');
     expect(getAuthenticationSnapshot()).toMatchObject({ terminationReason: null, session: { memberId: 1 } });
   });
 
-  it('취소하면 초기화 요청을 보내지 않는다', async () => {
+  it('취소하면 탈퇴 요청을 보내지 않는다', async () => {
     const user = userEvent.setup();
     useWeatherServer();
     const reset = useResetServer('success');

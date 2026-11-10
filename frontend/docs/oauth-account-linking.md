@@ -15,6 +15,8 @@ OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 �
 | `features`에 `auth`를 알린 앱                                     | `authProviders`의 제공자만 |
 | 위 앱이지만 `authProviders`가 비었거나 서버에 API가 없다고 확인함 | 숨긴다                     |
 
+앱용 `/nonce`, `/id-token` API(#646)는 웹보다 먼저 배포한다. 순서가 뒤집히면 그 사이에 버튼을 누른 앱에서는 아래 서버 미지원 처리로 하루 동안 숨는다.
+
 서버의 `/nonce`나 `/id-token`이 404, 405, 501이면 서버 미지원으로 보고 `localStorage`의 `jachwi:native-oauth-unsupported`에 하루 동안 남겨 그동안 앱에서 숨긴다. 앱 버전은 따로 비교하지 않는다. `auth`와 `authProviders`는 브리지를 넣은 앱만 알리기 때문이다.
 
 앱인지는 `window.__JACHWI_NATIVE_APP__`이나 앱 User-Agent(`JachwiSunbae/`)로 본다. 앱 WebView에서 `/oauth/complete`로 들어오면 아무것도 하지 않고 마이로 보낸다. 앱을 다시 빌드하지 않아도 웹 배포만으로 숨겨진다.

@@ -59,6 +59,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  vi.unstubAllGlobals();
 });
 
 describe('앱 네이티브 로그인으로 계정 연결', () => {
@@ -72,7 +73,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: null,
       countProperties: () => Promise.resolve(2),
       login,
     });
@@ -83,7 +83,7 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
     expect(notice).toMatchObject({ tone: 'success', title: '카카오 계정을 연결했어요' });
     expect(readLinkedProvider(20)).toBe('KAKAO');
     expect(oauthEvents()).toEqual([
-      ['oauth_link_started', { provider: 'kakao', already_linked: false, flow: 'native', property_count: 2 }],
+      ['oauth_link_started', { provider: 'kakao', flow: 'native', property_count: 2 }],
       ['oauth_link_completed', { provider: 'kakao', outcome: 'linked', flow: 'native', property_count: 2 }],
     ]);
   });
@@ -99,7 +99,7 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       nonce: 'server-nonce',
     });
 
-    const notice = await startNativeOAuthLink({ config, provider: 'APPLE', memberId: 20, linkedProvider: null, login });
+    const notice = await startNativeOAuthLink({ config, provider: 'APPLE', memberId: 20, login });
 
     expect(bodies).toEqual([{ idToken: 'apple-id-token', authorizationCode: 'apple-code', nonce: 'server-nonce' }]);
     expect(notice.title).toBe('Apple 계정으로 기록을 합쳤어요');
@@ -114,7 +114,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'APPLE',
       memberId: 20,
-      linkedProvider: 'KAKAO',
       login: loginReturns({ status: 'cancelled' }),
     });
 
@@ -122,7 +121,7 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
     expect(notice.title).toBe('계정 연결을 취소했어요');
     expect(getAuthenticationSnapshot().session?.memberId).toBe(20);
     expect(oauthEvents().map(([name, properties]) => [name, properties])).toEqual([
-      ['oauth_link_started', { provider: 'apple', already_linked: true, flow: 'native' }],
+      ['oauth_link_started', { provider: 'apple', flow: 'native' }],
       ['oauth_link_cancelled', { provider: 'apple', flow: 'native' }],
     ]);
   });
@@ -140,7 +139,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: null,
       login: loginReturns({ status: 'error', code }),
     });
 
@@ -161,7 +159,7 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
     server.use(http.post(NONCE_URL, () => failure('NOT_FOUND', 404)));
     const login = loginReturns({ status: 'cancelled' });
 
-    const notice = await startNativeOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, login });
+    const notice = await startNativeOAuthLink({ config, provider: 'KAKAO', memberId: 20, login });
 
     expect(login).not.toHaveBeenCalled();
     expect(notice.title).toBe('지금은 계정을 연결할 수 없어요');
@@ -185,7 +183,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: null,
       login: loginReturns({ status: 'success', idToken: 't', nonce: 'server-nonce' }),
     });
 
@@ -204,7 +201,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'APPLE',
       memberId: 20,
-      linkedProvider: null,
       login: loginReturns({ status: 'success', idToken: 't', authorizationCode: 'c', nonce: 'server-nonce' }),
     });
 
@@ -232,7 +228,6 @@ describe('앱 네이티브 로그인으로 계정 연결', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: null,
       login: loginReturns({ status: 'cancelled' }),
     });
 

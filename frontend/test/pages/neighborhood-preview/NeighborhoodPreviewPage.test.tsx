@@ -16,7 +16,6 @@ import NeighborhoodRoutePage from '@/pages/neighborhood-preview/NeighborhoodRout
 import { setAuthentication } from '@/features/auth/model/authStore';
 import { MapLocationError, readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import type { MapCanvasProps } from '@/features/map/model/MapCanvas';
-import { dismissExampleProperty } from '@/features/property/model/exampleProperty';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
@@ -551,9 +550,7 @@ it('데스크탑도 장소를 고르는 지도에 확대, 축소 버튼을 둔�
   }
 });
 it('기록한 매물이 없거나 로그인 전(공개 동네 찾기)이면 My를 눌렀을 때 시트에 안내를 보이고, 공개 동네 찾기는 매물을 부르지 않는다', async () => {
-  // 이미 예시를 사용한 회원이 자신의 기록을 모두 지운 상황이다.
   setAuthentication({ memberId: 1, accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
-  dismissExampleProperty({ apiBaseUrl: 'http://localhost:8080' });
   let propertyRequests = 0;
   const track = ({ request }: { request: Request }) => {
     if (new URL(request.url).pathname.startsWith('/api/properties')) propertyRequests += 1;
@@ -899,7 +896,7 @@ it('휴대폰은 시설 칸을 켜도 멀리 보면 받지 않고 안내만 띄�
   expect(sheet.getByText(/에서 직선/)).toBeInTheDocument();
   expect(viewCenter()).toMatchObject({ latitude: hospital.latitude, longitude: hospital.longitude });
 });
-it('휴대폰은 지도에서 동네를 누르면 한 단계 시트에 그 동네의 통근, 월세 시세와 다방 링크를 보인다', async () => {
+it('휴대폰은 지도에서 동네를 누르면 낮은 시트에 그 동네의 통근, 월세 시세와 다방 링크를 보인다', async () => {
   show();
   const user = await choosePoint();
   await user.click(screen.getByRole('button', { name: /에서 찾기$/ }));
@@ -908,8 +905,8 @@ it('휴대폰은 지도에서 동네를 누르면 한 단계 시트에 그 동�
   expect(sheet.getByText('월세 68만원 · 보증금 1,000만원')).toBeInTheDocument();
   expect(sheet.getByText(/까지 약 \d+분/)).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /다방에서 역삼1동 원·투룸 보기/ })).toBeInTheDocument();
-  // 한 단계 높이로만 두고 끝까지 끌어 올리는 손잡이를 두지 않는다.
-  expect(screen.queryByRole('button', { name: '상세 패널 높이 조절' })).not.toBeInTheDocument();
+  // 동네 시트는 낮게 열고, 끌어 올려 더 크게 볼 수 있게 손잡이를 둔다.
+  expect(screen.getByRole('button', { name: '상세 패널 높이 조절' })).toBeInTheDocument();
 });
 it('My를 켜면 내 매물 마커에 통근 시간을 붙이고 한 화면에 들어오게 옮기며, 시트에 매물과 통근 시간 목록을 보인다', async () => {
   server.use(
