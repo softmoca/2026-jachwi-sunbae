@@ -1,8 +1,10 @@
 package com.jachwisunbae.auth.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -12,18 +14,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.auth.client.OAuthProviderClient;
+import com.jachwisunbae.auth.client.ProviderIdentity;
 import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
+import com.jachwisunbae.common.exception.client.InvalidInputException;
+import com.jachwisunbae.common.exception.errorcode.ErrorCode;
+import com.jachwisunbae.common.exception.server.ServiceUnavailableException;
 import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.Cookie;
 import java.time.LocalDateTime;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +46,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -114,13 +124,13 @@ class AnonymousAuthenticationAcceptanceTest {
         String state = params.getFirst("state");
         String nonce = params.getFirst("nonce");
         assertThat(state).isNotBlank().isNotEqualTo(nonce);
-        doReturn("external-user").when(oauthProviderClient)
+        doReturn(new ProviderIdentity("external-user", null)).when(oauthProviderClient)
                 .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(nonce));
 
         mvc.perform(get(callbackPath).cookie(otherCookie).param("state", state).param("code", "valid-code"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isSeeOther()).andExpect(failureRedirect("session"));
         mvc.perform(get("/api/auth/oauth/APPLE/callback").cookie(cookie).param("state", state).param("code", "valid-code"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isSeeOther()).andExpect(failureRedirect("session"));
         var linked = mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
                 .andExpect(status().isSeeOther())
                 .andExpect(header().string(HttpHeaders.LOCATION, "https://app.example.com/")).andReturn();
@@ -133,11 +143,86 @@ class AnonymousAuthenticationAcceptanceTest {
         mvc.perform(post("/api/auth/refresh").cookie(replacement))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(memberId));
         mvc.perform(post("/api/auth/refresh").cookie(otherCookie)).andExpect(status().isOk());
-        mvc.perform(get(callbackPath).cookie(cookie).param("state", state).param("code", "valid-code"))
-                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("OAUTH_AUTHENTICATION_FAILED"));
+        mvc.perform(get(callbackPath).cookie(replacement).param("state", state).param("code", "valid-code"))
+                .andExpect(status().isSeeOther()).andExpect(failureRedirect("session"));
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT member_id FROM member_identities WHERE provider = 'KAKAO' AND provider_subject = 'external-user'",
                 Long.class)).isEqualTo(memberId);
+    }
+
+    static Stream<Arguments> callbackFailures() {
+        return Stream.of(
+                Arguments.of("provider-cancelled", "cancelled"),
+                Arguments.of("provider-error", "failed"),
+                Arguments.of("missing-cookie", "session"),
+                Arguments.of("unknown-state", "session"),
+                Arguments.of("missing-code", "failed"),
+                Arguments.of("token-rejected", "failed"),
+                Arguments.of("provider-unavailable", "unavailable"),
+                Arguments.of("unexpected", "failed"));
+    }
+
+    @ParameterizedTest(name = "{0} -> {1}")
+    @MethodSource("callbackFailures")
+    @DisplayName("OAuth 콜백이 실패하면 API 오류 화면에 남기지 않고 쿠키를 바꾸지 않은 채 완료 주소에 실패 사유를 붙여 보낸다")
+    void redirectsCallbackFailureToCompletionPage(String situation, String failure) throws Exception {
+        // given
+        AnonymousLogin login = startAnonymous();
+        String state = startOAuth(login);
+        var request = get("/api/auth/oauth/KAKAO/callback").param("state", state);
+        if (!situation.equals("missing-cookie")) {
+            request.cookie(login.refreshCookie());
+        }
+        switch (situation) {
+            case "provider-cancelled" -> request.param("error", "access_denied");
+            case "provider-error" -> request.param("error", "server_error");
+            case "unknown-state" -> request.param("state", tokenProvider.generateOpaqueToken()).param("code", "valid-code");
+            case "missing-code" -> { }
+            case "token-rejected" -> {
+                request.param("code", "valid-code");
+                doThrow(new InvalidInputException(ErrorCode.OAUTH_ID_TOKEN_INVALID, "test rejection"))
+                        .when(oauthProviderClient).exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), anyString());
+            }
+            case "provider-unavailable" -> {
+                request.param("code", "valid-code");
+                doThrow(new ServiceUnavailableException(ErrorCode.OAUTH_PROVIDER_UNAVAILABLE, "test outage"))
+                        .when(oauthProviderClient).exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), anyString());
+            }
+            case "unexpected" -> {
+                request.param("code", "valid-code");
+                doThrow(new IllegalStateException("test failure"))
+                        .when(oauthProviderClient).exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), anyString());
+            }
+            default -> request.param("code", "valid-code");
+        }
+
+        // when
+        var response = mvc.perform(request)
+                .andExpect(status().isSeeOther())
+                .andExpect(failureRedirect(failure))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(header().string("Referrer-Policy", "no-referrer"))
+                .andReturn();
+
+        // then
+        assertThat(response.getResponse().getCookie("refresh_token")).isNull();
+        mvc.perform(post("/api/auth/refresh").cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(login.memberId()));
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM member_identities", Long.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM members", Long.class)).isOne();
+    }
+
+    private String startOAuth(AnonymousLogin login) throws Exception {
+        var response = mvc.perform(post("/api/auth/oauth/KAKAO/start")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(login)).cookie(login.refreshCookie()))
+                .andExpect(status().isOk()).andReturn();
+        String url = objectMapper.readTree(response.getResponse().getContentAsString())
+                .path("data").path("authorizationUrl").asText();
+        return UriComponentsBuilder.fromUriString(url).build().getQueryParams().getFirst("state");
+    }
+
+    private static ResultMatcher failureRedirect(String failure) {
+        return header().string(HttpHeaders.LOCATION, "https://app.example.com/?error=" + failure);
     }
 
     @Test
@@ -228,7 +313,7 @@ class AnonymousAuthenticationAcceptanceTest {
         String url = objectMapper.readTree(response.getResponse().getContentAsString())
                 .path("data").path("authorizationUrl").asText();
         var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
-        doReturn(subject).when(oauthProviderClient)
+        doReturn(new ProviderIdentity(subject, null)).when(oauthProviderClient)
                 .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(params.getFirst("nonce")));
         return mvc.perform(get("/api/auth/oauth/KAKAO/callback").cookie(login.refreshCookie())
                         .param("state", params.getFirst("state")).param("code", "valid-code"))

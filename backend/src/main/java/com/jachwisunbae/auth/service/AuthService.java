@@ -129,6 +129,10 @@ public class AuthService {
         if (existingTarget.isEmpty()) {
             saveIdentity(identity, target, now);
         }
+        if (identity.credential() != null) {
+            identities.updateProviderCredential(identity.provider(), identity.subject(),
+                    identity.credential().clientId(), identity.credential().refreshToken());
+        }
         if (anonymous && !source.equals(target)) {
             memberRepository.mergeOwnedData(source, target, now);
             refreshTokenRepository.deleteByMemberId(source);
