@@ -79,6 +79,7 @@ const createPlugins = ({ isProduction, buildEnvironment }) => [
     __API_BASE_URL__: JSON.stringify(buildEnvironment.apiBaseUrl),
     __MAP_PROVIDER_MODE__: JSON.stringify(buildEnvironment.mapProviderMode),
     __NAVER_MAP_CLIENT_ID__: JSON.stringify(buildEnvironment.naverMapClientId),
+    __NATIVE_OAUTH_ENABLED__: JSON.stringify(buildEnvironment.nativeOAuthEnabled),
     __POSTHOG_PROJECT_TOKEN__: JSON.stringify(buildEnvironment.posthogProjectToken),
     __POSTHOG_HOST__: JSON.stringify(buildEnvironment.posthogHost),
     __APP_VERSION__: JSON.stringify(buildEnvironment.appVersion ?? packageVersion),

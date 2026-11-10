@@ -1,3 +1,4 @@
+import { isNativeOAuthEnabled } from '@/shared/config/publicConfig';
 import { getNativeAuthProviders, hasNativeAppFeature, isRunningInNativeApp } from '@/shared/lib/native-app/nativeApp';
 
 import type { NativeAuthProvider } from '../lib/nativeAuthBridge';
@@ -35,12 +36,14 @@ const isNativeOAuthServerUnsupported = (now = Date.now()): boolean => {
  * 계정 연결에 쓸 수 있는 제공자. 카드, 버튼, 복귀 화면이 모두 이 함수로 판단한다.
  * - 브라우저: 모두. #570의 `/start`, `/callback`으로 연결한다.
  * - 앱 WebView: 카카오, Apple 로그인 화면을 WebView 안에서 열면 안 되므로(RFC 8252) 네이티브 로그인 브리지(#591)로만 연다.
- *   앱이 `features`에 `auth`를 알리고 `authProviders`에 넣은 제공자만 쓴다. 이 둘이 없는 예전 앱(2.1.x 이하)이나
+ *   웹 빌드의 `NATIVE_OAUTH_ENABLED`가 꺼져 있으면 앱이 무엇을 알려도 빈 목록이라 숨긴다.
+ *   켜져 있으면 앱이 `features`에 `auth`를 알리고 `authProviders`에 넣은 제공자만 쓴다. 이 둘이 없는 예전 앱(2.1.x 이하)이나
  *   키가 없는 빌드, 서버에 API가 없다고 확인한 동안에는 빈 목록이라 숨긴다.
- * 출시 순서는 https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/570#issuecomment-6635306937 을 따른다.
+ * 출시 순서: 백엔드 nonce, id-token API가 배포되면 `NATIVE_OAUTH_ENABLED`를 켜고 웹을 배포한다.
  */
 export const getAvailableOAuthProviders = (): readonly OAuthProvider[] => {
   if (!isRunningInNativeApp()) return OAUTH_PROVIDERS;
+  if (!isNativeOAuthEnabled()) return [];
   if (!hasNativeAppFeature(NATIVE_OAUTH_FEATURE) || isNativeOAuthServerUnsupported()) return [];
   const nativeProviders = getNativeAuthProviders();
   return OAUTH_PROVIDERS.filter((provider) => nativeProviders.includes(toNativeAuthProvider(provider)));

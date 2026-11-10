@@ -54,11 +54,13 @@ const serveNativeOAuth = () => {
 
 beforeEach(() => {
   trackEvent.mockClear();
+  vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', true);
   window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple', 'kakao'] };
 });
 
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  vi.unstubAllGlobals();
 });
 
 describe('앱 네이티브 로그인으로 계정 연결', () => {
