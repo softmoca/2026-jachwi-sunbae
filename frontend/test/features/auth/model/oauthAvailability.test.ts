@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getAvailableOAuthProviders,
@@ -6,8 +6,37 @@ import {
   markNativeOAuthServerUnsupported,
 } from '@/features/auth/model/oauthAvailability';
 
+const APPLE_APP = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple'] } as const;
+
+beforeEach(() => {
+  vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', true);
+});
+
 afterEach(() => {
   delete window.__JACHWI_NATIVE_APP__;
+  vi.unstubAllGlobals();
+});
+
+describe('NATIVE_OAUTH_ENABLED가 꺼진 웹 빌드', () => {
+  beforeEach(() => {
+    vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', false);
+  });
+
+  it('auth와 authProviders를 알린 앱에서도 숨긴다', () => {
+    window.__JACHWI_NATIVE_APP__ = { ...APPLE_APP, authProviders: ['apple', 'kakao'] };
+    expect(getAvailableOAuthProviders()).toEqual([]);
+    expect(isOAuthLinkAvailable()).toBe(false);
+  });
+
+  it('브라우저에서는 그대로 모두 보여 준다', () => {
+    expect(getAvailableOAuthProviders()).toEqual(['KAKAO', 'APPLE']);
+  });
+
+  it('값이 주입되지 않은 빌드도 꺼진 것으로 본다', () => {
+    vi.unstubAllGlobals();
+    window.__JACHWI_NATIVE_APP__ = { ...APPLE_APP };
+    expect(isOAuthLinkAvailable()).toBe(false);
+  });
 });
 
 describe('OAuth 계정 연결 노출', () => {
@@ -61,7 +90,7 @@ describe('OAuth 계정 연결 노출', () => {
     markNativeOAuthServerUnsupported(now);
     expect(isOAuthLinkAvailable()).toBe(true);
 
-    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple'] };
+    window.__JACHWI_NATIVE_APP__ = { ...APPLE_APP };
     expect(isOAuthLinkAvailable()).toBe(false);
 
     vi.spyOn(Date, 'now').mockReturnValue(now + 24 * 60 * 60 * 1_000 + 1);
