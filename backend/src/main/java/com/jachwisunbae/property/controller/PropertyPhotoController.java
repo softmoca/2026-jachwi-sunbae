@@ -1,6 +1,6 @@
 package com.jachwisunbae.property.controller;
 
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import com.jachwisunbae.property.controller.dto.response.PropertyPhotoListResponse;
 import com.jachwisunbae.property.controller.dto.response.PropertyPhotoResponse;

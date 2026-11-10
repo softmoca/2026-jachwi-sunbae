@@ -3,7 +3,7 @@ package com.jachwisunbae.auth.controller;
 import com.jachwisunbae.auth.controller.dto.LoginResponse;
 import com.jachwisunbae.auth.service.AuthService;
 import com.jachwisunbae.auth.service.dto.LoginResult;
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

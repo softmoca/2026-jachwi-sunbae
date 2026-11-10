@@ -1,14 +1,14 @@
 package com.jachwisunbae.member.service;
 
-import com.jachwisunbae.auth.repository.MemberIdentityRepository;
-import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.common.exception.client.ResourceNotFoundException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.member.entity.Member;
+import com.jachwisunbae.member.event.MemberDeleted;
 import com.jachwisunbae.member.repository.MemberRepository;
 import com.jachwisunbae.member.service.dto.result.MemberProfile;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final MemberIdentityRepository identities;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public MemberService(final MemberRepository memberRepository,
-                         final RefreshTokenRepository refreshTokenRepository,
-                         final MemberIdentityRepository identities,
+                         final ApplicationEventPublisher events,
                          final Clock clock) {
         this.memberRepository = memberRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.identities = identities;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -54,8 +51,8 @@ public class MemberService {
                         "memberId=" + memberId + " 회원을 찾을 수 없습니다."));
         LocalDateTime now = LocalDateTime.now(clock);
         memberRepository.deleteOwnedData(memberId, now);
-        refreshTokenRepository.deleteByMemberId(memberId);
-        identities.deleteByMemberId(memberId);
         memberRepository.delete(memberId, now);
+        // 동기 리스너가 인증을 정리하며, 실패하면 회원과 기록 삭제도 함께 롤백한다.
+        events.publishEvent(new MemberDeleted(memberId));
     }
 }

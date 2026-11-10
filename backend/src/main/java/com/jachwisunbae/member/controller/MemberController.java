@@ -1,6 +1,6 @@
 package com.jachwisunbae.member.controller;
 
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import com.jachwisunbae.member.controller.dto.MemberDetailResponse;
 import com.jachwisunbae.member.service.MemberService;

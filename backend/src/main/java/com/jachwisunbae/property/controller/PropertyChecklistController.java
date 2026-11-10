@@ -1,6 +1,6 @@
 package com.jachwisunbae.property.controller;
 
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.checklist.entity.PropertyChecklist;
 import com.jachwisunbae.checklist.entity.PropertyChecklistItem;
 import com.jachwisunbae.checklist.type.CheckStage;

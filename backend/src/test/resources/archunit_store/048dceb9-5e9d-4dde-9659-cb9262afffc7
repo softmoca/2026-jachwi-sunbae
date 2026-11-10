@@ -1,29 +1,5 @@
 규칙: 업무 패키지 사이에 순환 의존이 없어야 한다\
 문제: 업무 패키지가 서로를 참조하는 순환 의존이 있습니다.\
-순환 의존 발견: 업무 패키지 auth -> \
-                업무 패키지 member -> \
-                업무 패키지 auth\
-  1. 의존 목록: 업무 패키지 auth\
-    - 생성자 <com.jachwisunbae.auth.service.AuthService.<init>(com.jachwisunbae.member.repository.MemberRepository, com.jachwisunbae.auth.repository.RefreshTokenRepository, com.jachwisunbae.auth.token.JwtTokenProvider, com.jachwisunbae.auth.token.RefreshTokenProvider, java.time.Clock, long, long)> | 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.member.repository.MemberRepository> | 위치: (AuthService.java:0)\
-    - 생성자 <com.jachwisunbae.auth.web.JwtAuthenticationFilter.<init>(com.jachwisunbae.auth.token.JwtTokenProvider, com.jachwisunbae.member.repository.MemberRepository, com.fasterxml.jackson.databind.ObjectMapper)> | 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.member.repository.MemberRepository> | 위치: (JwtAuthenticationFilter.java:0)\
-    - 필드 <com.jachwisunbae.auth.service.AuthService.memberRepository> | 의존 유형: 필드 타입 | 대상: <com.jachwisunbae.member.repository.MemberRepository> | 위치: (AuthService.java:0)\
-    - 필드 <com.jachwisunbae.auth.web.JwtAuthenticationFilter.memberRepository> | 의존 유형: 필드 타입 | 대상: <com.jachwisunbae.member.repository.MemberRepository> | 위치: (JwtAuthenticationFilter.java:0)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createLoginResult(com.jachwisunbae.member.entity.Member, boolean, java.lang.String, long)> | 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.member.entity.Member> | 위치: (AuthService.java:0)\
-    - 메서드 <com.jachwisunbae.auth.web.JwtAuthenticationFilter.doFilterInternal(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, jakarta.servlet.FilterChain)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.repository.MemberRepository.findById(java.lang.Long)> | 위치: (JwtAuthenticationFilter.java:58)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.restoreAuthentication(java.lang.String, java.time.LocalDateTime)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.repository.MemberRepository.findById(java.lang.Long)> | 위치: (AuthService.java:74)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createAnonymous(java.time.LocalDateTime)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.entity.Member.create(java.time.LocalDateTime)> | 위치: (AuthService.java:89)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createAnonymous(java.time.LocalDateTime)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.repository.MemberRepository.save(com.jachwisunbae.member.entity.Member)> | 위치: (AuthService.java:89)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createAnonymous(java.time.LocalDateTime)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.entity.Member.getId()> | 위치: (AuthService.java:93)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createLoginResult(com.jachwisunbae.member.entity.Member, boolean, java.lang.String, long)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.entity.Member.getId()> | 위치: (AuthService.java:102)\
-    - 메서드 <com.jachwisunbae.auth.service.AuthService.createLoginResult(com.jachwisunbae.member.entity.Member, boolean, java.lang.String, long)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.member.entity.Member.getId()> | 위치: (AuthService.java:103)\
-  2. 의존 목록: 업무 패키지 member\
-    - 생성자 <com.jachwisunbae.member.service.MemberService.<init>(com.jachwisunbae.member.repository.MemberRepository, com.jachwisunbae.auth.repository.RefreshTokenRepository, java.time.Clock)> | 의존 유형: 매개변수 타입 | 대상: <com.jachwisunbae.auth.repository.RefreshTokenRepository> | 위치: (MemberService.java:0)\
-    - 필드 <com.jachwisunbae.member.service.MemberService.refreshTokenRepository> | 의존 유형: 필드 타입 | 대상: <com.jachwisunbae.auth.repository.RefreshTokenRepository> | 위치: (MemberService.java:0)\
-    - Parameter <java.lang.Long> of method <com.jachwisunbae.member.controller.MemberController.delete(java.lang.Long, jakarta.servlet.http.HttpServletResponse)>에 선언한 어노테이션: <com.jachwisunbae.auth.web.AuthenticatedMemberId> | 위치: (MemberController.java:0)\
-    - Parameter <java.lang.Long> of method <com.jachwisunbae.member.controller.MemberController.get(java.lang.Long)>에 선언한 어노테이션: <com.jachwisunbae.auth.web.AuthenticatedMemberId> | 위치: (MemberController.java:0)\
-    - 메서드 <com.jachwisunbae.member.service.MemberService.delete(java.lang.Long)> | 의존 유형: 메서드 호출 | 대상: <com.jachwisunbae.auth.repository.RefreshTokenRepository.deleteByMemberId(java.lang.Long)> | 위치: (MemberService.java:47)
-규칙: 업무 패키지 사이에 순환 의존이 없어야 한다\
-문제: 업무 패키지가 서로를 참조하는 순환 의존이 있습니다.\
 순환 의존 발견: 업무 패키지 rental -> \
                 업무 패키지 transit -> \
                 업무 패키지 rental\

@@ -1,6 +1,6 @@
 package com.jachwisunbae.checklist.controller;
 
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.checklist.controller.dto.request.CreateUserChecklistRequest;
 import com.jachwisunbae.checklist.controller.dto.response.CreateUserChecklistResponse;
 import com.jachwisunbae.checklist.controller.dto.response.UserChecklistListResponse;

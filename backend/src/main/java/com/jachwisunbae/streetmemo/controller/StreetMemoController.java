@@ -1,6 +1,6 @@
 package com.jachwisunbae.streetmemo.controller;
 
-import com.jachwisunbae.auth.web.AuthenticatedMemberId;
+import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import com.jachwisunbae.streetmemo.controller.dto.request.CreateStreetMemoRequest;
 import com.jachwisunbae.streetmemo.controller.dto.response.StreetMemoResponse;
