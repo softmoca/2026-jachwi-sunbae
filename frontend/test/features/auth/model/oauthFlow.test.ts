@@ -56,13 +56,12 @@ describe('OAuth 연결 분석 이벤트', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: null,
       countProperties: () => Promise.resolve(3),
       leavePage: vi.fn(),
     });
 
     expect(oauthEvents()).toEqual([
-      ['oauth_link_started', { provider: 'kakao', already_linked: false, property_count: 3 }],
+      ['oauth_link_started', { provider: 'kakao', property_count: 3 }],
     ]);
     expect(trackOutboundEvent).toHaveBeenCalledTimes(1);
   });
@@ -79,7 +78,6 @@ describe('OAuth 연결 분석 이벤트', () => {
       config,
       provider: 'APPLE',
       memberId: 20,
-      linkedProvider: 'KAKAO',
       countProperties: () => Promise.resolve(4),
       leavePage: vi.fn(),
     });
@@ -97,16 +95,15 @@ describe('OAuth 연결 분석 이벤트', () => {
       config,
       provider: 'KAKAO',
       memberId: 20,
-      linkedProvider: 'APPLE',
       countProperties: () => Promise.reject(new Error('목록 실패')),
       leavePage: vi.fn(),
     });
 
-    expect(oauthEvents()).toEqual([['oauth_link_started', { provider: 'kakao', already_linked: true }]]);
+    expect(oauthEvents()).toEqual([['oauth_link_started', { provider: 'kakao' }]]);
   });
 
   it('완료는 결과 종류와 바뀐 회원 기준 매물 수를 남긴다', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20 });
     signIn(20);
     server.use(loginAs(10));
     let countedAs: number | null = null;
@@ -122,17 +119,16 @@ describe('OAuth 연결 분석 이벤트', () => {
     ]);
   });
 
-  it.each([
-    ['linked', 20, null],
-    ['switched', 30, 'KAKAO'],
-  ] as const)('완료 결과를 %s로 남긴다', async (outcome, newMemberId, previousProvider) => {
-    savePendingOAuth({ provider: 'APPLE', previousMemberId: 20, previousProvider });
+  it('회원이 그대로면 완료 결과를 linked로 남긴다', async () => {
+    savePendingOAuth({ provider: 'APPLE', previousMemberId: 20 });
     signIn(20);
-    server.use(loginAs(newMemberId));
+    server.use(loginAs(20));
 
     await completeOAuthLink(config, () => Promise.resolve(1));
 
-    expect(oauthEvents()).toEqual([['oauth_link_completed', { provider: 'apple', outcome, property_count: 1 }]]);
+    expect(oauthEvents()).toEqual([
+      ['oauth_link_completed', { provider: 'apple', outcome: 'linked', property_count: 1 }],
+    ]);
   });
 
   it('시작 정보를 잃은 채 완료되면 제공자를 unknown으로, 결과는 빼고 남긴다', async () => {
@@ -145,7 +141,7 @@ describe('OAuth 연결 분석 이벤트', () => {
   });
 
   it('제공자 화면에서 완료 없이 돌아오면 취소 이벤트를 남긴다(취소와 콜백 실패는 구분하지 못한다)', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20 });
 
     await detectUnfinishedOAuthLink(() => Promise.resolve(2));
 
@@ -170,12 +166,12 @@ describe('OAuth 계정 연결 시작', () => {
     );
     const leavePage = vi.fn();
 
-    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, leavePage });
+    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, leavePage });
 
     expect(result).toEqual({ kind: 'left-page' });
     expect(requests).toEqual(['KAKAO Bearer token-20 include']);
     expect(leavePage).toHaveBeenCalledWith('https://kauth.kakao.com/oauth/authorize?state=abc');
-    expect(takePendingOAuth()).toMatchObject({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    expect(takePendingOAuth()).toMatchObject({ provider: 'KAKAO', previousMemberId: 20 });
   });
 
   it('앱 WebView에서도 시스템 브라우저 없이 같은 페이지 이동으로 시작한다', async () => {
@@ -190,7 +186,7 @@ describe('OAuth 계정 연결 시작', () => {
     );
     const leavePage = vi.fn();
 
-    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, linkedProvider: null, leavePage });
+    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, leavePage });
 
     expect(startPath).toBe('/api/auth/oauth/APPLE/start');
     expect(result).toEqual({ kind: 'left-page' });
@@ -206,7 +202,7 @@ describe('OAuth 계정 연결 시작', () => {
     );
     const leavePage = vi.fn();
 
-    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, linkedProvider: null, leavePage });
+    const result = await startOAuthLink({ config, provider: 'APPLE', memberId: 20, leavePage });
 
     expect(result).toMatchObject({
       kind: 'finished',
@@ -231,7 +227,7 @@ describe('OAuth 계정 연결 시작', () => {
     );
     const leavePage = vi.fn();
 
-    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, leavePage });
+    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, leavePage });
 
     expect(result).toMatchObject({
       kind: 'finished',
@@ -276,7 +272,7 @@ describe('OAuth 계정 연결 시작', () => {
     server.use(http.post(START_URL, () => success({ authorizationUrl: 'javascript:alert(1)' })));
     const leavePage = vi.fn();
 
-    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, linkedProvider: null, leavePage });
+    const result = await startOAuthLink({ config, provider: 'KAKAO', memberId: 20, leavePage });
 
     expect(result).toMatchObject({ kind: 'finished', notice: { tone: 'error' } });
     expect(leavePage).not.toHaveBeenCalled();
@@ -285,7 +281,7 @@ describe('OAuth 계정 연결 시작', () => {
 
 describe('OAuth 복귀', () => {
   it('익명 회원이 이미 연결된 계정으로 인증하면 새 쿠키의 회원으로 바꾸고 통합 결과를 안내한다', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20 });
     signIn(20);
     queryClient.setQueryData(propertyQueryKeys.detail(1), { name: '이전 회원 매물' });
     server.use(loginAs(10));
@@ -299,24 +295,27 @@ describe('OAuth 복귀', () => {
   });
 
   it('처음 연결하면 회원 번호가 그대로이고 연결 결과를 안내한다', async () => {
-    savePendingOAuth({ provider: 'APPLE', previousMemberId: 20, previousProvider: null });
+    savePendingOAuth({ provider: 'APPLE', previousMemberId: 20 });
     server.use(loginAs(20));
 
     await expect(completeOAuthLink(config)).resolves.toMatchObject({ title: 'Apple 계정을 연결했어요' });
     expect(readLinkedProvider(20)).toBe('APPLE');
   });
 
-  it('다른 계정을 연결했던 회원이 다른 회원으로 바뀌면 전환으로 안내한다', async () => {
-    savePendingOAuth({ provider: 'APPLE', previousMemberId: 10, previousProvider: 'KAKAO' });
+  it('이전 배포가 남긴 시작 정보(previousProvider 포함)도 읽고, 회원이 바뀌면 통합으로 안내한다', async () => {
+    window.sessionStorage.setItem(
+      'jachwi:oauth-pending',
+      JSON.stringify({ provider: 'APPLE', previousMemberId: 10, previousProvider: 'KAKAO', startedAt: Date.now() }),
+    );
     signIn(10);
     server.use(loginAs(30));
 
-    await expect(completeOAuthLink(config)).resolves.toMatchObject({ title: 'Apple 계정으로 바꿨어요' });
+    await expect(completeOAuthLink(config)).resolves.toMatchObject({ title: 'Apple 계정으로 기록을 합쳤어요' });
     expect(readLinkedProvider(30)).toBe('APPLE');
   });
 
   it('완료 없이 돌아오면 다시 로그인하지 않고 지금 회원을 그대로 둔 채 안내한다', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20, previousProvider: null });
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 20 });
     signIn(20);
     const login = vi.fn();
     server.use(http.post(`${config.apiBaseUrl}/api/auth/login`, login));

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -34,24 +34,17 @@ afterEach(() => {
 });
 
 describe('마이 화면 계정 연결', () => {
-  it('익명 회원에게 카카오와 Apple 연결을 보여 주고, 연결 전에 기록이 그 계정에 보관된다고 안내한다', async () => {
-    const user = userEvent.setup();
+  it('익명 회원에게 카카오와 Apple 로그인 버튼을 보여 준다', async () => {
     renderMyPage();
 
     expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '카카오 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apple로 로그인' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }));
-    const dialog = screen.getByRole('dialog', { name: '카카오 계정을 연결할까요?' });
-    // #570 mergeOwnedData가 옮기는 기록과, 계정의 설정을 먼저 쓰는 규칙을 알린다.
-    expect(within(dialog).getByText(/매물, 체크리스트, 거리 메모를 이 계정에 보관해요/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/다른 계정으로 옮길 수 없어요/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/지금 기록을 그쪽으로 합쳐요/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/날씨 위치와 알림 설정은 계정에 있던 설정을 써요/)).toBeInTheDocument();
   });
 
   it('제공자 화면에서 완료 없이 돌아와 마이를 다시 보면 연결을 마치지 못했다고 알리고 회원은 그대로다', async () => {
-    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 1, previousProvider: null });
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 1 });
     renderMyPage();
 
     expect(await screen.findByRole('status', { name: '계정 연결을 마치지 못했어요' })).toBeInTheDocument();
@@ -59,15 +52,16 @@ describe('마이 화면 계정 연결', () => {
     expect(screen.getByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
   });
 
-  it('연결한 회원이 다른 계정으로 바꿀 때는 합치지 않고, 처음 쓰는 계정이면 빈 기록이라고 알린다', async () => {
-    const user = userEvent.setup();
-    saveLinkedProvider(1, 'KAKAO');
+  it('연결한 회원에게는 연결한 계정과 로그아웃만 보여 주고 다른 제공자 버튼은 숨긴다', async () => {
+    saveLinkedProvider(1, 'APPLE');
     renderMyPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Apple 계정으로 바꾸기' }));
-    const dialog = screen.getByRole('dialog', { name: 'Apple 계정으로 바꿀까요?' });
-    expect(within(dialog).getByText(/합치지 않고 그대로 남아요/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Apple 계정을 처음 쓰면 빈 기록으로 시작해요/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Apple 계정 연결됨' })).toBeInTheDocument();
+    expect(screen.getByText(/다른 계정을 쓰려면 로그아웃한 뒤 연결해 주세요/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apple로 로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /바꾸기/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
   });
 
   it('시작에 실패하면 지금 회원을 그대로 두고 실패를 안내한다', async () => {
@@ -79,15 +73,14 @@ describe('마이 화면 계정 연결', () => {
     );
     renderMyPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Apple로 계속하기' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+    await user.click(await screen.findByRole('button', { name: 'Apple로 로그인' }));
 
     expect(await screen.findByRole('status', { name: '지금은 계정을 연결할 수 없어요' })).toBeInTheDocument();
     expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
     expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
   });
 
-  it('연결한 회원은 다른 계정으로 바꾸거나 이 기기에서만 로그아웃하고 새 익명 회원으로 홈에 간다', async () => {
+  it('연결한 회원은 이 기기에서만 로그아웃하고 새 익명 회원으로 홈에 간다', async () => {
     const user = userEvent.setup();
     saveLinkedProvider(1, 'KAKAO');
     let hasCookie = true;
@@ -108,15 +101,10 @@ describe('마이 화면 계정 연결', () => {
     renderMyPage();
 
     expect(await screen.findByRole('heading', { name: '카카오 계정 연결됨' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '카카오로 계속하기' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apple 계정으로 바꾸기' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
-    const dialog = screen.getByRole('dialog', { name: '로그아웃할까요?' });
-    expect(
-      within(dialog).getByText(/카카오 계정으로 다시 인증하면 지금 기록으로 돌아올 수 있어요/),
-    ).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: '로그아웃' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     expect(await screen.findByLabelText('현재 경로')).toHaveTextContent(/^\/$/);
     expect(getAuthenticationSnapshot().session?.memberId).toBe(2);
@@ -129,7 +117,7 @@ describe('마이 화면 계정 연결', () => {
 
     expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '카카오로 계속하기' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
   });
 
@@ -194,7 +182,7 @@ describe('마이 화면 계정 연결', () => {
 
       expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '카카오로 계속하기' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
     });
 
     it('웹 빌드의 NATIVE_OAUTH_ENABLED가 꺼져 있으면 앱에서 복귀 화면으로 들어와도 마이로 보낸다', async () => {
@@ -221,9 +209,8 @@ describe('마이 화면 계정 연결', () => {
       renderMyPage();
 
       expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Apple로 계속하기' })).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }));
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+      expect(screen.queryByRole('button', { name: 'Apple로 로그인' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: '카카오 로그인' }));
 
       expect(await screen.findByRole('status', { name: '카카오 계정을 연결했어요' })).toBeInTheDocument();
       expect(idTokenBodies).toEqual([{ idToken: 'kakao-id-token', nonce: 'nonce-1' }]);
@@ -237,8 +224,7 @@ describe('마이 화면 계정 연결', () => {
       server.use(http.post('*/api/auth/oauth/:provider/nonce', () => success({ nonce: 'nonce-1' })));
       renderMyPage();
 
-      await user.click(await screen.findByRole('button', { name: '카카오로 계속하기' }));
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+      await user.click(await screen.findByRole('button', { name: '카카오 로그인' }));
 
       expect(await screen.findByRole('status', { name: '계정 연결을 취소했어요' })).toBeInTheDocument();
       expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
@@ -255,8 +241,7 @@ describe('마이 화면 계정 연결', () => {
       );
       renderMyPage();
 
-      await user.click(await screen.findByRole('button', { name: '카카오로 계속하기' }));
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+      await user.click(await screen.findByRole('button', { name: '카카오 로그인' }));
 
       expect(await screen.findByRole('status', { name: '지금은 계정을 연결할 수 없어요' })).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();

@@ -24,7 +24,7 @@ export type NativeOAuthFailure =
 
 type OAuthLinkEvents = {
   /** 확인 창에서 연결을 눌러 제공자 화면으로 떠나기 직전. */
-  oauth_link_started: PropertyCount & Flow & { provider: OAuthAnalyticsProvider; already_linked: boolean };
+  oauth_link_started: PropertyCount & Flow & { provider: OAuthAnalyticsProvider };
   /** 복귀 화면에서 새 쿠키로 다시 로그인한 뒤. 매물 수는 바뀐 회원(통합 뒤) 기준이다. */
   oauth_link_completed: PropertyCount &
     Flow & {

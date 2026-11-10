@@ -48,7 +48,6 @@ type StartOptions = {
   config: PublicConfig;
   provider: OAuthProvider;
   memberId: number;
-  linkedProvider: OAuthProvider | null;
   countProperties?: CountProperties;
   /** 제공자 화면으로 페이지를 옮기는 방법. 테스트에서 바꾼다. */
   leavePage?: (url: string) => void;
@@ -67,7 +66,6 @@ export const startOAuthLink = async ({
   config,
   provider,
   memberId,
-  linkedProvider,
   countProperties = unknownCount,
   leavePage = (url) => window.location.assign(url),
 }: StartOptions): Promise<OAuthStartResult> => {
@@ -88,13 +86,11 @@ export const startOAuthLink = async ({
 
   trackOAuthLinkStarted({
     provider: toAnalyticsProvider(provider),
-    already_linked: linkedProvider !== null,
     ...withPropertyCount(await propertyCount),
   });
   const pending: PendingOAuth = {
     provider,
     previousMemberId: memberId,
-    previousProvider: linkedProvider,
     startedAt: 0,
   };
   savePendingOAuth(pending);
@@ -185,7 +181,6 @@ export const startNativeOAuthLink = async ({
   config,
   provider,
   memberId,
-  linkedProvider,
   countProperties = unknownCount,
   login = requestNativeLogin,
 }: NativeStartOptions): Promise<OAuthNotice> => {
@@ -213,7 +208,6 @@ export const startNativeOAuthLink = async ({
 
   trackOAuthLinkEvent('oauth_link_started', {
     provider: analyticsProvider,
-    already_linked: linkedProvider !== null,
     flow: 'native',
     ...withPropertyCount(await propertyCount),
   });
@@ -240,7 +234,7 @@ export const startNativeOAuthLink = async ({
   }
 
   return finishOAuthLink(config, {
-    pending: { provider, previousMemberId: memberId, previousProvider: linkedProvider, startedAt: Date.now() },
+    pending: { provider, previousMemberId: memberId, startedAt: Date.now() },
     countProperties,
     // 페이지를 떠나지 않으므로 캐시를 비우기만 하면 지금 화면의 조회가 다시 불리지 않는다. 초기화해 다시 불러오게 한다.
     resetCache: () => void queryClient.resetQueries().catch(() => undefined),
