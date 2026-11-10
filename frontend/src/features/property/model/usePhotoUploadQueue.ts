@@ -5,7 +5,7 @@ import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 import { getPropertyErrorMessage } from '../api/propertyErrorMessages';
 import { useUploadPropertyPhoto } from '../api/usePropertyMutations';
 
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 export const MAX_PROPERTY_PHOTOS = 30;
 export const acceptedPhotoTypes = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
@@ -46,7 +46,7 @@ const prepareFiles = (files: File[], availableCount: number): PreparedFile[] =>
 
     if (file.size > MAX_PHOTO_BYTES) {
       return {
-        item: { ...item, status: 'error', message: '사진 한 장은 5MB 이하만 올릴 수 있어요.' },
+        item: { ...item, status: 'error', message: '사진 한 장은 10MB 이하만 올릴 수 있어요.' },
         file: null,
       };
     }
