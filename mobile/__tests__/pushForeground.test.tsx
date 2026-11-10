@@ -53,8 +53,10 @@ jest.mock('@notifee/react-native', () => ({
 const message = {
   messageId: 'm-1',
   notification: { title: '오늘 비 소식', body: '우산을 챙기세요' },
-  data: { notificationId: '7', url: '/weather' },
+  data: { notificationId: '7', type: 'weather', url: '/weather' },
 } as unknown as RemoteMessage;
+
+const OPENED = 'notification_id=7&notification_type=weather';
 
 const WEB = 'https://dev.jachwi-sunbae.kr';
 const loadNotifee = () => require('@notifee/react-native');
@@ -96,7 +98,7 @@ describe('포그라운드 푸시', () => {
     await act(async () => {
       handlers.opened(message);
     });
-    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather`);
+    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather?${OPENED}`);
     unmount();
   });
 
@@ -115,7 +117,7 @@ describe('포그라운드 푸시', () => {
       id: 'm-1',
       title: '오늘 비 소식',
       body: '우산을 챙기세요',
-      data: { notificationId: '7', url: '/weather' },
+      data: { notificationId: '7', type: 'weather', url: '/weather' },
       android: {
         channelId: PUSH_CHANNEL.id,
         smallIcon: 'ic_notification',
@@ -149,11 +151,20 @@ describe('포그라운드 푸시', () => {
       act(async () => {
         handlers.notifeeForeground({
           type,
-          detail: { notification: { id, data: { url } } },
+          detail: {
+            notification: {
+              id,
+              data: { notificationId: id, type: 'weather', url },
+            },
+          },
         });
       });
     await emit(1, 'a', '/weather');
-    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather`);
+    expect(navigate).toHaveBeenCalledWith(
+      `${WEB}/weather?notification_id=a&notification_type=weather`,
+    );
+    // 같은 알림을 다시 눌러도 한 번만 연다.
+    await emit(1, 'a', '/weather');
     await emit(1, 'b', 'https://evil.example/');
     await emit(0, 'c', '/map');
     expect(navigate).toHaveBeenCalledTimes(1);
@@ -162,7 +173,10 @@ describe('포그라운드 푸시', () => {
 
   it('Android 백그라운드에서 누른 알림은 앱이 켜질 때 한 번만 이동한다', async () => {
     registerBackgroundOpen('android', loadNotifee);
-    const pressed = { id: 'bg', data: { url: '/weather' } };
+    const pressed = {
+      id: 'bg',
+      data: { notificationId: '7', type: 'weather', url: '/weather' },
+    };
     await handlers.notifeeBackground({
       type: 1,
       detail: { notification: pressed },
@@ -174,8 +188,16 @@ describe('포그라운드 푸시', () => {
     const { navigate, unmount } = await mount('android');
     await act(async () => {});
     expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather`);
+    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather?${OPENED}`);
     mockNotifee.getInitialNotification.mockResolvedValue(null);
+    unmount();
+  });
+
+  it('꺼진 상태에서 누른 FCM 알림도 알림 ID를 붙여 연다', async () => {
+    const messaging = require('@react-native-firebase/messaging');
+    messaging.getInitialNotification.mockResolvedValueOnce(message);
+    const { navigate, unmount } = await mount('ios');
+    expect(navigate).toHaveBeenCalledWith(`${WEB}/weather?${OPENED}`);
     unmount();
   });
 

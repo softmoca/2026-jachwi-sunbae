@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -23,10 +23,14 @@ import { usePushNotifications } from './src/push/usePushNotifications';
 import { startLaunchGate } from './src/push/launchGate';
 import { WEB_APP_URL } from './src/config';
 import { isAllowedWebAppUrl, toWebAppUrl } from './src/navigationPolicy';
-import { createNativeContextScript } from './src/webBridge';
+import { createNativeContextScript, type NativeAppFeature } from './src/webBridge';
+import { useNativeAuth } from './src/auth/useNativeAuth';
+import { readAppInfo } from './src/appInfo';
 
 // 네이티브 탭바를 광고하지 않는다. 웹의 탭바가 그대로 표시된다.
-const NATIVE_FEATURES = ['push'] as const;
+const NATIVE_FEATURES: readonly NativeAppFeature[] = ['push'];
+// 설치된 앱의 실제 버전과 빌드 번호. 실행 중에는 바뀌지 않아 한 번만 읽는다.
+const APP_INFO = readAppInfo();
 
 type ErrorViewProps = {
   onRetry: () => void;
@@ -73,6 +77,16 @@ const AppContent = () => {
     webViewRef.current?.injectJavaScript(script);
   }, []);
   const push = usePushNotifications(navigateFromPush, injectPushScript);
+  const auth = useNativeAuth(injectPushScript);
+  const nativeContextScript = useMemo(
+    () =>
+      createNativeContextScript(
+        Platform.OS,
+        auth.available ? [...NATIVE_FEATURES, 'auth'] : NATIVE_FEATURES,
+        { authProviders: auth.providers, ...APP_INFO },
+      ),
+    [auth.available, auth.providers],
+  );
 
   const openDeepLink = useCallback((url: string) => {
     const nextUrl = toWebAppUrl(url);
@@ -114,11 +128,11 @@ const AppContent = () => {
 
   const handleWebMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      push
-        .onMessageFromWeb(event.nativeEvent.data, event.nativeEvent.url)
-        .catch(() => undefined);
+      const { data, url } = event.nativeEvent;
+      auth.onMessageFromWeb(data, url).catch(() => undefined);
+      push.onMessageFromWeb(data, url).catch(() => undefined);
     },
-    [push],
+    [auth, push],
   );
 
   const handleWebViewLoadEnd = useCallback(() => {
@@ -146,10 +160,7 @@ const AppContent = () => {
             ref={webViewRef}
             source={{ uri: appUrl }}
             originWhitelist={['https://*', 'about:blank']}
-            injectedJavaScriptBeforeContentLoaded={createNativeContextScript(
-              Platform.OS,
-              NATIVE_FEATURES,
-            )}
+            injectedJavaScriptBeforeContentLoaded={nativeContextScript}
             onMessage={handleWebMessage}
             onShouldStartLoadWithRequest={shouldStartLoad}
             onNavigationStateChange={({ canGoBack: nextCanGoBack }) =>

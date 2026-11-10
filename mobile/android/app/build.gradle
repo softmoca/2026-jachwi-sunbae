@@ -82,6 +82,20 @@ def releaseSigningValues = [
 def hasReleaseSigning = releaseSigningValues.values().every { it }
 def hasPartialReleaseSigning = releaseSigningValues.values().any { it } && !hasReleaseSigning
 
+/**
+ * 카카오 네이티브 앱 키. 값은 커밋하지 않는다.
+ * -PKAKAO_NATIVE_APP_KEY, ~/.gradle/gradle.properties, android/local.properties 순서로 찾는다.
+ * 비어 있어도 빌드된다. 그때 앱은 웹에 카카오를 not_configured로 답한다.
+ */
+def readLocalProperty = { String name ->
+    def file = rootProject.file("local.properties")
+    if (!file.exists()) return null
+    def properties = new Properties()
+    file.withInputStream { properties.load(it) }
+    return properties.getProperty(name)
+}
+def kakaoNativeAppKey = (findProperty("KAKAO_NATIVE_APP_KEY") ?: readLocalProperty("KAKAO_NATIVE_APP_KEY") ?: "").toString().trim()
+
 if (hasPartialReleaseSigning) {
     throw new GradleException("Android 릴리스 서명 설정 4개를 모두 입력해 주세요.")
 }
@@ -96,8 +110,10 @@ android {
         applicationId "com.jachwisunbae"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 9
-        versionName "2.1.1"
+        versionCode 10
+        versionName "2.2.0"
+        resValue "string", "kakao_native_app_key", kakaoNativeAppKey
+        manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
     }
     signingConfigs {
         debug {
@@ -163,6 +179,8 @@ gradle.taskGraph.whenReady { taskGraph ->
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    // 카카오 로그인(웹 auth 브리지). id_token만 받고 서버는 부르지 않는다.
+    implementation("com.kakao.sdk:v2-user:2.26.0")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

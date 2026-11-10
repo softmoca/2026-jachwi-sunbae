@@ -8,12 +8,17 @@ import {
   type RemoteMessage,
 } from '@react-native-firebase/messaging';
 import { WEB_APP_URL } from '../config';
+import {
+  classifyPushError,
+  PUSH_BRIDGE_ERROR,
+  PUSH_FAILURE_NOTICE,
+} from './errors';
 import { createForegroundNotifier, type PushOpen } from './foreground';
 import { createNativePush, getConfiguredMessaging } from './service';
 import {
   createPushReplyScript,
   parsePushRequest,
-  resolvePushUrl,
+  resolvePushOpenUrl,
 } from './policy';
 
 const ORIGIN = new URL(WEB_APP_URL).origin;
@@ -36,11 +41,9 @@ export const usePushNotifications = (
           '알림이 꺼져 있어요',
           '기기 설정에서 자취선배 알림을 허용해 주세요.',
         );
-    } catch {
-      Alert.alert(
-        '알림 연결을 완료하지 못했어요',
-        '네트워크를 확인한 뒤 다시 시도해 주세요.',
-      );
+    } catch (error) {
+      const notice = PUSH_FAILURE_NOTICE[classifyPushError(error)];
+      Alert.alert(notice.title, notice.message);
     }
   }, [push]);
 
@@ -73,13 +76,15 @@ export const usePushNotifications = (
     const messaging = getConfiguredMessaging();
     if (!messaging || !push) return undefined;
     let active = true;
-    const openUrl = (value: unknown) => {
-      const url = resolvePushUrl(value, WEB_APP_URL);
+    const openData = (data: unknown) => {
+      const url = resolvePushOpenUrl(data, WEB_APP_URL);
       if (active && url) navigate(url);
     };
-    const open = (message: RemoteMessage | null) => openUrl(message?.data?.url);
+    const open = (message: RemoteMessage | null) => {
+      if (message) openData(message.data);
+    };
     const openPressed = (pressed: PushOpen | null) => {
-      if (pressed) openUrl(pressed.url);
+      if (pressed) openData(pressed.data);
     };
     const takeOpened = () => {
       notifier
@@ -165,8 +170,11 @@ export const usePushNotifications = (
             return true;
         }
         reply({ ok: true, ...(await push.status()) });
-      } catch {
-        reply({ ok: false, error: 'push-unavailable' });
+      } catch (error) {
+        reply({
+          ok: false,
+          error: PUSH_BRIDGE_ERROR[classifyPushError(error)],
+        });
       }
       return true;
     },

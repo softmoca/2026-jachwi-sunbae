@@ -1,0 +1,7 @@
+// 카카오 네이티브 앱 키. 값은 커밋하지 않는다.
+// 같은 폴더에 Kakao.local.xcconfig(.gitignore 대상)를 만들고 아래 한 줄을 적는다.
+//   KAKAO_NATIVE_APP_KEY = <카카오 네이티브 앱 키>
+// 비어 있어도 빌드된다. 그때 앱은 웹에 카카오를 not_configured로 답한다.
+KAKAO_NATIVE_APP_KEY =
+
+#include? "Kakao.local.xcconfig"

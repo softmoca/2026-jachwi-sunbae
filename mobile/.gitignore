@@ -91,3 +91,6 @@ firebase-debug.log*
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# 카카오 네이티브 앱 키(커밋하지 않음)
+ios/Config/Kakao.local.xcconfig
