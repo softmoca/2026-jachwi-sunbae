@@ -32,10 +32,12 @@ auth:
       client-id: ${KAKAO_OAUTH_CLIENT_ID:}
       client-secret: ${KAKAO_OAUTH_CLIENT_SECRET:}
       redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI:}
+      native-audiences: ${KAKAO_OAUTH_NATIVE_AUDIENCES:}
     apple:
       client-id: ${APPLE_OAUTH_CLIENT_ID:}
       client-secret: ${APPLE_OAUTH_CLIENT_SECRET:}
       redirect-uri: ${APPLE_OAUTH_REDIRECT_URI:}
+      native-audiences: ${APPLE_OAUTH_NATIVE_AUDIENCES:}
 
 app:
   cors:

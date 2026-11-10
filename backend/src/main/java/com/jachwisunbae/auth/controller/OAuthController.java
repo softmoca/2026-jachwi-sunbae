@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -73,6 +74,41 @@ public class OAuthController {
                 .header("Referrer-Policy", "no-referrer").build();
     }
 
+    @PostMapping("/nonce")
+    @Operation(summary = "앱 네이티브 로그인 nonce 발급",
+            description = "동일 회원의 Bearer JWT와 Refresh 쿠키가 필요합니다. 이 쿠키의 인증 세션과 제공자에 묶인 "
+                    + "10분짜리 일회용 nonce를 반환합니다. 세션 확인 실패 시 401, 네이티브 설정 누락 시 503을 반환합니다.")
+    public ResponseEntity<ApiResponse<NonceResponse>> issueNonce(
+            @PathVariable OAuthProvider provider, @AuthenticatedMemberId Long memberId,
+            @CookieValue(name = "refresh_token", required = false) String refreshCookie) {
+        String nonce = service.issueNativeNonce(provider, memberId, refreshCookie);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(ApiResponse.of(new NonceResponse(nonce)));
+    }
+
+    @PostMapping("/id-token")
+    @Operation(summary = "앱 네이티브 로그인 결과 검증",
+            description = "nonce를 발급받은 회원의 Bearer JWT와 Refresh 쿠키가 필요합니다. 성공 시 새 Refresh 쿠키와 204, "
+                    + "세션 확인 실패 시 401, nonce나 ID Token 검증 실패 시 400, 제공자 설정 누락·장애 시 503을 반환합니다.")
+    public ResponseEntity<Void> completeWithIdToken(
+            @PathVariable OAuthProvider provider, @AuthenticatedMemberId Long memberId,
+            @CookieValue(name = "refresh_token", required = false) String refreshCookie,
+            @RequestBody IdTokenRequest request) {
+        VerifiedIdentity identity = service.verifyNativeIdToken(provider, memberId, refreshCookie,
+                request.idToken(), request.nonce());
+        IssuedRefreshToken token = authService.completeOAuth(identity);
+        // WebView가 이 쿠키로 /api/auth/refresh를 불러 바뀐 회원의 Access Token을 받는다.
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.SET_COOKIE, RefreshTokenCookie.create(token.rawToken(), token.expiresIn()).toString())
+                .build();
+    }
+
     public record AuthorizationResponse(URI authorizationUrl) {
+    }
+
+    public record NonceResponse(String nonce) {
+    }
+
+    // authorizationCode는 Apple 앱이 함께 보내지만 회원 식별에는 ID Token만 쓰므로 받기만 하고 사용하지 않는다.
+    public record IdTokenRequest(String idToken, String nonce, String authorizationCode) {
     }
 }
