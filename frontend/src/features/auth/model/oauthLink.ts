@@ -96,6 +96,22 @@ export const takePendingOAuth = (now = Date.now()): PendingOAuth | null => {
   };
 };
 
+const NOTICE_KEY = 'jachwi:oauth-notice';
+
+/** 페이지를 새로 열기 전에 결과 안내를 남긴다. 새로 연 마이 화면이 한 번 읽어 보여 준다. */
+export const stashOAuthNotice = (notice: OAuthNotice) => writeJson(session, NOTICE_KEY, notice);
+
+/** 한 번 읽으면 지운다. 형식이 다르면 없는 것으로 본다. */
+export const takeStashedOAuthNotice = (): OAuthNotice | null => {
+  const value = readJson(session, NOTICE_KEY);
+  removeItem(session, NOTICE_KEY);
+  if (value === null) return null;
+  const { title, description, tone } = value;
+  return typeof title === 'string' && typeof description === 'string' && (tone === 'success' || tone === 'error')
+    ? { title, description, tone }
+    : null;
+};
+
 /** 이 기기에서 확인한 지금 회원의 연결 계정. 다른 회원으로 바뀌었으면 연결하지 않은 것으로 본다. */
 export const readLinkedProvider = (memberId: number): OAuthProvider | null => {
   const value = readJson(local, LINK_KEY);

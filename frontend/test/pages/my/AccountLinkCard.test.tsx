@@ -6,8 +6,9 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import AppRoutes from '@/app/router/AppRoutes';
+import AccountLinkCard from '@/pages/my/ui/account-link-card/AccountLinkCard';
 import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
-import { saveLinkedProvider, savePendingOAuth } from '@/features/auth/model/oauthLink';
+import { saveLinkedProvider, savePendingOAuth, takeStashedOAuthNotice } from '@/features/auth/model/oauthLink';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 
 import { server } from '../../server';
@@ -207,6 +208,60 @@ describe('마이 화면 계정 연결', () => {
       expect(idTokenBodies).toEqual([{ idToken: 'kakao-id-token', nonce: 'nonce-1' }]);
       expect(screen.getByRole('heading', { name: '카카오 계정 연결됨' })).toBeInTheDocument();
       expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
+    });
+
+    it('앱 로그인으로 이미 쓰던 회원으로 바뀌면 결과 안내를 남기고 페이지를 새로 연다', async () => {
+      const user = userEvent.setup();
+      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 'kakao-id-token', nonce }));
+      let isLinked = false;
+      server.use(
+        http.post('*/api/auth/oauth/:provider/nonce', () => success({ nonce: 'nonce-1' })),
+        http.post('*/api/auth/oauth/:provider/id-token', () => {
+          isLinked = true;
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.post('*/api/auth/login', () =>
+          success({
+            accessToken: 'token',
+            tokenType: 'Bearer',
+            expiresIn: 900,
+            member: { memberId: isLinked ? 2 : 1 },
+          }),
+        ),
+      );
+      const reloadPage = vi.fn();
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } })}>
+          <PublicConfigProvider config={config}>
+            <MemoryRouter initialEntries={['/me']}>
+              <AccountLinkCard memberId={1} reloadPage={reloadPage} />
+            </MemoryRouter>
+          </PublicConfigProvider>
+        </QueryClientProvider>,
+      );
+
+      await user.click(await screen.findByRole('button', { name: '카카오 로그인' }));
+
+      await waitFor(() => expect(reloadPage).toHaveBeenCalledTimes(1));
+      expect(getAuthenticationSnapshot().session?.memberId).toBe(2);
+      // 새로 연 화면이 읽을 안내가 남아 있다.
+      expect(takeStashedOAuthNotice()?.tone).toBe('success');
+    });
+
+    it('새로 연 마이 화면은 남겨 둔 결과 안내를 한 번 보여 준다', async () => {
+      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 't', nonce }));
+      sessionStorage.setItem(
+        'jachwi:oauth-notice',
+        JSON.stringify({
+          tone: 'success',
+          title: '카카오 계정으로 기록을 합쳤어요',
+          description: '합친 기록을 이어서 써요.',
+        }),
+      );
+      renderMyPage();
+
+      expect(await screen.findByRole('status', { name: '카카오 계정으로 기록을 합쳤어요' })).toBeInTheDocument();
+      expect(sessionStorage.getItem('jachwi:oauth-notice')).toBeNull();
     });
 
     it('앱에서 취소하면 지금 회원을 그대로 두고 취소를 안내한다', async () => {

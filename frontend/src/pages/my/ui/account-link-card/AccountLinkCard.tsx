@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { logoutAuthentication } from '@/features/auth/api/apiClient';
 import appleLogo from '@/features/auth/assets/apple-logo-white.svg';
 import kakaoSymbol from '@/features/auth/assets/kakao-symbol.svg';
+import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
 import {
   getAvailableOAuthProviders,
   isOAuthLinkAvailable,
@@ -17,6 +18,8 @@ import {
   type OAuthNotice,
   type OAuthProvider,
   readLinkedProvider,
+  stashOAuthNotice,
+  takeStashedOAuthNotice,
 } from '@/features/auth/model/oauthLink';
 import { readPropertyCount } from '@/features/property/api/propertyCount';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
@@ -24,7 +27,11 @@ import { HOME_PATH } from '@/shared/lib/navigation/appPaths';
 import Icon from '@/shared/ui/icon/Icon';
 import Toast from '@/shared/ui/toast/Toast';
 
-type AccountLinkCardProps = { memberId: number };
+type AccountLinkCardProps = {
+  memberId: number;
+  /** 페이지를 새로 여는 방법. 테스트에서 바꾼다. */
+  reloadPage?: () => void;
+};
 
 /**
  * 제공자 버튼은 각 사의 로그인 버튼 규칙을 따른다.
@@ -65,7 +72,7 @@ export const readOAuthNoticeFromState = (state: unknown): OAuthNotice | null => 
  * 연결 상태는 아직 서버가 알려 주지 않아, 이 기기에서 인증을 마쳤을 때 기억한 값으로 보여 준다.
  * 브라우저는 제공자 화면으로 떠났다가 복귀 화면으로 돌아오고, 앱 WebView는 네이티브 로그인 브리지로 이 화면에서 마친다.
  */
-const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
+const AccountLinkCard = ({ memberId, reloadPage = () => window.location.reload() }: AccountLinkCardProps) => {
   const config = usePublicConfig();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -74,7 +81,9 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   const [linkRevision, setLinkRevision] = useState(0);
   const linkedProvider = useMemo(() => readLinkedProvider(memberId), [memberId, linkRevision]);
   const [status, setStatus] = useState<Status>('idle');
-  const [notice, setNotice] = useState<OAuthNotice | null>(() => readOAuthNoticeFromState(location.state));
+  const [notice, setNotice] = useState<OAuthNotice | null>(
+    () => readOAuthNoticeFromState(location.state) ?? takeStashedOAuthNotice(),
+  );
 
   /*
    * 제공자 화면에서 취소하거나 콜백이 실패하면 #570은 JSON 오류로 끝나 사용자가 뒤로 가기로 돌아온다.
@@ -132,6 +141,14 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
       memberId,
       countProperties: () => readPropertyCount(config, queryClient),
     }).catch(() => UNKNOWN_RESULT_NOTICE);
+    const currentMemberId = getAuthenticationSnapshot().session?.memberId ?? null;
+    if (currentMemberId !== null && currentMemberId !== memberId) {
+      // 이미 이 계정으로 쓰던 회원으로 바뀌었다. 화면에 붙어 있던 조회는 이전 회원을 계속 보므로,
+      // 브라우저 흐름처럼 페이지를 새로 열어 새 회원으로 다시 그리고 결과 안내는 새 화면이 보여 준다.
+      stashOAuthNotice(result);
+      reloadPage();
+      return;
+    }
     setStatus('idle');
     setLinkRevision((current) => current + 1);
     setNotice(result);
