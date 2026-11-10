@@ -4,11 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { logoutAuthentication } from '@/features/auth/api/apiClient';
-import { isOAuthLinkAvailable } from '@/features/auth/model/oauthAvailability';
-import { detectUnfinishedOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
+import {
+  getAvailableOAuthProviders,
+  isOAuthLinkAvailable,
+  usesNativeOAuth,
+} from '@/features/auth/model/oauthAvailability';
+import { detectUnfinishedOAuthLink, startNativeOAuthLink, startOAuthLink } from '@/features/auth/model/oauthFlow';
 import {
   OAUTH_PROVIDER_LABELS,
-  OAUTH_PROVIDERS,
   type OAuthNotice,
   type OAuthProvider,
   readLinkedProvider,
@@ -26,6 +29,12 @@ type DialogState = { kind: 'link'; provider: OAuthProvider } | { kind: 'logout' 
 
 type Status = 'idle' | 'working' | 'failed';
 
+const UNKNOWN_RESULT_NOTICE: OAuthNotice = {
+  tone: 'error',
+  title: '계정 인증 결과를 확인하지 못했어요',
+  description: '네트워크를 확인한 뒤 화면을 새로 고쳐 주세요.',
+};
+
 /** 복귀 화면이 넘긴 결과 안내. 다른 화면 상태가 섞여 있어도 형식이 맞을 때만 쓴다. */
 export const readOAuthNoticeFromState = (state: unknown): OAuthNotice | null => {
   if (typeof state !== 'object' || state === null || !('oauthNotice' in state)) return null;
@@ -41,13 +50,16 @@ export const readOAuthNoticeFromState = (state: unknown): OAuthNotice | null => 
  * 계정 연결. 익명으로 쓰다가 필요할 때 카카오나 Apple 계정을 연결해 기록을 보관하고 다른 기기에서 이어 쓴다.
  * 연결한 회원은 다른 계정으로 바꾸거나 이 기기에서만 로그아웃할 수 있다. 취소나 실패는 지금 회원을 그대로 둔다.
  * 연결 상태는 아직 서버가 알려 주지 않아, 이 기기에서 인증을 마쳤을 때 기억한 값으로 보여 준다.
+ * 브라우저는 제공자 화면으로 떠났다가 복귀 화면으로 돌아오고, 앱 WebView는 네이티브 로그인 브리지로 이 화면에서 마친다.
  */
 const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   const config = usePublicConfig();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-  const linkedProvider = useMemo(() => readLinkedProvider(memberId), [memberId]);
+  // 네이티브 흐름은 이 화면에서 연결을 마치므로, 같은 회원에 연결했을 때도 다시 읽도록 횟수를 둔다.
+  const [linkRevision, setLinkRevision] = useState(0);
+  const linkedProvider = useMemo(() => readLinkedProvider(memberId), [memberId, linkRevision]);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [notice, setNotice] = useState<OAuthNotice | null>(() => readOAuthNoticeFromState(location.state));
@@ -76,8 +88,31 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
     return () => window.removeEventListener('pageshow', handlePageShow);
   }, [config, queryClient]);
 
-  // 앱 WebView는 네이티브 로그인을 지원할 때까지 계정 연결과 로그아웃을 보여 주지 않는다.
-  if (!isOAuthLinkAvailable()) return null;
+  const providers = getAvailableOAuthProviders();
+
+  const closeNotice = () => {
+    setNotice(null);
+    // 새로 고침이나 뒤로 가기로 같은 안내가 다시 뜨지 않게 기록의 상태를 지운다.
+    if (readOAuthNoticeFromState(location.state) !== null) {
+      void navigate(location.pathname, { replace: true, state: null });
+    }
+  };
+
+  const toast = (
+    <Toast
+      className={styles.toast}
+      isOpen={notice !== null}
+      title={notice?.title ?? ''}
+      description={notice?.description}
+      onClose={closeNotice}
+    />
+  );
+
+  /*
+   * 앱 WebView는 네이티브 로그인 브리지와 제공자 키가 있는 앱에서만 계정 연결과 로그아웃을 보여 준다.
+   * 서버에 API가 없다고 방금 확인해 숨길 때도 그 안내는 보여 준다.
+   */
+  if (providers.length === 0) return notice === null ? null : toast;
 
   const open = (next: Exclude<DialogState, null>, trigger: HTMLButtonElement) => {
     returnFocusRef.current = trigger;
@@ -91,12 +126,19 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
     setStatus('idle');
   };
 
-  const closeNotice = () => {
-    setNotice(null);
-    // 새로 고침이나 뒤로 가기로 같은 안내가 다시 뜨지 않게 기록의 상태를 지운다.
-    if (readOAuthNoticeFromState(location.state) !== null) {
-      void navigate(location.pathname, { replace: true, state: null });
-    }
+  const confirmLinkInApp = async (provider: OAuthProvider) => {
+    setStatus('working');
+    const result = await startNativeOAuthLink({
+      config,
+      provider,
+      memberId,
+      linkedProvider,
+      countProperties: () => readPropertyCount(config, queryClient),
+    }).catch(() => UNKNOWN_RESULT_NOTICE);
+    setStatus('idle');
+    setDialog(null);
+    setLinkRevision((current) => current + 1);
+    setNotice(result);
   };
 
   const confirmLink = async (provider: OAuthProvider) => {
@@ -129,7 +171,7 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
   };
 
   const linkedLabel = linkedProvider === null ? null : OAUTH_PROVIDER_LABELS[linkedProvider];
-  const otherProviders = OAUTH_PROVIDERS.filter((provider) => provider !== linkedProvider);
+  const otherProviders = providers.filter((provider) => provider !== linkedProvider);
 
   return (
     <section className={styles.card} aria-labelledby="account-link-title">
@@ -186,7 +228,7 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
           isConfirming={status === 'working'}
           returnFocusRef={returnFocusRef}
           onCancel={close}
-          onConfirm={() => void confirmLink(dialog.provider)}
+          onConfirm={() => void (usesNativeOAuth() ? confirmLinkInApp : confirmLink)(dialog.provider)}
           description={
             linkedLabel === null ? (
               <>
@@ -233,13 +275,7 @@ const AccountLinkCard = ({ memberId }: AccountLinkCardProps) => {
         </ConfirmDialog>
       )}
 
-      <Toast
-        className={styles.toast}
-        isOpen={notice !== null}
-        title={notice?.title ?? ''}
-        description={notice?.description}
-        onClose={closeNotice}
-      />
+      {toast}
     </section>
   );
 };

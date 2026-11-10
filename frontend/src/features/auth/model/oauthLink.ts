@@ -17,10 +17,11 @@ export type OAuthOutcome = 'linked' | 'merged' | 'switched' | 'completed';
 /**
  * - `unfinished`: 제공자 화면으로 갔다가 완료 없이 돌아왔다. #570은 취소와 콜백 실패를 API 도메인의 JSON 오류로 끝내
  *   웹이 둘을 구분할 수 없다.
+ * - `cancelled`: 앱 네이티브 로그인 화면에서 취소했다. 앱은 취소를 따로 알려 준다.
  * - `session`: 시작 API가 이 브라우저의 Refresh 쿠키를 확인하지 못했다(`401 OAUTH_AUTHENTICATION_FAILED`).
  * - `unavailable`: 제공자 설정 누락이나 장애, 네트워크(`503 OAUTH_PROVIDER_UNAVAILABLE`).
  */
-export type OAuthFailure = 'unfinished' | 'session' | 'failed' | 'unavailable';
+export type OAuthFailure = 'unfinished' | 'cancelled' | 'session' | 'failed' | 'unavailable';
 
 export type OAuthNotice = { title: string; description: string; tone: 'success' | 'error' };
 
@@ -155,6 +156,12 @@ export const createOAuthFailureNotice = (failure: OAuthFailure): OAuthNotice => 
         tone: 'error',
         title: '계정 연결을 마치지 못했어요',
         description: '취소했거나 인증에 실패했어요. 지금 기록은 그대로예요. 필요할 때 다시 연결해 주세요.',
+      };
+    case 'cancelled':
+      return {
+        tone: 'error',
+        title: '계정 연결을 취소했어요',
+        description: '지금 기록은 그대로예요. 필요할 때 다시 연결해 주세요.',
       };
     case 'session':
       return {

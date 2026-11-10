@@ -151,10 +151,91 @@ describe('마이 화면 계정 연결', () => {
     expect(loginCalls).toBe(1);
   });
 
-  it('네이티브 로그인을 알린 앱에서는 계정 연결을 보여 준다', async () => {
-    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'] };
+  it('auth만 알리고 키를 갖춘 제공자가 없는 앱에서는 숨긴다', async () => {
+    window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: [] };
     renderMyPage();
 
-    expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
+  });
+
+  describe('네이티브 로그인 브리지를 알린 앱', () => {
+    const installApp = (reply: (nonce: string) => Record<string, unknown>) => {
+      window.__JACHWI_NATIVE_APP__ = {
+        platform: 'android',
+        version: 2,
+        features: ['push', 'auth'],
+        authProviders: ['kakao'],
+        appVersion: '2.2.0',
+      };
+      window.ReactNativeWebView = {
+        postMessage: (raw: string) => {
+          const { requestId, nonce } = JSON.parse(raw) as { requestId: string; nonce: string };
+          queueMicrotask(() =>
+            window.dispatchEvent(new CustomEvent('jachwi-auth', { detail: { requestId, ...reply(nonce) } })),
+          );
+        },
+      };
+    };
+
+    afterEach(() => {
+      delete window.ReactNativeWebView;
+    });
+
+    it('앱이 알린 제공자만 보여 주고, 앱 로그인으로 이 화면에서 연결을 마친다', async () => {
+      const user = userEvent.setup();
+      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 'kakao-id-token', nonce }));
+      const idTokenBodies: unknown[] = [];
+      server.use(
+        http.post('*/api/auth/oauth/:provider/nonce', () => success({ nonce: 'nonce-1' })),
+        http.post('*/api/auth/oauth/:provider/id-token', async ({ request }) => {
+          idTokenBodies.push(await request.json());
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      renderMyPage();
+
+      expect(await screen.findByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Apple로 계속하기' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: '카카오로 계속하기' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+
+      expect(await screen.findByRole('status', { name: '카카오 계정을 연결했어요' })).toBeInTheDocument();
+      expect(idTokenBodies).toEqual([{ idToken: 'kakao-id-token', nonce: 'nonce-1' }]);
+      expect(screen.getByRole('heading', { name: '카카오 계정 연결됨' })).toBeInTheDocument();
+      expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
+    });
+
+    it('앱에서 취소하면 지금 회원을 그대로 두고 취소를 안내한다', async () => {
+      const user = userEvent.setup();
+      installApp(() => ({ status: 'cancelled', provider: 'kakao' }));
+      server.use(http.post('*/api/auth/oauth/:provider/nonce', () => success({ nonce: 'nonce-1' })));
+      renderMyPage();
+
+      await user.click(await screen.findByRole('button', { name: '카카오로 계속하기' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+
+      expect(await screen.findByRole('status', { name: '계정 연결을 취소했어요' })).toBeInTheDocument();
+      expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+      expect(screen.getByRole('heading', { name: '계정 연결' })).toBeInTheDocument();
+    });
+
+    it('서버에 API가 없으면 안내만 남기고 계정 연결 카드를 숨긴다', async () => {
+      const user = userEvent.setup();
+      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 't', nonce }));
+      server.use(
+        http.post('*/api/auth/oauth/:provider/nonce', () =>
+          HttpResponse.json({ code: 'NOT_FOUND', message: '없음', errors: [] }, { status: 404 }),
+        ),
+      );
+      renderMyPage();
+
+      await user.click(await screen.findByRole('button', { name: '카카오로 계속하기' }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '연결하기' }));
+
+      expect(await screen.findByRole('status', { name: '지금은 계정을 연결할 수 없어요' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
+      expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+    });
   });
 });

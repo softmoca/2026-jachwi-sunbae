@@ -2,17 +2,20 @@
 
 익명으로 쓰다가 필요할 때 카카오나 Apple 계정을 연결해 기록을 보관하고 다른 기기에서 이어 쓴다. 정책은 [회원과 인증 기능 명세](../../docs/product/specs/authentication.md)를 따르고, 백엔드 API는 [PR #570](https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/570)을 그대로 쓴다.
 
-OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 숨기고, 다음 앱 버전에서 네이티브 로그인(Apple 로그인 시트, 카카오 SDK)으로 연다. 출시 순서와 이유는 [#570 코멘트](https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/570#issuecomment-6635306937)를 참고한다.
+OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 네이티브 로그인 브리지([PR #591](https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/591), 앱 2.2.0)가 있을 때만 네이티브 로그인(Apple 로그인 시트, 카카오 SDK)으로 열고, 아니면 숨긴다. 출시 순서와 이유는 [#570 코멘트](https://github.com/woowacourse-teams/2026-jachwi-sunbae/pull/570#issuecomment-6635306937)를 참고한다.
 
 ## 보여 줄지 정하기
 
-`features/auth/model/oauthAvailability.ts`의 `isOAuthLinkAvailable()` 하나로 카드, 버튼, 복귀 화면을 모두 판단한다.
+`features/auth/model/oauthAvailability.ts`의 `getAvailableOAuthProviders()`(와 `isOAuthLinkAvailable()`)로 카드, 버튼, 복귀 화면을 모두 판단한다.
 
-| 환경                                     | 계정 연결 |
-| ---------------------------------------- | --------- |
-| 브라우저                                 | 보인다    |
-| 앱 WebView                               | 숨긴다    |
-| `features`에 `auth`를 알린 앱(다음 버전) | 보인다    |
+| 환경                                                              | 계정 연결                  |
+| ----------------------------------------------------------------- | -------------------------- |
+| 브라우저                                                          | 카카오, Apple              |
+| 앱 WebView(2.1.x 이하, `features`에 `auth` 없음)                  | 숨긴다                     |
+| `features`에 `auth`를 알린 앱                                     | `authProviders`의 제공자만 |
+| 위 앱이지만 `authProviders`가 비었거나 서버에 API가 없다고 확인함 | 숨긴다                     |
+
+서버의 `/nonce`나 `/id-token`이 404, 405, 501이면 서버 미지원으로 보고 `localStorage`의 `jachwi:native-oauth-unsupported`에 하루 동안 남겨 그동안 앱에서 숨긴다. 앱 버전은 따로 비교하지 않는다. `auth`와 `authProviders`는 브리지를 넣은 앱만 알리기 때문이다.
 
 앱인지는 `window.__JACHWI_NATIVE_APP__`이나 앱 User-Agent(`JachwiSunbae/`)로 본다. 앱 WebView에서 `/oauth/complete`로 들어오면 아무것도 하지 않고 마이로 보낸다. 앱을 다시 빌드하지 않아도 웹 배포만으로 숨겨진다.
 
@@ -51,6 +54,25 @@ OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 �
 
 로그아웃은 `POST /api/auth/logout`으로 이 기기의 Refresh Token만 폐기하고, 쿠키 없이 로그인해 새 익명 회원으로 홈에 간다. 실패하면 지금 회원을 그대로 둔다.
 
+## 앱 네이티브 흐름
+
+앱 WebView 안에서 제공자 로그인 화면을 열지 않는다(RFC 8252). 앱은 `id_token`만 받아 웹에 넘기고, 서버는 WebView가 쿠키를 실어 부른다. 코드는 `features/auth/model/oauthFlow.ts`의 `startNativeOAuthLink`, 브리지는 `features/auth/lib/nativeAuthBridge.ts`다.
+
+1. `POST /api/auth/oauth/{KAKAO|APPLE}/nonce`를 Access Token과 Refresh 쿠키를 실어 보내 `{ nonce }`를 받는다.
+2. `window.ReactNativeWebView.postMessage({ type: 'auth', action: 'login', requestId, provider: 'kakao'|'apple', nonce })`로 앱에 로그인을 요청하고, 같은 `requestId`의 `jachwi-auth` 이벤트를 기다린다(5분). 앱은 nonce를 해시하지 않고 그대로 제공자에 넘긴다.
+3. 성공하면 `POST /api/auth/oauth/{provider}/id-token`에 `{ idToken, authorizationCode?, nonce }`를 쿠키와 함께 보낸다. Apple은 `authorizationCode`도 보낸다.
+4. 서버가 기존 `completeOAuth`로 Refresh 쿠키를 바꾸면 웹 흐름의 4번과 같이 다시 로그인해 결과를 정한다. 페이지를 떠나지 않으므로 캐시는 비우지 않고 초기화해 지금 화면이 다시 불러오게 하고, 안내는 마이 카드에 바로 띄운다.
+
+| 경우                                | 안내                           | 서버 호출                |
+| ----------------------------------- | ------------------------------ | ------------------------ |
+| 앱에서 취소                         | 계정 연결을 취소했어요         | `/nonce`만               |
+| 앱 `not_configured`, `unavailable`  | 지금은 계정을 연결할 수 없어요 | `/nonce`만               |
+| 앱 `failed`, 응답 없음(5분)         | 계정을 연결하지 못했어요       | `/nonce`만               |
+| 서버 API 없음(404 등)               | 지금은 계정을 연결할 수 없어요 | 그 뒤로 하루 동안 숨긴다 |
+| `/id-token`이 토큰이나 nonce를 거절 | 계정을 연결하지 못했어요       | 회원은 그대로            |
+
+로컬 목(`npm run dev:mock`)은 `/nonce`가 일회용 값을 주고, `/id-token`은 토큰을 검증하지 않고 그 nonce만 확인해 204로 답한다.
+
 ## 다른 탭
 
 로그인으로 회원이 정해질 때마다 `BroadcastChannel('jachwi-auth')`로 회원 번호를 알린다. 다른 회원으로 남아 있던 탭은 Access Token과 캐시를 바로 버려 늦게 온 응답을 쓰지 않고, 화면을 새로 열어 바뀐 쿠키로 다시 인증한다. 숨은 탭은 다시 보일 때 새로 연다.
@@ -65,6 +87,8 @@ OAuth는 **웹(브라우저)에서 먼저 출시**한다. 앱 WebView에서는 �
 | `oauth_link_completed` | 복귀 화면에서 새 쿠키로 다시 로그인한 뒤                         | `provider`, `outcome`(`linked`/`merged`/`switched`), `property_count`    |
 | `oauth_link_cancelled` | 완료 없이 돌아와 마이를 다시 볼 때(취소와 콜백 실패 구분 못함)   | `provider`, `property_count`                                             |
 | `oauth_link_failed`    | 시작 API가 실패했을 때                                           | `provider`, `reason`(`session`/`unavailable`/`failed`), `property_count` |
+
+앱 네이티브 흐름도 같은 이벤트를 쓰고 `flow: 'native'`를 더한다. `oauth_link_started`는 `/nonce`가 성공해 앱에 로그인을 요청하기 직전, `oauth_link_cancelled`는 앱이 취소로 답했을 때 남긴다. `oauth_link_failed`는 `/nonce`, 앱 로그인, `/id-token` 어디서 실패해도 남기고 `native_reason`(`server_unsupported`, `not_configured`, `bridge_unavailable`, `timeout`, `token_rejected`, `bridge_failed`)을 더한다. 앱이 주는 `message` 원인 코드는 싣지 않는다.
 
 - `provider`는 `kakao`, `apple`이다. 복귀 화면에서 시작 정보를 잃었으면 `unknown`이다.
 - `property_count`는 그 시점 지금 회원의 매물 수다. 완료는 바뀐 회원(통합이면 합친 뒤) 기준이다. 목록 캐시가 없으면 목록을 한 번 받아 세고, 받지 못하면 `first_property`처럼 속성을 빼고 보낸다.
