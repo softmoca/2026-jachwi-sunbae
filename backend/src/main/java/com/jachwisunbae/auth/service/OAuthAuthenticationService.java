@@ -60,7 +60,7 @@ public class OAuthAuthenticationService {
         String nonce = attempts.consume(tokens.hashOpaqueToken(state), session.getTokenHash(), provider, LocalDateTime.now(clock))
                 .orElseThrow(() -> invalid("유효한 OAuth 시작 요청을 찾을 수 없습니다."));
         if (error != null || code == null || code.isBlank() || code.length() > 4096) {
-            throw invalid("OAuth 인증이 취소됐거나 인가 코드가 유효하지 않습니다.");
+            throw invalidIdToken("OAuth 인증이 취소됐거나 인가 코드가 유효하지 않습니다.");
         }
         String subject = providers.exchangeAndVerify(provider, code, nonce);
         return new VerifiedIdentity(session.getMemberId(), provider, subject, session.getTokenHash());

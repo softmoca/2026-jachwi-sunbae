@@ -2,7 +2,6 @@ package com.jachwisunbae.auth.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jachwisunbae.auth.domain.OAuthProvider;
-import com.jachwisunbae.common.exception.client.AuthenticationFailedException;
 import com.jachwisunbae.common.exception.client.InvalidInputException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.exception.server.ServiceUnavailableException;
@@ -24,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
@@ -76,8 +74,7 @@ public class OAuthProviderClient {
     public String exchangeAndVerify(OAuthProvider provider, String code, String nonce) {
         Provider settings = configured(provider);
         String idToken = exchangeCode(settings, code);
-        return verify(settings.webProcessor(), idToken, nonce,
-                message -> new AuthenticationFailedException(ErrorCode.OAUTH_AUTHENTICATION_FAILED, message));
+        return verify(settings.webProcessor(), idToken, nonce);
     }
 
     // 앱 네이티브 로그인에 쓸 aud가 설정됐는지 nonce 발급 전에 확인한다.
@@ -89,20 +86,19 @@ public class OAuthProviderClient {
     // 서명·알고리즘·발급자·대상·유효기간을 확인하고 nonce 클레임이 서버가 발급한 원문과 같은지 본 뒤 sub를 반환한다.
     public String verifyNativeIdToken(OAuthProvider provider, String idToken, String nonce) {
         Provider settings = nativeConfigured(provider);
-        return verify(settings.nativeProcessor(), idToken, nonce,
-                message -> new InvalidInputException(ErrorCode.OAUTH_ID_TOKEN_INVALID, message));
+        return verify(settings.nativeProcessor(), idToken, nonce);
     }
 
-    private static String verify(DefaultJWTProcessor<SecurityContext> processor, String idToken, String nonce,
-                                 Function<String, RuntimeException> invalid) {
+    // 세션 확인은 끝난 뒤라 제공자가 거절하거나 검증에 실패한 결과는 401(세션 실패)과 구분해 400으로 둔다.
+    private static String verify(DefaultJWTProcessor<SecurityContext> processor, String idToken, String nonce) {
         try {
             var claims = processor.process(idToken, null);
             if (!nonce.equals(claims.getStringClaim("nonce"))) {
-                throw invalid.apply("OAuth ID Token의 nonce가 일치하지 않습니다.");
+                throw invalid("OAuth ID Token의 nonce가 일치하지 않습니다.");
             }
             return claims.getSubject();
         } catch (ParseException | BadJOSEException exception) {
-            throw invalid.apply("OAuth ID Token이 유효하지 않습니다.");
+            throw invalid("OAuth ID Token이 유효하지 않습니다.");
         } catch (JOSEException exception) {
             throw unavailable("OAuth ID Token 검증에 필요한 공개 키를 확인할 수 없습니다.");
         }
@@ -126,8 +122,7 @@ public class OAuthProviderClient {
             return response.idToken();
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 400) {
-                throw new AuthenticationFailedException(ErrorCode.OAUTH_AUTHENTICATION_FAILED,
-                        "OAuth 제공자가 인가 코드 교환을 거절했습니다.");
+                throw invalid("OAuth 제공자가 인가 코드 교환을 거절했습니다.");
             }
             throw unavailable("OAuth 토큰 교환에 실패했습니다.");
         } catch (RestClientException exception) {
@@ -195,6 +190,10 @@ public class OAuthProviderClient {
     private static Set<String> audiences(String value) {
         return Arrays.stream(value.split(",")).map(String::trim).filter(audience -> !audience.isEmpty())
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static InvalidInputException invalid(String message) {
+        return new InvalidInputException(ErrorCode.OAUTH_ID_TOKEN_INVALID, message);
     }
 
     private static ServiceUnavailableException unavailable(String message) {
