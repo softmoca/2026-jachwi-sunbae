@@ -157,8 +157,10 @@ export const desktopMapViewport = (
   };
 };
 
-/** 휴대폰 한 단계 정보 시트의 높이(지도 칸의 40%). 동네, 마커, My 정보가 모두 이 높이로 올라온다. */
-const MOBILE_AREA_SHEET_RATIO = 0.4;
+/** 휴대폰 동네 시트가 처음 열리는 높이(지도 칸의 %). 동네 이름, 통근, 월세 요약까지 보이고 지도와 고른 동이 같이 보이게 낮게 둔다. */
+export const MOBILE_AREA_SHEET_PERCENT = 30;
+/** 지도 시점을 맞출 때 아래에서 비우는 비율. 동네를 고르면 동네 시트가 이만큼 덮는다. */
+const MOBILE_AREA_SHEET_RATIO = MOBILE_AREA_SHEET_PERCENT / 100;
 
 /** 휴대폰과 태블릿 결과 지도 칸. 위는 결과 머리(`headerBottom`, 지도 칸 위에서부터 px), 오른쪽은 확대 축소와 레일 줄, 아래는 정보 시트 높이를 비운다. */
 export const mobileMapViewport = (map: { width: number; height: number }, headerBottom: number): MapViewport | null => {
