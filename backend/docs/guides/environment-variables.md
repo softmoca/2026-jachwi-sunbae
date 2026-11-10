@@ -105,6 +105,35 @@ AWS S3는 EC2 `ec2-project` instance role로 접근하므로 `PHOTO_STORAGE_ENDP
 
 새 환경변수를 도입하면 서버의 환경변수 파일도 함께 갱신한다.
 
+## OAuth 계정 연결
+
+웹 OAuth(`/start` → 제공자 인증 → `/callback`)와 앱 네이티브 로그인(`/nonce` → 카카오 SDK·Apple 로그인 → `/id-token`)은 제공자별로 설정한다.
+값이 비어 있으면 해당 흐름의 API가 `503 OAUTH_PROVIDER_UNAVAILABLE`로 응답하고 회원과 인증은 바뀌지 않는다. dev·prod 값은 Vault의 `app_env`에 등록한다.
+
+| 환경변수                       | 용도                                                                                                                                                                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OAUTH_SUCCESS_REDIRECT_URI`   | 웹 콜백 뒤 이동할 프론트 HTTPS 주소(`/oauth/complete`). 성공하면 그대로 보내고, 실패하면 쿠키를 바꾸지 않은 채 `error`(`cancelled`, `session`, `failed`, `unavailable`)를 붙여 보낸다. 비우면 성공은 204, 실패는 JSON 오류로 끝난다 |
+| `KAKAO_OAUTH_CLIENT_ID`        | 웹 OAuth의 카카오 REST API 키. 인가 요청 `client_id`이자 웹 ID Token의 `aud`                                                                                                                                                        |
+| `KAKAO_OAUTH_CLIENT_SECRET`    | 웹 OAuth 인가 코드 교환용 카카오 Client Secret                                                                                                                                                                                      |
+| `KAKAO_OAUTH_REDIRECT_URI`     | 카카오 콘솔에 등록한 `/api/auth/oauth/KAKAO/callback` 주소                                                                                                                                                                          |
+| `KAKAO_OAUTH_NATIVE_AUDIENCES` | 앱 네이티브 로그인 ID Token의 `aud`로 허용할 카카오 네이티브 앱 키. 쉼표로 여러 값을 둘 수 있다                                                                                                                                     |
+| `APPLE_OAUTH_CLIENT_ID`        | 웹 OAuth의 Apple Services ID. 웹 ID Token의 `aud`                                                                                                                                                                                   |
+| `APPLE_OAUTH_CLIENT_SECRET`    | Services ID로 서명한 Apple Client Secret(JWT)                                                                                                                                                                                       |
+| `APPLE_OAUTH_REDIRECT_URI`     | Apple 콘솔의 Services ID에 등록한 `/api/auth/oauth/APPLE/callback` 주소                                                                                                                                                             |
+| `APPLE_OAUTH_NATIVE_AUDIENCES` | 앱 네이티브 로그인 ID Token의 `aud`로 허용할 iOS 앱 번들 ID. 개발용 앱 번들 ID가 다르면 쉼표로 함께 넣는다                                                                                                                          |
+| `APPLE_OAUTH_TEAM_ID`          | Apple Developer Team ID. Apple `client_secret`(ES256 JWT)의 `iss`                                                                                                                                                                   |
+| `APPLE_OAUTH_KEY_ID`           | Sign in with Apple을 켠 키의 Key ID                                                                                                                                                                                                 |
+| `APPLE_OAUTH_PRIVATE_KEY`      | 그 키의 `.p8` 내용. 머리말을 빼고 한 줄로 넣거나 줄바꿈을 `\n` 문자로 바꿔 넣는다. 네이티브 인가 코드 교환과 탈퇴 시 토큰 철회에 쓴다                                                                                               |
+| `KAKAO_OAUTH_ADMIN_KEY`        | 탈퇴 시 카카오 연결 끊기에 쓰는 서비스 앱 어드민 키                                                                                                                                                                                 |
+| `OAUTH_TOKEN_ENCRYPTION_KEY`   | 철회용 Apple Refresh Token을 암호화하는 32바이트 키(Base64). `openssl rand -base64 32`로 만들고 바꾸면 이미 저장한 토큰을 철회할 수 없다                                                                                            |
+
+네이티브 SDK가 발급한 ID Token의 `aud`는 웹과 다르다. 카카오는 토큰을 발급한 앱 키(네이티브 SDK는 네이티브 앱 키)를, Apple은 iOS 앱의 번들 ID를 넣는다.
+서버는 웹과 네이티브 흐름의 `aud`를 따로 검증하므로 웹용 REST API 키나 Services ID를 네이티브 값에 넣지 않는다. 네이티브 앱 키와 번들 ID는 앱에도 들어 있는 공개 식별값이지만 허용 목록은 서버 설정으로 관리한다.
+Apple은 웹·네이티브 모두 연결할 때 인가 코드를 교환해 받은 Refresh Token을 암호화해 저장하고, 탈퇴하면 이 토큰을 철회한다.
+그래서 Apple 연결에는 `OAUTH_TOKEN_ENCRYPTION_KEY`와 Apple 키(`APPLE_OAUTH_TEAM_ID`, `APPLE_OAUTH_KEY_ID`, `APPLE_OAUTH_PRIVATE_KEY`)가 필요하다.
+웹은 `APPLE_OAUTH_CLIENT_SECRET`이 있으면 그 값을 쓰고, 없으면 Apple 키로 만든다. 카카오는 탈퇴 시 `KAKAO_OAUTH_ADMIN_KEY`로 연결을 끊는다.
+탈퇴 후 연결 해제는 dev·prod 프로필에서 1분마다 처리하며, 실패하면 간격을 늘려 다시 시도한다.
+
 닉네임 인증은 외부 키가 필요 없다. 지도 기본 모드를 `demo`로 두면 외부 키 없이 전체 로컬 흐름을 실행할 수 있다.
 
 실제 비밀값은 `.env.example`, 애플리케이션 설정, 문서와 Git에 커밋하지 않는다.
