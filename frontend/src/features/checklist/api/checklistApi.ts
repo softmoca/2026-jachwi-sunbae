@@ -1,5 +1,4 @@
 import { apiRequest } from '@/features/auth/api/apiClient';
-import { isExampleProperty, replaceExampleChecklist } from '@/features/property/model/exampleProperty';
 import type { PublicConfig } from '@/shared/config/publicConfigTypes';
 
 import type { ChecklistPresetType, ChecklistStage, LegacyChecklistDetail } from '../model/checklistTypes';
@@ -158,25 +157,21 @@ export const assignActiveChecklist = (
   stage: ChecklistStage,
   body: AssignActiveChecklistRequestDto,
 ) =>
-  isExampleProperty(propertyId)
-    ? body.sourceType === 'SYSTEM_DEFAULT'
-      ? Promise.resolve().then(() => replaceExampleChecklist(config))
-      : fetchChecklistDetail(config, body.checklistId).then((checklist) => replaceExampleChecklist(config, checklist))
-    : apiRequest({
-        config,
-        path: `/api/properties/${propertyId}/checklists/${stage}`,
-        method: 'PUT',
-        body: body.sourceType === 'SYSTEM_DEFAULT' ? body : { sourceType: 'USER', checklistId: body.checklistId },
-        parseData: (value) => {
-          const result = parseActiveChecklist(value);
-          if (
-            result.propertyId !== propertyId ||
-            result.stage !== stage ||
-            (body.sourceType !== 'SYSTEM_DEFAULT' && result.checklistId !== body.checklistId) ||
-            (body.sourceType === 'SYSTEM_DEFAULT' && result.checklistId !== null)
-          ) {
-            throw new Error('active-checklist');
-          }
-          return result;
-        },
-      });
+  apiRequest({
+    config,
+    path: `/api/properties/${propertyId}/checklists/${stage}`,
+    method: 'PUT',
+    body: body.sourceType === 'SYSTEM_DEFAULT' ? body : { sourceType: 'USER', checklistId: body.checklistId },
+    parseData: (value) => {
+      const result = parseActiveChecklist(value);
+      if (
+        result.propertyId !== propertyId ||
+        result.stage !== stage ||
+        (body.sourceType !== 'SYSTEM_DEFAULT' && result.checklistId !== body.checklistId) ||
+        (body.sourceType === 'SYSTEM_DEFAULT' && result.checklistId !== null)
+      ) {
+        throw new Error('active-checklist');
+      }
+      return result;
+    },
+  });

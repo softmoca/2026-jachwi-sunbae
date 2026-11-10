@@ -7,7 +7,6 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import type { PropertyCreationEntrypoint } from '../lib/propertyAnalytics';
 import { trackPropertyEvent } from '../lib/propertyAnalytics';
 import { rememberRecentEdit } from '../lib/recentEdit';
-import { EXAMPLE_PROPERTY_ID, isExampleProperty } from '../model/exampleProperty';
 import { rememberMovedProperty } from '../model/movedProperty';
 import type { PropertyBasicInfo, PropertyDetail, PropertyPage } from '../model/Property';
 import type {
@@ -34,14 +33,9 @@ export const useCreateProperty = (entrypoint: PropertyCreationEntrypoint = 'form
       const total = client.getQueryData<InfiniteData<PropertyPage>>(propertyQueryKeys.list(''))?.pages[0]
         ?.totalElements;
       trackPropertyEvent('property_creation_submitted', { entrypoint });
-      const onlyExample =
-        client
-          .getQueryData<InfiniteData<PropertyPage>>(propertyQueryKeys.list(''))
-          ?.pages[0]?.content.every((property) => isExampleProperty(property.propertyId)) ?? false;
-      return { firstProperty: total === undefined ? undefined : total === 0 || (total === 1 && onlyExample) };
+      return { firstProperty: total === undefined ? undefined : total === 0 };
     },
     onSuccess: async (created, _request, context) => {
-      client.removeQueries({ queryKey: propertyQueryKeys.detail(EXAMPLE_PROPERTY_ID) });
       trackPropertyEvent('property_created', {
         entrypoint,
         property_id: created.propertyId,
