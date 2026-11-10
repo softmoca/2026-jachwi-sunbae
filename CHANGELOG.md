@@ -6,6 +6,33 @@
 
 아직 릴리스하지 않은 변경을 기록한다.
 
+## [4.2.0] - 2026-11-10
+
+### Added
+
+- 익명 회원에 카카오·Apple 계정을 연결하고, 이미 연결된 계정이 있으면 기록을 합치거나 그 회원으로 전환한다. 마이에서 연결한 계정의 로그아웃을 제공한다.
+- 앱 WebView에서 카카오 SDK·Apple 로그인으로 받은 ID Token을 서버가 검증해 계정을 연결하는 네이티브 로그인 API(`POST /api/auth/oauth/{KAKAO|APPLE}/nonce`, `POST /api/auth/oauth/{KAKAO|APPLE}/id-token`)를 추가한다.
+- 회원 탈퇴 시 연결한 카카오 계정의 연결을 끊고 Apple 토큰을 철회한다. 실패하면 최대 12번까지 다시 시도한다.
+- 알림이 꺼진 앱 사용자에게 헤더에 `알림 받기`를 보이고 그 자리에서 알림을 켠다.
+
+### Changed
+
+- 마이의 `초기화`를 `회원 탈퇴`로 바꾸고, 확인 창과 개인정보 처리방침에 삭제·파기와 연결 해제 내용을 안내한다.
+- 매물이 없는 회원에게 보이던 예시 매물을 없애고 빈 상태를 그대로 보인다.
+- 사진 한 장의 업로드 용량 제한을 5MB에서 10MB로 늘린다.
+- 카카오·Apple 로그인 버튼을 각 사 규칙에 맞추고, 웹 OAuth 콜백이 실패하면 완료 화면으로 돌려보내 마이에서 취소·실패를 안내한다.
+- 휴대폰 동네 찾기의 행정동 시트를 낮게 열고 끌어 올려 크게 볼 수 있게 하며, 시트를 닫아도 동네 선택을 유지한다.
+- 앱 진입 시 헤더가 위치 권한을 묻지 않고 현재 위치를 받는다.
+- dev 사이트에 `noindex`를 넣고 크롤링을 열어 이미 색인된 dev 페이지를 검색에서 뺀다.
+- Flyway `V14`~`V18`에서 OAuth 연결·시도, 익명 회원 기록 통합, 네이티브 시도 구분, 탈퇴 시 연결 해제 요청 테이블을 추가한다. 운영 배포 때는 백엔드를 웹보다 먼저 배포한다.
+- 백엔드·프론트엔드 제품 버전을 `4.2.0`으로 맞춘다.
+
+### Fixed
+
+- 앱 로그인으로 다른 회원으로 바뀌어도 마이 화면이 이전 회원으로 남던 문제를 수정한다.
+- 헤더 안내 영역이 클릭을 가로채 `이어서 보기`와 알림·위치 버튼이 눌리지 않던 문제를 수정한다.
+- 매물 상세 메모의 줄바꿈이 저장 뒤 사라지던 문제와 지도 트랙패드 핀치 확대 문제를 수정한다.
+
 ## [4.1.0] - 2026-11-09
 
 ### Added
@@ -266,7 +293,8 @@
 - WebView 지도 마커 위치 갱신을 `transform` 기반으로 최적화한다.
 - 매물 사진 Object URL을 재사용해 지도 확대·이동 중 불필요한 재생성을 줄인다.
 
-[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v4.1.0...HEAD
+[Unreleased]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.2.0
 [4.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.1.0
 [4.0.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v4.0.0
 [3.1.0]: https://github.com/woowacourse-teams/2026-jachwi-sunbae/releases/tag/v3.1.0
