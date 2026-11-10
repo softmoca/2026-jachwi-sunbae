@@ -16,7 +16,6 @@ import NeighborhoodRoutePage from '@/pages/neighborhood-preview/NeighborhoodRout
 import { setAuthentication } from '@/features/auth/model/authStore';
 import { MapLocationError, readGeolocationPermission, requestCurrentMapLocation } from '@/features/map/lib/mapLocation';
 import type { MapCanvasProps } from '@/features/map/model/MapCanvas';
-import { dismissExampleProperty } from '@/features/property/model/exampleProperty';
 import { PublicConfigProvider } from '@/shared/config/PublicConfigContext';
 import { trackPostHogEvent } from '@/shared/lib/analytics/posthog';
 
@@ -551,9 +550,7 @@ it('데스크탑도 장소를 고르는 지도에 확대, 축소 버튼을 둔�
   }
 });
 it('기록한 매물이 없거나 로그인 전(공개 동네 찾기)이면 My를 눌렀을 때 시트에 안내를 보이고, 공개 동네 찾기는 매물을 부르지 않는다', async () => {
-  // 이미 예시를 사용한 회원이 자신의 기록을 모두 지운 상황이다.
   setAuthentication({ memberId: 1, accessToken: 'test', tokenType: 'Bearer', expiresIn: 900 });
-  dismissExampleProperty({ apiBaseUrl: 'http://localhost:8080' });
   let propertyRequests = 0;
   const track = ({ request }: { request: Request }) => {
     if (new URL(request.url).pathname.startsWith('/api/properties')) propertyRequests += 1;
