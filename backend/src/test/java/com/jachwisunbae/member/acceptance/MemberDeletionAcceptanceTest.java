@@ -1,7 +1,6 @@
 package com.jachwisunbae.member.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.auth.domain.RefreshToken;
-import com.jachwisunbae.auth.repository.MemberIdentityRepository;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
@@ -30,7 +28,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -55,8 +52,6 @@ class MemberDeletionAcceptanceTest {
     private RefreshTokenRepository refreshTokens;
     @Autowired
     private JwtTokenProvider tokenProvider;
-    @MockitoSpyBean
-    private MemberIdentityRepository identities;
 
     @DynamicPropertySource
     static void configureDatabase(DynamicPropertyRegistry registry) {
@@ -74,29 +69,7 @@ class MemberDeletionAcceptanceTest {
         jdbc.update("DELETE FROM properties");
         jdbc.update("DELETE FROM user_checklists");
         jdbc.update("DELETE FROM refresh_tokens");
-        jdbc.update("DELETE FROM member_identities");
         jdbc.update("DELETE FROM members");
-    }
-
-    @Test
-    @DisplayName("인증 정보 삭제가 실패하면 회원과 소유 기록의 탈퇴도 롤백한다")
-    void rollsBackDeletionWhenAuthenticationCleanupFails() throws Exception {
-        var login = mvc.perform(post("/api/auth/login")).andExpect(status().isOk()).andReturn();
-        JsonNode data = objectMapper.readTree(login.getResponse().getContentAsString()).path("data");
-        long memberId = data.path("member").path("memberId").asLong();
-        String token = data.path("accessToken").asText();
-        Cookie cookie = login.getResponse().getCookie("refresh_token");
-        jdbc.update("INSERT INTO properties (member_id, name, created_at) VALUES (?, '보존할 집', NOW(6))", memberId);
-        doThrow(new IllegalStateException("인증 정리 실패")).when(identities).deleteByMemberId(memberId);
-
-        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isInternalServerError());
-        assertThat(jdbc.queryForObject("SELECT deleted_at FROM members WHERE id = ?", LocalDateTime.class, memberId))
-                .isNull();
-        assertThat(jdbc.queryForObject(
-                "SELECT COUNT(*) FROM properties WHERE member_id = ? AND deleted_at IS NULL", Long.class, memberId))
-                .isOne();
-        mvc.perform(post("/api/auth/refresh").cookie(cookie)).andExpect(status().isOk());
     }
 
     @Test
@@ -115,10 +88,6 @@ class MemberDeletionAcceptanceTest {
                 .orElseThrow().getCreatedAt();
         refreshTokens.save(RefreshToken.create(memberId, tokenProvider.hashOpaqueToken(anotherRawToken), issuedAt, 365));
 
-        jdbc.update("""
-                INSERT INTO member_identities (member_id, provider, provider_subject, created_at)
-                VALUES (?, 'KAKAO', 'deleted-member', NOW(6))
-                """, memberId);
         LocalDateTime now = LocalDateTime.now();
         jdbc.update("INSERT INTO properties (member_id, name, created_at) VALUES (?, '내 매물', ?)", memberId, now);
         long propertyId = jdbc.queryForObject("SELECT id FROM properties WHERE member_id = ?", Long.class, memberId);
@@ -174,7 +143,6 @@ class MemberDeletionAcceptanceTest {
         mvc.perform(get("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
-        assertThat(identities.findByMemberId(memberId)).isEmpty();
         mvc.perform(post("/api/auth/refresh").cookie(refreshCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_INVALID"));

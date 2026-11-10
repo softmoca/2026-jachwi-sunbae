@@ -1,6 +1,6 @@
 package com.jachwisunbae.property.controller;
 
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
+import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.property.controller.dto.request.ExportPropertyComparisonRequest;
 import com.jachwisunbae.property.service.pdf.PropertyComparisonPdfService;
 import io.swagger.v3.oas.annotations.Operation;

@@ -1,6 +1,5 @@
 package com.jachwisunbae.auth.web;
 
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
 import org.springframework.core.MethodParameter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;

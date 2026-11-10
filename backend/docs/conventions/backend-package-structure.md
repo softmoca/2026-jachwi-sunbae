@@ -136,7 +136,3 @@ Domain 객체는 getter와 setter만 가진 데이터 묶음으로 만들지 않
 - 요청 ID와 요청 메서드·경로·상태·소요 시간만 남기는 안전한 요청 로깅
 
 특정 Domain의 규칙은 `common`에 두지 않는다. `common`을 이름을 정하기 어려운 코드의 임시 보관소로 사용하지 않는다.
-
-## 회원 인증과 탈퇴
-
-인증된 회원 ID를 Controller에 전달하는 어노테이션은 `common.web`에 둔다. 회원 탈퇴는 `member`에서 처리하고 `MemberDeleted` 이벤트를 발행한다. `auth`의 동기 리스너는 같은 트랜잭션에서 Refresh Token과 OAuth 연결을 삭제하며, 인증 정리가 실패하면 탈퇴도 롤백한다. 이 협력의 업무 패키지 의존 방향은 `auth → member`다.

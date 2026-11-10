@@ -1,7 +1,5 @@
 package com.jachwisunbae.auth.web;
 
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

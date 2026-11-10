@@ -5,7 +5,7 @@ import com.jachwisunbae.auth.service.AuthService;
 import com.jachwisunbae.auth.service.AuthService.IssuedRefreshToken;
 import com.jachwisunbae.auth.service.OAuthAuthenticationService;
 import com.jachwisunbae.auth.service.OAuthAuthenticationService.VerifiedIdentity;
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
+import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import java.net.URI;

@@ -1,6 +1,6 @@
 package com.jachwisunbae.notification.controller;
 
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
+import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import com.jachwisunbae.notification.controller.dto.WeatherNotificationResponse;
 import com.jachwisunbae.notification.service.WeatherNotificationHistoryService;

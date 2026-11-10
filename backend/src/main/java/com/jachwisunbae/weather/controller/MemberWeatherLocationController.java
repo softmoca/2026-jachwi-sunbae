@@ -1,6 +1,6 @@
 package com.jachwisunbae.weather.controller;
 
-import com.jachwisunbae.common.web.AuthenticatedMemberId;
+import com.jachwisunbae.auth.web.AuthenticatedMemberId;
 import com.jachwisunbae.common.web.ApiResponse;
 import com.jachwisunbae.weather.controller.dto.WeatherLocationRequest;
 import com.jachwisunbae.weather.controller.dto.WeatherLocationResponse;

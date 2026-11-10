@@ -1,4 +1,4 @@
-package com.jachwisunbae.common.web;
+package com.jachwisunbae.auth.web;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
