@@ -142,6 +142,7 @@ export const useRemoveProperty = (propertyId: number) => {
 };
 
 const invalidatePhotoAggregates = async (propertyId: number) => {
+  rememberRecentEdit(propertyId, 'info');
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: propertyQueryKeys.photos(propertyId), exact: true }),
     queryClient.invalidateQueries({ queryKey: propertyQueryKeys.detail(propertyId), exact: true }),
