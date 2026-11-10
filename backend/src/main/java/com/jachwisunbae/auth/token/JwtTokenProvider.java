@@ -2,6 +2,7 @@ package com.jachwisunbae.auth.token;
 
 import com.jachwisunbae.common.exception.client.AuthenticationFailedException;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
+import com.jachwisunbae.common.exception.server.InternalSystemException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -12,15 +13,24 @@ import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
+import java.util.HexFormat;
 
 //로그인 시 AuthService가 토큰을 만들 때 사용하고, 이후 요청에서는 JwtAuthenticationFilter가 토큰을 검증할 때 사용한다.
 // JWT == Header.Payload.Signature
 // Signature == 헤더 + 페이로드를 비밀키로 서명한 값
 public class JwtTokenProvider {
+
+    private static final int OPAQUE_TOKEN_BYTES = 32;
+
+    private final SecureRandom secureRandom = new SecureRandom();
 
     // JWT 발급시 서명하는 객체(JWT내용을 비밀키로 서명 -> 시그니처 생성
     private final JWSSigner signer;
@@ -29,6 +39,7 @@ public class JwtTokenProvider {
     private final String issuer;// 토큰 발행자
     private final String audience;// 누가 사용하도록 발급했는가
     private final long accessTokenSeconds;
+    private final long refreshTokenValidityDays;
     private final Clock clock;
 
     // 비밀키가 잘못되면 로그인할 때가 아니라 서버가 시작할 때 실패하도록 생성자에서 검사한다.
@@ -37,6 +48,7 @@ public class JwtTokenProvider {
             String issuer,
             String audience,
             long accessTokenSeconds,
+            long refreshTokenValidityDays,
             Clock clock) {
         byte[] secretBytes = secretBytes(secret);
         this.signer = createSigner(secretBytes);
@@ -44,6 +56,7 @@ public class JwtTokenProvider {
         this.issuer = issuer;
         this.audience = audience;
         this.accessTokenSeconds = accessTokenSeconds;
+        this.refreshTokenValidityDays = refreshTokenValidityDays;
         this.clock = clock;
     }
 
@@ -74,6 +87,36 @@ public class JwtTokenProvider {
         } catch (ParseException | JOSEException exception) {
             throw new AuthenticationFailedException(ErrorCode.ACCESS_TOKEN_INVALID,
                     "Access Token이 올바르지 않습니다: JWT 형식이나 서명 방식이 올바르지 않습니다.", exception);
+        }
+    }
+
+    public long accessTokenSeconds() {
+        return accessTokenSeconds;
+    }
+
+    public long refreshTokenValidityDays() {
+        return refreshTokenValidityDays;
+    }
+
+    // Refresh Token과 OAuth state·nonce에 URL-safe 난수를 사용한다.
+    public String generateOpaqueToken() {
+        byte[] bytes = new byte[OPAQUE_TOKEN_BYTES];
+        secureRandom.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    // DB에 저장하거나 조회할 때 원문 대신 SHA-256 해시를 사용한다.
+    public String hashOpaqueToken(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new IllegalArgumentException("토큰 원문은 필수입니다.");
+        }
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(rawToken.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new InternalSystemException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "토큰 해시에 필요한 SHA-256 알고리즘을 사용할 수 없습니다.", exception);
         }
     }
 

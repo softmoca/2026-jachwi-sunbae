@@ -7,6 +7,7 @@ import {
   apiRequest,
   getApiErrorTrackingContext,
   getSafeApiErrorMessage,
+  logoutAuthentication,
   resetAuthentication,
 } from '@/features/auth/api/apiClient';
 import {
@@ -515,5 +516,51 @@ describe('초기화', () => {
     await expect(request).rejects.toMatchObject({ kind: 'authentication-ended' });
     expect(refreshCalls).toBe(0);
     expect(getAccessToken()).toBe('new-member-token');
+  });
+});
+
+describe('로그아웃', () => {
+  const LOGOUT_URL = `${config.apiBaseUrl}/api/auth/logout`;
+  const LOGIN_URL = `${config.apiBaseUrl}/api/auth/login`;
+  const loginResponse = (accessToken: string, memberId: number, newMember = false) =>
+    success({ accessToken, tokenType: 'Bearer', expiresIn: 900, newMember, member: { memberId } });
+
+  it('이 기기의 인증만 끝낸 뒤 새 익명 회원으로 바꾸고 이전 회원의 화면 캐시를 지운다', async () => {
+    setAuthentication({ accessToken: 'linked-member', tokenType: 'Bearer', expiresIn: 900, memberId: 10 });
+    queryClient.setQueryData(propertyQueryKeys.detail(10), { name: '계정 회원 매물' });
+    const requests: string[] = [];
+    server.use(
+      http.post(LOGOUT_URL, ({ request }) => {
+        requests.push(`logout ${request.headers.get('Authorization')} ${request.credentials}`);
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.post(LOGIN_URL, ({ request }) => {
+        requests.push(`login ${request.headers.get('Authorization')} ${request.credentials}`);
+        return loginResponse('anonymous-token', 30, true);
+      }),
+    );
+
+    await logoutAuthentication(config);
+
+    expect(requests).toEqual(['logout Bearer linked-member include', 'login null include']);
+    expect(getAuthenticationSnapshot().session?.memberId).toBe(30);
+    expect(queryClient.getQueryData(propertyQueryKeys.detail(10))).toBeUndefined();
+  });
+
+  it('로그아웃이 실패하면 지금 회원과 화면 캐시를 그대로 둔다', async () => {
+    setAuthentication({ accessToken: 'linked-member', tokenType: 'Bearer', expiresIn: 900, memberId: 10 });
+    queryClient.setQueryData(propertyQueryKeys.detail(10), { name: '계정 회원 매물' });
+    const login = vi.fn();
+    server.use(
+      http.post(LOGOUT_URL, () =>
+        HttpResponse.json({ code: 'INTERNAL_ERROR', message: '실패', errors: [] }, { status: 500 }),
+      ),
+      http.post(LOGIN_URL, login),
+    );
+
+    await expect(logoutAuthentication(config)).rejects.toMatchObject({ kind: 'server', code: 'INTERNAL_ERROR' });
+    expect(login).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBe('linked-member');
+    expect(queryClient.getQueryData(propertyQueryKeys.detail(10))).toEqual({ name: '계정 회원 매물' });
   });
 });

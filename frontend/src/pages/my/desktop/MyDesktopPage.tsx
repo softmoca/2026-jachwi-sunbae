@@ -1,10 +1,12 @@
 import { css } from '@emotion/css';
 
+import { useMember } from '@/features/auth/api/useCurrentMember';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
 import { formatAppVersionLabel } from '../lib/appVersionLabel';
+import AccountLinkCard from '../ui/account-link-card/AccountLinkCard';
 import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
@@ -13,6 +15,7 @@ import * as shared from '../MyPage.styles';
 /** 데스크탑 마이. 공용 헤더로 이동하므로 뒤로 가기 없이 제목만 두고, 좁은 한 열에 카드를 위에서 아래로 쌓는다. */
 const MyDesktopPage = () => {
   const config = usePublicConfig();
+  const member = useMember();
 
   return (
     <main className={shared.page}>
@@ -22,6 +25,7 @@ const MyDesktopPage = () => {
         </div>
         <WeatherSummaryCard />
         <div className={styles.links}>
+          <AccountLinkCard memberId={member.memberId} />
           <PrivacyLinkCard />
           <AccountResetCard />
         </div>

@@ -121,7 +121,7 @@ class ChecklistCatalogMigrationIntegrationTest {
         var before = tables.stream().map(table -> jdbcTemplate.queryForList("SELECT * FROM " + table)).toList();
         var retiredAt = jdbcTemplate.queryForMap("SELECT deleted_at FROM system_check_items WHERE id = 108");
 
-        assertThat(Flyway.configure().dataSource(dataSource).load().migrate().migrationsExecuted).isOne();
+        assertThat(Flyway.configure().dataSource(dataSource).target("13").load().migrate().migrationsExecuted).isOne();
 
         assertThat(tables.stream().map(table -> jdbcTemplate.queryForList("SELECT * FROM " + table)).toList()).isEqualTo(before);
         assertThat(jdbcTemplate.queryForMap("SELECT deleted_at FROM system_check_items WHERE id = 108")).isEqualTo(retiredAt);

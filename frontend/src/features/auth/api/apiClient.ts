@@ -15,6 +15,7 @@ import {
   getAuthenticationSnapshot,
   setAuthentication,
 } from '../model/authStore';
+import { announceMember } from '../model/authSync';
 import { parseLoginResponseDto } from './authParsers';
 
 type ApiErrorKind = 'network' | 'server' | 'invalid-response' | 'authentication-ended';
@@ -57,6 +58,13 @@ type ApiRequestOptions<T> = {
   formData?: FormData;
   signal?: AbortSignal;
   requiresAuthentication?: boolean;
+  /** Refresh 쿠키(Path=/api/auth)로 같은 기기의 세션을 함께 확인하는 인증 API에만 켠다. */
+  includeCredentials?: boolean;
+  /**
+   * Access Token 만료가 아닌 401 오류 코드. 이 코드면 토큰을 갱신하거나 인증을 끝내지 않고 오류로 돌려준다.
+   * OAuth 시작 API는 Refresh 쿠키를 확인하지 못하면 `401 OAUTH_AUTHENTICATION_FAILED`를 준다.
+   */
+  nonSessionUnauthorizedCodes?: readonly string[];
   /** 비동기 기기 권한 확인 중 회원이 바뀌면 새 회원에게 이전 동의를 적용하지 않는다. */
   expectedMemberId?: number;
   parseData: (value: unknown) => T;
@@ -169,17 +177,36 @@ type ExecuteRequestOptions = {
   body?: BodyInit;
   signal?: AbortSignal;
   requiresAuthentication: boolean;
+  includeCredentials?: boolean;
+  nonSessionUnauthorizedCodes?: readonly string[];
   expectedMemberId?: number;
 };
 
+/** 401 응답이 Access Token 문제가 아니라 그 API의 업무 오류인지 본다. 본문은 복제해 읽어 원래 응답을 그대로 둔다. */
+const isNonSessionUnauthorized = async (response: Response, codes: readonly string[] | undefined) => {
+  if (codes === undefined || codes.length === 0) return false;
+  try {
+    const payload: unknown = await response.clone().json();
+    return isErrorDto(payload) && codes.includes(payload.code);
+  } catch {
+    return false;
+  }
+};
+
 const sendRequest = async (
-  { config, path, method, headers, body, signal }: ExecuteRequestOptions,
+  { config, path, method, headers, body, signal, includeCredentials = false }: ExecuteRequestOptions,
   accessToken: string | null,
 ): Promise<Response> => {
   if (accessToken !== null) headers.set('Authorization', `Bearer ${accessToken}`);
 
   try {
-    return await fetch(createApiUrl(config, path), { method, headers, body, signal });
+    return await fetch(createApiUrl(config, path), {
+      method,
+      headers,
+      body,
+      signal,
+      ...(includeCredentials ? { credentials: 'include' as const } : {}),
+    });
   } catch (error) {
     if (isAbortError(error)) {
       throw error;
@@ -193,16 +220,19 @@ const LOGIN_PATH = '/api/auth/login';
 const REFRESH_PATH = '/api/auth/refresh';
 // 초기화의 첫 단계. 지금 회원을 탈퇴 처리(논리 삭제)하고 Refresh Token을 폐기한다. 새 회원은 이어서 로그인으로 받는다.
 const MEMBER_PATH = '/api/members/me';
+// 로그아웃의 첫 단계. 이 기기의 Refresh Token만 폐기하고 쿠키를 만료시킨다. 회원과 기록, 다른 기기의 인증은 그대로다.
+const LOGOUT_PATH = '/api/auth/logout';
 
 type TokenPath = typeof LOGIN_PATH | typeof REFRESH_PATH;
+type MemberTokenRequest = { path: typeof MEMBER_PATH; method: 'DELETE' } | { path: typeof LOGOUT_PATH; method: 'POST' };
 
 /**
- * 인증 요청을 보낸다. 로그인과 갱신은 Refresh 쿠키(Path=/api/auth)로, 탈퇴는 Access Token으로 회원을 확인한다.
+ * 인증 요청을 보낸다. 로그인과 갱신은 Refresh 쿠키(Path=/api/auth)로, 탈퇴와 로그아웃은 Access Token으로 회원을 확인한다.
  * 다른 출처의 응답이 Refresh 쿠키를 저장하거나 만료시킬 수 있도록 모두 쿠키를 함께 보낸다.
  */
 const sendAuthenticationRequest = async (
   config: PublicConfig,
-  path: TokenPath | typeof MEMBER_PATH,
+  path: TokenPath | MemberTokenRequest['path'],
   method: 'POST' | 'DELETE',
   accessToken?: string,
 ): Promise<Response> => {
@@ -240,6 +270,8 @@ const acceptTokenResponse = async (response: Response, path: TokenPath): Promise
   if (path === LOGIN_PATH && isFirstLogin) {
     trackPostHogEvent('login_succeeded', { login_method: 'anonymous', new_member: login.newMember });
   }
+  // 로그인은 쿠키로 회원을 정한다. 다른 탭이 이전 회원으로 남아 있으면 이 회원으로 맞추게 한다.
+  if (path === LOGIN_PATH) announceMember(login.member.memberId);
   return login.accessToken;
 };
 
@@ -296,21 +328,71 @@ const refreshAuthentication = (config: PublicConfig): Promise<string> =>
   );
 
 /**
- * 지금 회원의 Access Token으로 탈퇴를 요청한다. 토큰이 만료됐거나 401을 받으면 같은 회원으로 한 번 갱신해 다시 보낸다.
- * 초기화가 진행 중인 인증으로 등록돼 있어 공용 갱신은 초기화 자신을 기다리게 되므로, 여기서는 갱신을 직접 보낸다.
+ * 지금 회원의 Access Token으로 탈퇴나 로그아웃을 요청한다. 토큰이 만료됐거나 401을 받으면 같은 회원으로 한 번 갱신해 다시 보낸다.
+ * 이 요청이 진행 중인 인증으로 등록돼 있어 공용 갱신은 자신을 기다리게 되므로, 여기서는 갱신을 직접 보낸다.
  */
-const requestMemberDeletion = async (config: PublicConfig): Promise<void> => {
+const requestWithMemberToken = async (config: PublicConfig, { path, method }: MemberTokenRequest): Promise<void> => {
   const { session, terminationReason } = getAuthenticationSnapshot();
   if (session === null || terminationReason !== null) throw new ApiError({ kind: 'authentication-ended' });
 
   const accessToken = getAccessToken() ?? (await requestToken(config, REFRESH_PATH));
-  let response = await sendAuthenticationRequest(config, MEMBER_PATH, 'DELETE', accessToken);
+  let response = await sendAuthenticationRequest(config, path, method, accessToken);
   if (response.status === 401) {
     const refreshedToken = await requestToken(config, REFRESH_PATH);
-    response = await sendAuthenticationRequest(config, MEMBER_PATH, 'DELETE', refreshedToken);
+    response = await sendAuthenticationRequest(config, path, method, refreshedToken);
   }
-  // 탈퇴가 거절되면 지금 회원은 그대로 둔다.
+  // 요청이 거절되면 지금 회원은 그대로 둔다.
   if (!response.ok) await throwResponseError(response);
+};
+
+type MemberSessionEnd = {
+  request: MemberTokenRequest;
+  successEvent: string;
+  failureEvent: string;
+};
+
+/**
+ * 지금 회원의 이 기기 인증을 끝내고(탈퇴 또는 로그아웃), Refresh 쿠키 없이 로그인해 새 익명 회원을 받는다.
+ * 진행 중인 로그인이나 갱신이 끝난 뒤에 보내고, 요청이 끝날 때까지 뒤이은 로그인과 갱신은 이 작업을 함께 기다린다.
+ * 요청이 실패하면 지금 회원과 화면 상태를 그대로 두고 오류를 던진다.
+ * 요청 뒤 로그인이 실패해도 세션은 이미 비었으므로, 다음 요청의 자동 로그인이 새 회원을 받는다.
+ */
+const endMemberSession = async (
+  config: PublicConfig,
+  { request, successEvent, failureEvent }: MemberSessionEnd,
+): Promise<void> => {
+  const previous = pendingAuthentication;
+  let isSessionEnded = false;
+  let ending: Promise<string> | null = null;
+  ending = sharePendingAuthentication(
+    (async () => {
+      if (previous !== null) await previous.catch(() => undefined);
+      try {
+        await requestWithMemberToken(config, request);
+      } catch (error) {
+        captureUnexpectedApiError({ error, path: request.path, method: request.method });
+        trackPostHogEvent(failureEvent, {
+          error_kind: error instanceof ApiError ? error.kind : 'unknown',
+          error_code: error instanceof ApiError ? error.code : null,
+        });
+        throw error;
+      }
+      isSessionEnded = true;
+      // 인증을 끝내지 않고 세션과 회원 캐시만 비운다. 'unauthorized'를 넘기면 오류 화면이 뜬다.
+      clearAuthentication(null);
+      // 성공 이벤트는 이전 회원으로 남기고, 새 회원은 회원 조회가 끝나면 다시 식별한다.
+      trackPostHogEvent(successEvent);
+      resetPostHogIdentity();
+      // 요청이 끝났으니 대기를 풀고, 공용 자동 로그인으로 새 회원을 받는다. 기다리던 요청은 그 토큰을 받는다.
+      if (pendingAuthentication === ending) pendingAuthentication = null;
+      return authenticate(config);
+    })(),
+  );
+  try {
+    await ending;
+  } catch (error) {
+    if (!isSessionEnded) throw error;
+  }
 };
 
 /**
@@ -319,39 +401,36 @@ const requestMemberDeletion = async (config: PublicConfig): Promise<void> => {
  * 탈퇴가 실패하면 지금 회원과 화면 상태를 그대로 두고 오류를 던진다.
  * 탈퇴 뒤 로그인이 실패해도 세션은 이미 비었으므로, 다음 요청의 자동 로그인이 새 회원을 받는다.
  */
-export const resetAuthentication = async (config: PublicConfig): Promise<void> => {
+export const resetAuthentication = (config: PublicConfig): Promise<void> =>
+  endMemberSession(config, {
+    request: { path: MEMBER_PATH, method: 'DELETE' },
+    successEvent: 'account_reset_succeeded',
+    failureEvent: 'account_reset_failed',
+  });
+
+/**
+ * 로그아웃. 이 기기의 인증만 끝내고 새 익명 회원으로 시작한다. 연결한 OAuth 계정과 기록은 서버에 그대로 남아,
+ * 같은 계정으로 다시 인증하면 돌아온다. 실패하면 지금 회원을 그대로 두고 오류를 던진다.
+ */
+export const logoutAuthentication = (config: PublicConfig): Promise<void> =>
+  endMemberSession(config, {
+    request: { path: LOGOUT_PATH, method: 'POST' },
+    successEvent: 'logout_succeeded',
+    failureEvent: 'logout_failed',
+  });
+
+/**
+ * OAuth 인증으로 이 기기의 Refresh 쿠키가 바뀐 뒤 부른다. 이전 회원의 토큰과 캐시를 버리고 쿠키로 다시 로그인한다.
+ * 진행 중인 로그인이나 갱신이 이전 쿠키로 끝나도 그 결과를 쓰지 않도록, 그것이 끝난 뒤 새로 로그인한다.
+ */
+export const reloadAuthentication = async (config: PublicConfig): Promise<number> => {
   const previous = pendingAuthentication;
-  let isMemberDeleted = false;
-  let reset: Promise<string> | null = null;
-  reset = sharePendingAuthentication(
-    (async () => {
-      if (previous !== null) await previous.catch(() => undefined);
-      try {
-        await requestMemberDeletion(config);
-      } catch (error) {
-        captureUnexpectedApiError({ error, path: MEMBER_PATH, method: 'DELETE' });
-        trackPostHogEvent('account_reset_failed', {
-          error_kind: error instanceof ApiError ? error.kind : 'unknown',
-          error_code: error instanceof ApiError ? error.code : null,
-        });
-        throw error;
-      }
-      isMemberDeleted = true;
-      // 인증을 끝내지 않고 세션과 회원 캐시만 비운다. 'unauthorized'를 넘기면 오류 화면이 뜬다.
-      clearAuthentication(null);
-      // 성공 이벤트는 이전 회원으로 남기고, 새 회원은 회원 조회가 끝나면 다시 식별한다.
-      trackPostHogEvent('account_reset_succeeded');
-      resetPostHogIdentity();
-      // 탈퇴가 끝났으니 초기화 대기를 풀고, 공용 자동 로그인으로 새 회원을 받는다. 기다리던 요청은 그 토큰을 받는다.
-      if (pendingAuthentication === reset) pendingAuthentication = null;
-      return authenticate(config);
-    })(),
-  );
-  try {
-    await reset;
-  } catch (error) {
-    if (!isMemberDeleted) throw error;
-  }
+  if (previous !== null) await previous.catch(() => undefined);
+  clearAuthentication(null);
+  await authenticate(config);
+  const memberId = getAuthenticationSnapshot().session?.memberId ?? null;
+  if (memberId === null) throw new ApiError({ kind: 'invalid-response' });
+  return memberId;
 };
 
 /**
@@ -399,6 +478,7 @@ const executeRequest = async (options: ExecuteRequestOptions): Promise<Response>
   }
   throwIfAuthenticationEnded();
   if (response.status !== 401) return response;
+  if (await isNonSessionUnauthorized(response, options.nonSessionUnauthorizedCodes)) return response;
 
   // Access Token이 만료됐다. 다른 요청이 이미 새 토큰을 받았으면 그 토큰으로, 아니면 갱신해서 한 번만 다시 보낸다.
   const currentToken = getAccessToken();
@@ -440,6 +520,8 @@ const apiRequestInternal = async <T>({
   formData,
   signal,
   requiresAuthentication = true,
+  includeCredentials = false,
+  nonSessionUnauthorizedCodes,
   expectedMemberId,
   parseData,
 }: ApiRequestOptions<T>): Promise<T> => {
@@ -461,6 +543,8 @@ const apiRequestInternal = async <T>({
     body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
     signal,
     requiresAuthentication,
+    includeCredentials,
+    nonSessionUnauthorizedCodes,
     expectedMemberId,
   });
 

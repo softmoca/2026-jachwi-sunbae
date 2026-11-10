@@ -21,6 +21,7 @@ React 19·TypeScript 6·Webpack 5 기반 모바일 우선 SPA입니다.
 - [프론트엔드 로딩 성능 리포트](docs/performance-report.md)
 - [뮤테이션 테스트](docs/mutation-testing.md)
 - [생활 날씨 카드](docs/weather-ui-prototype.md)
+- [OAuth 계정 연결](docs/oauth-account-linking.md)
 
 ## 설치와 실행
 

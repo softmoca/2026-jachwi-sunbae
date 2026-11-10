@@ -38,7 +38,7 @@ public class StreetMemoService {
     public StreetMemoResult create(final Long memberId, final BigDecimal latitude, final BigDecimal longitude,
                                     final String memo, final StreetMemoPreference preference) {
         StreetMemoLocation location = new StreetMemoLocation(latitude, longitude);
-        memberService.findById(memberId);
+        memberService.requireActiveMemberForUpdate(memberId);
         String adminDongCode = adminDongFinder.findCode(location.latitude(), location.longitude()).orElse(null);
         StreetMemo streetMemo = StreetMemo.create(memberId, latitude, longitude, adminDongCode, memo, preference,
                 LocalDateTime.now(clock));

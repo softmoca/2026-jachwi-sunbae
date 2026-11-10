@@ -34,7 +34,7 @@ public class MemberWeatherLocationService {
 
     @Transactional
     public MemberWeatherLocation sync(final long memberId, final double latitude, final double longitude) {
-        members.findProfileById(memberId);
+        members.requireActiveMemberForUpdate(memberId);
         GridPoint grid = converter.convert(latitude, longitude);
         Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         repository.sync(memberId, grid, now);
@@ -43,7 +43,7 @@ public class MemberWeatherLocationService {
 
     @Transactional
     public void delete(final long memberId) {
-        members.findProfileById(memberId);
+        members.requireActiveMemberForUpdate(memberId);
         repository.delete(memberId);
     }
 }

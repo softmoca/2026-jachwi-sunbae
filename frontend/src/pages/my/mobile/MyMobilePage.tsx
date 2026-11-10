@@ -1,9 +1,11 @@
 import { css } from '@emotion/css';
 
+import { useMember } from '@/features/auth/api/useCurrentMember';
 import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/WeatherSummaryCard';
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import { formatAppVersionLabel } from '../lib/appVersionLabel';
+import AccountLinkCard from '../ui/account-link-card/AccountLinkCard';
 import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
@@ -12,12 +14,14 @@ import * as shared from '../MyPage.styles';
 /** 휴대폰·태블릿 마이. 뒤로 가기·제목은 앱 상단 바가 그리고, 홈과 같은 본문(최대 45rem)에 카드를 늘이지 않고 쌓는다. */
 const MyMobilePage = () => {
   const config = usePublicConfig();
+  const member = useMember();
 
   return (
     <main className={shared.page}>
       <div className={styles.container}>
         <WeatherSummaryCard />
         <div className={styles.links}>
+          <AccountLinkCard memberId={member.memberId} />
           <PrivacyLinkCard />
           <AccountResetCard />
         </div>

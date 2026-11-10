@@ -8,4 +8,5 @@ export type PublicConfig = {
   posthogHost?: string;
   appVersion?: string;
   appEnvironment?: 'production' | 'development';
+  nativeOAuthEnabled?: boolean;
 };

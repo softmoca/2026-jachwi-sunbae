@@ -39,6 +39,8 @@ export const LANDING_PATH = '/landing';
 export const ABOUT_PATH = '/about';
 /** 예전 매물 등록 화면. 매물은 본 방 기록 지도에서 등록하므로 기록 지도로 보낸다. */
 export const PROPERTY_NEW_PATH = '/properties/new';
+/** OAuth 인증을 마치고 돌아오는 화면. 결과를 정해 마이로 보낸다. 백엔드의 완료 주소(`OAUTH_SUCCESS_REDIRECT_URI`)가 이 주소다. */
+export const OAUTH_COMPLETE_PATH = '/oauth/complete';
 
 /** 라우터 정의에만 쓰는 패턴. `area`, `areaDetails`는 동네 찾기 주소 아래에 붙는 상대 패턴이다. */
 export const ROUTE_PATTERNS = {
