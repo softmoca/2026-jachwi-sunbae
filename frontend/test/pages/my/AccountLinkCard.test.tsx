@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -106,7 +106,8 @@ describe('마이 화면 계정 연결', () => {
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
-    expect(await screen.findByLabelText('현재 경로')).toHaveTextContent(/^\/$/);
+    // 로그아웃 요청과 새 익명 로그인이 끝난 뒤에 홈으로 간다.
+    await waitFor(() => expect(screen.getByLabelText('현재 경로')).toHaveTextContent(/^\/$/));
     expect(getAuthenticationSnapshot().session?.memberId).toBe(2);
   });
 
