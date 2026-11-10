@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import AppRoutes from '@/app/router/AppRoutes';
 import { getAuthenticationSnapshot } from '@/features/auth/model/authStore';
@@ -180,33 +180,9 @@ describe('마이 화면 계정 연결', () => {
       };
     };
 
-    beforeEach(() => {
-      vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', true);
-    });
-
     afterEach(() => {
       delete window.ReactNativeWebView;
       vi.unstubAllGlobals();
-    });
-
-    it('웹 빌드의 NATIVE_OAUTH_ENABLED가 꺼져 있으면 앱이 알려도 계정 연결 카드를 숨긴다', async () => {
-      vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', false);
-      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 't', nonce }));
-      renderMyPage();
-
-      expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
-      expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
-    });
-
-    it('웹 빌드의 NATIVE_OAUTH_ENABLED가 꺼져 있으면 앱에서 복귀 화면으로 들어와도 마이로 보낸다', async () => {
-      vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', false);
-      installApp((nonce) => ({ status: 'success', provider: 'kakao', idToken: 't', nonce }));
-      renderMyPage('/oauth/complete');
-
-      expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
-      expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
-      expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
     });
 
     it('앱이 알린 제공자만 보여 주고, 앱 로그인으로 이 화면에서 연결을 마친다', async () => {

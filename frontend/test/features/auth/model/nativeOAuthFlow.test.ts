@@ -54,7 +54,6 @@ const serveNativeOAuth = () => {
 
 beforeEach(() => {
   trackEvent.mockClear();
-  vi.stubGlobal('__NATIVE_OAUTH_ENABLED__', true);
   window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: ['apple', 'kakao'] };
 });
 

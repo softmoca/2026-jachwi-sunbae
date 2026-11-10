@@ -56,7 +56,7 @@ prod → /main.8a49163cbe52bf996d07.js
 
 ## 환경변수는 빌드 타임에 박힌다
 
-`webpack.config.js`의 `DefinePlugin`이 `API_BASE_URL`·`MAP_PROVIDER_MODE`·`NAVER_MAP_CLIENT_ID`·`ENABLE_MSW`·`POSTHOG_PROJECT_TOKEN`·`POSTHOG_HOST`·`NATIVE_OAUTH_ENABLED`·`APP_VERSION`·`APP_ENVIRONMENT`를 번들에 박아넣는다. 런타임 설정이 아니므로 **값을 바꾸면 재빌드·재배포해야 한다.** 배포 빌드는 `MAP_PROVIDER_MODE`가 비어 있어도 항상 Naver 지도를 선택하며, Client ID가 없으면 데모 지도로 대체하지 않고 설정 오류를 표시한다. MSW는 기본적으로 배포에서 꺼져 있지만 API 개발용 dev fixture가 필요할 때만 `ENABLE_MSW=true`로 선택해 켤 수 있다. 운영에서는 이 값을 지정하지 않는다.
+`webpack.config.js`의 `DefinePlugin`이 `API_BASE_URL`·`MAP_PROVIDER_MODE`·`NAVER_MAP_CLIENT_ID`·`ENABLE_MSW`·`POSTHOG_PROJECT_TOKEN`·`POSTHOG_HOST`·`APP_VERSION`·`APP_ENVIRONMENT`를 번들에 박아넣는다. 런타임 설정이 아니므로 **값을 바꾸면 재빌드·재배포해야 한다.** 배포 빌드는 `MAP_PROVIDER_MODE`가 비어 있어도 항상 Naver 지도를 선택하며, Client ID가 없으면 데모 지도로 대체하지 않고 설정 오류를 표시한다. MSW는 기본적으로 배포에서 꺼져 있지만 API 개발용 dev fixture가 필요할 때만 `ENABLE_MSW=true`로 선택해 켤 수 있다. 운영에서는 이 값을 지정하지 않는다.
 
 | 환경변수                | prod                           | dev                                |
 | ----------------------- | ------------------------------ | ---------------------------------- |
@@ -65,10 +65,9 @@ prod → /main.8a49163cbe52bf996d07.js
 | `NAVER_MAP_CLIENT_ID`   | Naver Maps Client ID           | 같은 Naver Maps Application의 ID   |
 | `POSTHOG_PROJECT_TOKEN` | PostHog 프로젝트 토큰          | 같은 PostHog 프로젝트 토큰         |
 | `POSTHOG_HOST`          | `https://us.i.posthog.com`     | `https://us.i.posthog.com`         |
-| `NATIVE_OAUTH_ENABLED`  | 비움(꺼짐)                     | 비움(꺼짐)                         |
 | `APP_VERSION`           | `package.json` 버전            | `package.json` 버전                |
 
-값은 CodePipeline Commands 빌드 액션의 환경변수로 전달한다. Naver Maps Client ID와 PostHog 프로젝트 토큰은 브라우저 번들에 포함되는 공개 식별자이며 REST API 키나 Client Secret 등 비밀값을 넣지 않는다. `NATIVE_OAUTH_ENABLED`는 앱 WebView의 계정 연결(네이티브 로그인)을 켠다. 백엔드에 앱용 `/api/auth/oauth/{provider}/nonce`, `/id-token` API가 배포된 뒤에만 `true`로 바꾸고 웹을 다시 배포한다([OAuth 계정 연결](oauth-account-linking.md)). Naver Maps Application에 `https://www.jachwi-sunbae.kr`과 `https://dev.jachwi-sunbae.kr`을 Web 서비스 URL로 등록한다.
+값은 CodePipeline Commands 빌드 액션의 환경변수로 전달한다. Naver Maps Client ID와 PostHog 프로젝트 토큰은 브라우저 번들에 포함되는 공개 식별자이며 REST API 키나 Client Secret 등 비밀값을 넣지 않는다. Naver Maps Application에 `https://www.jachwi-sunbae.kr`과 `https://dev.jachwi-sunbae.kr`을 Web 서비스 URL로 등록한다.
 
 dev와 prod는 같은 PostHog 프로젝트에 수집한다. `API_BASE_URL`이 운영 API이면 `environment=production`, 그 외에는 `environment=development`를 모든 이벤트의 공통 속성으로 등록한다. PostHog 인사이트·퍼널·세션 리플레이에는 반드시 이 속성 필터를 적용해 두 환경을 분리한다. 로컬 개발은 `.env.local`에 `POSTHOG_PROJECT_TOKEN`과 `POSTHOG_HOST`를 넣은 경우에만 수집한다. 세션 녹화에서는 환경과 무관하게 텍스트와 요소 속성을 마스킹한다.
 
