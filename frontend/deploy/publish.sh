@@ -38,11 +38,8 @@ fi
 VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
 printf '{"version":"%s"}\n' "${VERSION}" > "${DIST_DIR}/version.json"
 
-# dev 사이트는 검색에 나오지 않게 전체를 막고, 운영 주소를 가리키는 사이트맵은 올리지 않는다.
-if [[ "${DEPLOY_ENVIRONMENT}" == "dev" ]]; then
-    printf 'User-agent: *\nDisallow: /\n' > "${DIST_DIR}/robots.txt"
-    rm -f "${DIST_DIR}/sitemap.xml"
-fi
+# dev는 robots.txt, sitemap.xml, index.html의 noindex를 고치고, prod는 noindex가 없는지 확인한다.
+"${SCRIPT_DIR}/prepare-seo-files.sh" "${DEPLOY_ENVIRONMENT}" "${DIST_DIR}"
 
 export AWS_PAGER=""
 
