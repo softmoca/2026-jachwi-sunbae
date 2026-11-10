@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'jachwi-weather-installation-v1';
 type WeatherInstallation = { installationId: string; installationSecret: string };
 
-/** origin별 설치 소유 증명만 저장한다. FCM 토큰은 저장하지 않는다. 계정 초기화 때도 유지한다. */
+/** origin별 설치 소유 증명만 저장한다. FCM 토큰은 저장하지 않는다. 회원 탈퇴 때도 유지한다. */
 export const getWeatherInstallation = (): WeatherInstallation => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);

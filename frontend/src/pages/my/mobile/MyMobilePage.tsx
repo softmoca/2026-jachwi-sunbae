@@ -6,7 +6,7 @@ import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 
 import { formatAppVersionLabel } from '../lib/appVersionLabel';
 import AccountLinkCard from '../ui/account-link-card/AccountLinkCard';
-import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
+import AccountWithdrawCard from '../ui/account-withdraw-card/AccountWithdrawCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
 import * as shared from '../MyPage.styles';
@@ -23,7 +23,7 @@ const MyMobilePage = () => {
         <div className={styles.links}>
           <AccountLinkCard memberId={member.memberId} />
           <PrivacyLinkCard />
-          <AccountResetCard />
+          <AccountWithdrawCard />
         </div>
       </div>
       <footer className={`${shared.footer} ${styles.footer}`}>
@@ -87,7 +87,7 @@ const styles = {
     }
   `,
 
-  /* 개인정보 처리방침과 초기화는 한 묶음으로 쌓는다(넓은 화면에서는 날씨 옆 열). */
+  /* 개인정보 처리방침과 회원 탈퇴는 한 묶음으로 쌓는다(넓은 화면에서는 날씨 옆 열). */
   links: css`
     label: MyMobilePage-links;
     display: grid;

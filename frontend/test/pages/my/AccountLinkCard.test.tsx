@@ -117,7 +117,7 @@ describe('마이 화면 계정 연결', () => {
     saveLinkedProvider(1, 'KAKAO');
     renderMyPage();
 
-    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^회원 탈퇴/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '카카오 로그인' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
@@ -134,7 +134,7 @@ describe('마이 화면 계정 연결', () => {
     );
     renderMyPage('/oauth/complete');
 
-    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^회원 탈퇴/ })).toBeInTheDocument();
     expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
     expect(screen.queryByRole('status', { name: /계정/ })).not.toBeInTheDocument();
     // 마이 화면의 자동 로그인 한 번뿐이다. 복귀 화면의 다시 로그인은 하지 않는다.
@@ -159,7 +159,7 @@ describe('마이 화면 계정 연결', () => {
     window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: [] };
     renderMyPage();
 
-    expect(await screen.findByRole('button', { name: /^초기화/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^회원 탈퇴/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /계정 연결/ })).not.toBeInTheDocument();
   });
 
