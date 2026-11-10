@@ -2,7 +2,6 @@ import {
   ApnsTimeoutError,
   classifyPushError,
   PUSH_BRIDGE_ERROR,
-  PUSH_FAILURE_NOTICE,
   waitForApnsToken,
 } from '../src/push/errors';
 
@@ -89,13 +88,7 @@ describe('classifyPushError', () => {
     expect(classifyPushError(undefined)).toBe('unknown');
   });
 
-  it('네트워크 문구는 네트워크 오류에만 쓰고, 브리지 코드는 종류마다 다르다', () => {
-    expect(PUSH_FAILURE_NOTICE.apns_timeout.title).toBe(
-      '알림 연결이 늦어지고 있어요',
-    );
-    expect(PUSH_FAILURE_NOTICE.apns_timeout.message).not.toContain('네트워크');
-    expect(PUSH_FAILURE_NOTICE.unknown.message).not.toContain('네트워크');
-    expect(PUSH_FAILURE_NOTICE.network.message).toContain('네트워크');
+  it('브리지 오류 코드는 종류마다 다르다', () => {
     expect(PUSH_BRIDGE_ERROR).toEqual({
       apns_timeout: 'apns-timeout',
       network: 'network',

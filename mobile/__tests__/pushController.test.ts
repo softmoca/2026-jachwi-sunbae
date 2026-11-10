@@ -23,9 +23,14 @@ describe('push controller', () => {
     expect(await push.restore()).toBeNull();
     expect(port.register).not.toHaveBeenCalled();
     expect(port.subscribe).not.toHaveBeenCalled();
-    expect(await push.shouldPrompt()).toBe(true);
-    await push.defer();
-    expect(await push.shouldPrompt()).toBe(false);
+  });
+  it('예전 첫 실행 안내에서 나중에를 고른 사용자도 꺼진 상태로 두고 켤 수 있다', async () => {
+    const { port, push } = setup('deferred');
+    expect(await push.restore()).toBeNull();
+    expect(port.register).not.toHaveBeenCalled();
+    expect((await push.status()).enabled).toBe(false);
+    expect(await push.enable()).toBe('private-device-token');
+    expect((await push.status()).enabled).toBe(true);
   });
   it('OS 권한 거절을 활성화 성공으로 취급하지 않는다', async () => {
     const { port, push } = setup(null, false);

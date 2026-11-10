@@ -31,8 +31,6 @@ export const createPushController = (port: PushPort) => {
   return {
     status: () => serial(status),
     token: () => serial(currentToken),
-    shouldPrompt: () => serial(async () => (await port.getChoice()) === null),
-    defer: () => serial(() => port.setChoice('deferred')),
     enable: () =>
       serial(async () => {
         if (!(await port.requestPermission())) return null;
