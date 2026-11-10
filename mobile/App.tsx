@@ -135,10 +135,6 @@ const AppContent = () => {
     [auth, push],
   );
 
-  const handleWebViewLoadEnd = useCallback(() => {
-    push.onLoad().catch(() => undefined);
-  }, [push]);
-
   const shouldStartLoad = (request: WebViewNavigation) => {
     if (isAllowedWebAppUrl(request.url)) return true;
 
@@ -166,7 +162,6 @@ const AppContent = () => {
             onNavigationStateChange={({ canGoBack: nextCanGoBack }) =>
               setCanGoBack(nextCanGoBack)
             }
-            onLoad={handleWebViewLoadEnd}
             onError={() => setFailed(true)}
             onContentProcessDidTerminate={() => webViewRef.current?.reload()}
             renderLoading={LoadingView}

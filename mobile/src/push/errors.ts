@@ -54,24 +54,6 @@ export const classifyPushError = (error: unknown): PushFailure => {
   return 'unknown';
 };
 
-export const PUSH_FAILURE_NOTICE: Record<
-  PushFailure,
-  { title: string; message: string }
-> = {
-  apns_timeout: {
-    title: '알림 연결이 늦어지고 있어요',
-    message: '잠시 뒤 다시 켜 주세요.',
-  },
-  network: {
-    title: '알림 연결을 완료하지 못했어요',
-    message: '네트워크를 확인한 뒤 다시 시도해 주세요.',
-  },
-  unknown: {
-    title: '알림 연결을 완료하지 못했어요',
-    message: '잠시 뒤 다시 시도해 주세요.',
-  },
-};
-
 /** 웹 브리지 push:response의 error 값. 웹은 ok가 false면 종류와 관계없이 실패로 본다. */
 export const PUSH_BRIDGE_ERROR: Record<PushFailure, string> = {
   apns_timeout: 'apns-timeout',

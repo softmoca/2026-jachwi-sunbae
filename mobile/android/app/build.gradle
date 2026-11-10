@@ -110,7 +110,7 @@ android {
         applicationId "com.jachwisunbae"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 10
+        versionCode 11
         versionName "2.2.0"
         resValue "string", "kakao_native_app_key", kakaoNativeAppKey
         manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
