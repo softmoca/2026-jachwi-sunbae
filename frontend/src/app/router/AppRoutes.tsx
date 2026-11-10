@@ -25,6 +25,7 @@ import {
   type NeighborhoodBasePath,
   NEIGHBORHOODS_NEARBY_PATH,
   NEIGHBORHOODS_PATH,
+  OAUTH_COMPLETE_PATH,
   PRIVACY_PATH,
   PROPERTY_NEW_PATH,
   propertyDetailPath,
@@ -45,6 +46,7 @@ const NeighborhoodRoutePage = lazy(() => import('@/pages/neighborhood-preview/Ne
 const UsageGuidePage = lazy(() => import('@/pages/usage-guide/UsageGuidePage'));
 const LandingPage = lazy(() => import('@/pages/landing/LandingPage'));
 const PrivacyPage = lazy(() => import('@/pages/privacy/PrivacyPage'));
+const OAuthCompletePage = lazy(() => import('@/pages/oauth-complete/OAuthCompletePage'));
 const NotFoundPage = lazy(() => import('@/pages/not-found/NotFoundPage'));
 const PropertyDetailPage = lazy(() => import('@/pages/property-detail/PropertyDetailPage'));
 const EditPropertyPage = lazy(() => import('@/pages/edit-property/EditPropertyPage'));
@@ -125,6 +127,8 @@ const AppRoutes = () => (
     <Route path={LANDING_PATH} element={lazyPage(<LandingPage />)} />
     <Route path={ABOUT_PATH} element={<Navigate to={GUIDE_PATH} replace />} />
     <Route path={PRIVACY_PATH} element={lazyPage(<PrivacyPage />)} />
+    {/* OAuth 콜백 뒤 돌아오는 곳. 새 쿠키로 다시 로그인해 결과를 정하고 마이로 보낸다. */}
+    <Route path={OAUTH_COMPLETE_PATH} element={lazyPage(<OAuthCompletePage />)} />
     {/* 로그인 화면은 없다. 예전 주소로 들어오면 홈에서 자동 로그인한다. */}
     <Route path={LOGIN_PATH} element={<Navigate to={HOME_PATH} replace />} />
     {/* 매물은 본 방 기록 지도에서 바로 등록한다. 예전 매물 등록 주소로 들어오면 기록 지도로 보낸다. */}

@@ -36,4 +36,13 @@ export const authHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
   http.get('*/api/members/me', () => success({ id: currentMemberId })),
+  // 현재 기기 로그아웃. 쿠키가 지워진 것처럼 다음 로그인에서 새 익명 회원을 받는다.
+  http.post('*/api/auth/logout', () => {
+    hasRefreshCookie = false;
+    return new HttpResponse(null, { status: 204 });
+  }),
+  // OAuth 시작. 로컬 목은 제공자 화면 없이 바로 복귀 화면으로 돌아와, 지금 회원에 처음 연결한 것처럼 보인다.
+  http.post('*/api/auth/oauth/:provider/start', () =>
+    success({ authorizationUrl: `${globalThis.location?.origin ?? 'http://localhost:3000'}/oauth/complete` }),
+  ),
 ];

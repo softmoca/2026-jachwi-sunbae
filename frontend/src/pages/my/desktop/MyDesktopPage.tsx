@@ -5,6 +5,7 @@ import WeatherSummaryCard from '@/features/weather/ui/weather-summary-card/Weath
 import { usePublicConfig } from '@/shared/config/PublicConfigContext';
 import TopNavigation from '@/shared/ui/top-navigation/TopNavigation';
 
+import AccountLinkCard from '../ui/account-link-card/AccountLinkCard';
 import AccountResetCard from '../ui/account-reset-card/AccountResetCard';
 import PrivacyLinkCard from '../ui/privacy-link-card/PrivacyLinkCard';
 
@@ -23,6 +24,7 @@ const MyDesktopPage = () => {
         </div>
         <WeatherSummaryCard />
         <div className={styles.links}>
+          <AccountLinkCard memberId={member.memberId} />
           <PrivacyLinkCard />
           <AccountResetCard memberId={member.memberId} />
         </div>
