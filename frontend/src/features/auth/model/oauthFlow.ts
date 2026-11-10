@@ -136,6 +136,28 @@ export const completeOAuthLink = (
 ): Promise<OAuthNotice> =>
   finishOAuthLink(config, { pending: takePendingOAuth(), countProperties, resetCache: () => queryClient.clear() });
 
+/** #646 콜백이 실패하면 복귀 주소에 붙이는 `error` 값. 모르는 값은 `failed`로 본다. */
+const toCallbackFailure = (error: string): Exclude<OAuthFailure, 'unfinished'> => {
+  if (error === 'cancelled' || error === 'session' || error === 'unavailable') return error;
+  return 'failed';
+};
+
+/**
+ * 콜백이 실패해 `/oauth/complete?error=...`로 돌아왔을 때 부른다. 서버는 이때 쿠키와 회원을 바꾸지 않으므로
+ * 다시 로그인하지 않고, 남은 시작 정보만 지운 뒤 취소나 실패를 기록하고 안내를 돌려준다.
+ */
+export const failOAuthLink = async (
+  error: string,
+  countProperties: CountProperties = unknownCount,
+): Promise<OAuthNotice> => {
+  const failure = toCallbackFailure(error);
+  const provider = toAnalyticsProvider(takePendingOAuth()?.provider);
+  const propertyCount = withPropertyCount(await countProperties().catch(() => undefined));
+  if (failure === 'cancelled') trackOAuthLinkEvent('oauth_link_cancelled', { provider, ...propertyCount });
+  else trackOAuthLinkEvent('oauth_link_failed', { provider, reason: failure, ...propertyCount });
+  return createOAuthFailureNotice(failure);
+};
+
 /** 서버에 네이티브 로그인 API가 아직 없을 때의 응답. Spring은 없는 경로에 404를 준다. */
 const isServerUnsupported = (error: unknown): boolean =>
   error instanceof ApiError && error.status !== null && [404, 405, 501].includes(error.status);

@@ -139,6 +139,20 @@ describe('마이 화면 계정 연결', () => {
     expect(loginCalls).toBe(1);
   });
 
+  it.each([
+    ['cancelled', '계정 연결을 취소했어요'],
+    ['unavailable', '지금은 계정을 연결할 수 없어요'],
+  ])('콜백이 실패해 error=%s로 돌아오면 회원을 그대로 두고 마이에서 실패를 안내한다', async (error, title) => {
+    savePendingOAuth({ provider: 'KAKAO', previousMemberId: 1 });
+    renderMyPage(`/oauth/complete?error=${error}`);
+
+    expect(await screen.findByRole('status', { name: title })).toBeInTheDocument();
+    expect(screen.getByLabelText('현재 경로')).toHaveTextContent('/me');
+    expect(getAuthenticationSnapshot().session?.memberId).toBe(1);
+    // 시작 정보를 썼으므로 마이가 '마치지 못했어요'를 한 번 더 띄우지 않는다.
+    expect(screen.queryByRole('status', { name: '계정 연결을 마치지 못했어요' })).not.toBeInTheDocument();
+  });
+
   it('auth만 알리고 키를 갖춘 제공자가 없는 앱에서는 숨긴다', async () => {
     window.__JACHWI_NATIVE_APP__ = { platform: 'ios', version: 2, features: ['auth'], authProviders: [] };
     renderMyPage();
