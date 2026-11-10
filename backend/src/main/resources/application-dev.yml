@@ -21,6 +21,9 @@ logging:
 auth:
   jwt:
     secret: ${JWT_SECRET}
+  oauth:
+    unlink:
+      enabled: true
 
 promotion:
   collection:

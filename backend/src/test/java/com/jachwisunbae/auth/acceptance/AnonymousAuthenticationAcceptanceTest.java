@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jachwisunbae.auth.client.OAuthProviderClient;
+import com.jachwisunbae.auth.client.ProviderIdentity;
 import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
@@ -123,7 +124,7 @@ class AnonymousAuthenticationAcceptanceTest {
         String state = params.getFirst("state");
         String nonce = params.getFirst("nonce");
         assertThat(state).isNotBlank().isNotEqualTo(nonce);
-        doReturn("external-user").when(oauthProviderClient)
+        doReturn(new ProviderIdentity("external-user", null)).when(oauthProviderClient)
                 .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(nonce));
 
         mvc.perform(get(callbackPath).cookie(otherCookie).param("state", state).param("code", "valid-code"))
@@ -312,7 +313,7 @@ class AnonymousAuthenticationAcceptanceTest {
         String url = objectMapper.readTree(response.getResponse().getContentAsString())
                 .path("data").path("authorizationUrl").asText();
         var params = UriComponentsBuilder.fromUriString(url).build().getQueryParams();
-        doReturn(subject).when(oauthProviderClient)
+        doReturn(new ProviderIdentity(subject, null)).when(oauthProviderClient)
                 .exchangeAndVerify(eq(OAuthProvider.KAKAO), eq("valid-code"), eq(params.getFirst("nonce")));
         return mvc.perform(get("/api/auth/oauth/KAKAO/callback").cookie(login.refreshCookie())
                         .param("state", params.getFirst("state")).param("code", "valid-code"))

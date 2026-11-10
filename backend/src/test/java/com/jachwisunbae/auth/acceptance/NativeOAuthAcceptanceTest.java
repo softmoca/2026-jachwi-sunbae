@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -17,10 +18,12 @@ import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.MemberIdentityRepository;
 import com.jachwisunbae.auth.repository.RefreshTokenRepository;
+import com.jachwisunbae.auth.service.OAuthUnlinkService;
 import com.jachwisunbae.auth.support.FakeOAuthProvider;
 import com.jachwisunbae.auth.token.JwtTokenProvider;
 import com.jachwisunbae.common.exception.errorcode.ErrorCode;
 import com.jachwisunbae.common.exception.server.ServiceUnavailableException;
+import com.nimbusds.jwt.SignedJWT;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;
 import java.time.Instant;
@@ -30,6 +33,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -95,6 +99,9 @@ class NativeOAuthAcceptanceTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private OAuthUnlinkService unlinkService;
+
     @MockitoSpyBean
     private OAuthProviderClient providerClient;
     @MockitoSpyBean
@@ -115,6 +122,14 @@ class NativeOAuthAcceptanceTest {
         registry.add("auth.oauth.apple.redirect-uri", () -> "https://example.com/api/auth/oauth/APPLE/callback");
         registry.add("auth.oauth.apple.native-audiences", () -> APPLE_BUNDLE_ID);
         registry.add("auth.oauth.apple.jwks-uri", PROVIDER::jwksUri);
+        registry.add("auth.oauth.apple.token-uri", PROVIDER::appleTokenUri);
+        registry.add("auth.oauth.apple.unlink-uri", PROVIDER::appleRevokeUri);
+        registry.add("auth.oauth.apple.team-id", () -> FakeOAuthProvider.APPLE_TEAM_ID);
+        registry.add("auth.oauth.apple.key-id", () -> FakeOAuthProvider.APPLE_KEY_ID);
+        registry.add("auth.oauth.apple.private-key", PROVIDER::applePrivateKey);
+        registry.add("auth.oauth.kakao.admin-key", () -> FakeOAuthProvider.KAKAO_ADMIN_KEY);
+        registry.add("auth.oauth.kakao.unlink-uri", PROVIDER::kakaoUnlinkUri);
+        registry.add("auth.oauth.token-encryption-key", () -> FakeOAuthProvider.TOKEN_ENCRYPTION_KEY);
     }
 
     @AfterAll
@@ -124,6 +139,8 @@ class NativeOAuthAcceptanceTest {
 
     @BeforeEach
     void clearMembers() {
+        PROVIDER.reset();
+        jdbcTemplate.update("DELETE FROM oauth_unlink_requests");
         jdbcTemplate.update("DELETE FROM oauth_attempts");
         jdbcTemplate.update("DELETE FROM refresh_tokens");
         jdbcTemplate.update("DELETE FROM property_photos");
@@ -147,7 +164,7 @@ class NativeOAuthAcceptanceTest {
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                 .andExpect(jsonPath("$.code").value("SUCCESS")).andReturn();
         String nonce = objectMapper.readTree(issued.getResponse().getContentAsString()).path("data").path("nonce").asText();
-        var completed = submit(provider, login, idToken(provider, "external-user", nonce), nonce, "apple-code")
+        var completed = submit(provider, login, idToken(provider, "external-user", nonce), nonce)
                 .andExpect(status().isNoContent())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store")).andReturn();
 
@@ -167,6 +184,18 @@ class NativeOAuthAcceptanceTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(login.memberId()));
         assertThat(linkedMember(provider, "external-user")).isEqualTo(login.memberId());
         assertThat(count("SELECT COUNT(*) FROM oauth_attempts")).isZero();
+        var stored = jdbcTemplate.queryForMap(
+                "SELECT provider_client_id, provider_refresh_token FROM member_identities WHERE provider_subject = ?",
+                "external-user");
+        if (provider == OAuthProvider.APPLE) {
+            // 철회에 쓸 Apple refresh token은 번들 ID와 함께 암호문으로만 저장한다.
+            assertThat(stored.get("provider_client_id")).isEqualTo(APPLE_BUNDLE_ID);
+            assertThat((String) stored.get("provider_refresh_token")).startsWith("v1:")
+                    .doesNotContain(FakeOAuthProvider.appleRefreshToken(""));
+        } else {
+            assertThat(stored.get("provider_client_id")).isNull();
+            assertThat(stored.get("provider_refresh_token")).isNull();
+        }
     }
 
     @ParameterizedTest
@@ -395,7 +424,7 @@ class NativeOAuthAcceptanceTest {
         Login login = startAnonymous();
         String nonce = issueNonce(provider, login);
         doThrow(new ServiceUnavailableException(ErrorCode.OAUTH_PROVIDER_UNAVAILABLE, "test outage"))
-                .when(providerClient).verifyNativeIdToken(eq(provider), anyString(), eq(nonce));
+                .when(providerClient).verifyNativeLogin(eq(provider), anyString(), eq(nonce), any());
 
         submit(provider, login, idToken(provider, "external-user", nonce), nonce)
                 .andExpect(status().isServiceUnavailable())
@@ -435,6 +464,96 @@ class NativeOAuthAcceptanceTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(login.memberId()));
     }
 
+    @Test
+    @DisplayName("탈퇴하면 연결 정보를 지우고 남긴 요청으로 카카오 연결을 끊고 Apple 토큰을 철회한 뒤 요청도 지운다")
+    void unlinksProvidersAfterMemberDeletion() throws Exception {
+        // given
+        Login kakaoMember = startAnonymous();
+        Login appleMember = startAnonymous();
+        Cookie kakaoCookie = completeNative(OAuthProvider.KAKAO, kakaoMember, "1234567890");
+        Cookie appleCookie = completeNative(OAuthProvider.APPLE, appleMember, "apple-user");
+
+        // when
+        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(kakaoCookie)))
+                .andExpect(status().isNoContent());
+        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(appleCookie)))
+                .andExpect(status().isNoContent());
+
+        // then
+        assertThat(count("SELECT COUNT(*) FROM member_identities")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM oauth_unlink_requests")).isEqualTo(2);
+        assertThat(PROVIDER.unlinks()).isEmpty();
+        assertThat(PROVIDER.revocations()).isEmpty();
+
+        assertThat(unlinkService.processDue()).isEqualTo(2);
+
+        assertThat(PROVIDER.unlinks()).singleElement().satisfies(request -> {
+            assertThat(request.get("authorization")).isEqualTo("KakaoAK " + FakeOAuthProvider.KAKAO_ADMIN_KEY);
+            assertThat(request.get("target_id")).isEqualTo("1234567890");
+        });
+        assertThat(PROVIDER.revocations()).singleElement().satisfies(request -> {
+            assertThat(request.get("client_id")).isEqualTo(APPLE_BUNDLE_ID);
+            assertThat(request.get("token")).startsWith(FakeOAuthProvider.appleRefreshToken("apple-code-"));
+        });
+        assertThat(count("SELECT COUNT(*) FROM oauth_unlink_requests")).isZero();
+    }
+
+    @Test
+    @DisplayName("제공자 장애로 연결 해제에 실패해도 탈퇴는 마치고 요청을 미뤄 다시 시도한다")
+    void retriesUnlinkWhenProviderFails() throws Exception {
+        Login login = startAnonymous();
+        Cookie linked = completeNative(OAuthProvider.KAKAO, login, "1234567890");
+        PROVIDER.respondToUnlink(500, "{\"code\":-1}");
+
+        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(linked)))
+                .andExpect(status().isNoContent());
+        unlinkService.processDue();
+
+        var request = jdbcTemplate.queryForMap("SELECT attempts, next_attempt_at FROM oauth_unlink_requests");
+        assertThat(request.get("attempts")).isEqualTo(1);
+        assertThat(((LocalDateTime) request.get("next_attempt_at"))).isAfter(LocalDateTime.now(clock));
+        assertThat(unlinkService.processDue()).isZero();
+
+        // 다음 시도 시각이 되면 다시 처리하고, 성공하면 요청을 지운다.
+        PROVIDER.respondToUnlink(200, "");
+        jdbcTemplate.update("UPDATE oauth_unlink_requests SET next_attempt_at = ?", LocalDateTime.now(clock));
+        assertThat(unlinkService.processDue()).isOne();
+        assertThat(count("SELECT COUNT(*) FROM oauth_unlink_requests")).isZero();
+        assertThat(PROVIDER.unlinks()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("끝내 연결 해제에 실패하면 제공자 정보를 더 보관하지 않도록 요청을 지운다")
+    void abandonsUnlinkAfterMaxAttempts() throws Exception {
+        Login login = startAnonymous();
+        Cookie linked = completeNative(OAuthProvider.APPLE, login, "apple-user");
+        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(linked)))
+                .andExpect(status().isNoContent());
+        PROVIDER.respondToRevoke(503, "");
+        // 최대 12번 중 11번 실패한 요청이다.
+        jdbcTemplate.update("UPDATE oauth_unlink_requests SET attempts = 11");
+
+        assertThat(unlinkService.processDue()).isOne();
+
+        assertThat(count("SELECT COUNT(*) FROM oauth_unlink_requests")).isZero();
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 같은 계정으로 다시 연결하면 이전 기록 없이 지금 회원에 새로 연결한다")
+    void relinksAsNewAccountAfterDeletion() throws Exception {
+        Login original = startAnonymous();
+        Cookie linked = completeNative(OAuthProvider.APPLE, original, "apple-user");
+        mvc.perform(delete("/api/members/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken(linked)))
+                .andExpect(status().isNoContent());
+
+        Login fresh = startAnonymous();
+        Cookie relinked = completeNative(OAuthProvider.APPLE, fresh, "apple-user");
+
+        mvc.perform(post("/api/auth/refresh").cookie(relinked))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.member.memberId").value(fresh.memberId()));
+        assertThat(linkedMember(OAuthProvider.APPLE, "apple-user")).isEqualTo(fresh.memberId());
+    }
+
     private Cookie completeNative(OAuthProvider provider, Login login, String subject) throws Exception {
         String nonce = issueNonce(provider, login);
         return submit(provider, login, idToken(provider, subject, nonce), nonce)
@@ -448,17 +567,15 @@ class NativeOAuthAcceptanceTest {
         return objectMapper.readTree(response.getResponse().getContentAsString()).path("data").path("nonce").asText();
     }
 
+    // Apple 앱처럼 같은 로그인에서 받은 인가 코드를 함께 보낸다. 가짜 제공자는 그 코드를 토큰의 사용자로 교환해 준다.
     private ResultActions submit(OAuthProvider provider, Login login, String idToken, String nonce) throws Exception {
-        return submit(provider, login, idToken, nonce, null);
-    }
-
-    private ResultActions submit(OAuthProvider provider, Login login, String idToken, String nonce,
-                                 String authorizationCode) throws Exception {
         Map<String, String> body = new LinkedHashMap<>();
         body.put("idToken", idToken);
         body.put("nonce", nonce);
-        if (authorizationCode != null) {
-            body.put("authorizationCode", authorizationCode);
+        if (provider == OAuthProvider.APPLE) {
+            String code = "apple-code-" + UUID.randomUUID();
+            PROVIDER.registerAppleCode(code, subjectOf(idToken));
+            body.put("authorizationCode", code);
         }
         return mvc.perform(post("/api/auth/oauth/" + provider + "/id-token")
                 .header(HttpHeaders.AUTHORIZATION, login.bearer()).cookie(login.cookie())
@@ -508,6 +625,14 @@ class NativeOAuthAcceptanceTest {
 
     private long count(String sql, Object... args) {
         return jdbcTemplate.queryForObject(sql, Long.class, args);
+    }
+
+    private static String subjectOf(String idToken) {
+        try {
+            return SignedJWT.parse(idToken).getJWTClaimsSet().getSubject();
+        } catch (java.text.ParseException exception) {
+            return "unparsable";
+        }
     }
 
     private static String idToken(OAuthProvider provider, String subject, String nonce) {

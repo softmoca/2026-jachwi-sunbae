@@ -1,6 +1,8 @@
 package com.jachwisunbae.auth.service;
 
 import com.jachwisunbae.auth.client.OAuthProviderClient;
+import com.jachwisunbae.auth.client.ProviderIdentity;
+import com.jachwisunbae.auth.client.ProviderIdentity.ProviderCredential;
 import com.jachwisunbae.auth.domain.OAuthProvider;
 import com.jachwisunbae.auth.domain.RefreshToken;
 import com.jachwisunbae.auth.repository.OAuthAttemptRepository;
@@ -62,8 +64,8 @@ public class OAuthAuthenticationService {
         if (error != null || code == null || code.isBlank() || code.length() > 4096) {
             throw invalidIdToken("OAuth 인증이 취소됐거나 인가 코드가 유효하지 않습니다.");
         }
-        String subject = providers.exchangeAndVerify(provider, code, nonce);
-        return new VerifiedIdentity(session.getMemberId(), provider, subject, session.getTokenHash());
+        ProviderIdentity verified = providers.exchangeAndVerify(provider, code, nonce);
+        return VerifiedIdentity.of(session, provider, verified);
     }
 
     // Bearer JWT의 회원과 Refresh 쿠키의 회원이 같아야 지금 기기의 인증 세션으로 본다.
@@ -98,7 +100,7 @@ public class OAuthAuthenticationService {
 
     // nonce를 먼저 한 번만 소비한 뒤 ID Token을 검증한다. 검증에 실패하거나 제공자에 닿지 못해도 nonce는 다시 쓰지 못한다.
     public VerifiedIdentity verifyNativeIdToken(OAuthProvider provider, Long memberId, String refreshCookie,
-                                                String idToken, String nonce) {
+                                                String idToken, String nonce, String authorizationCode) {
         RefreshToken session = requireSessionOf(memberId, refreshCookie);
         if (nonce == null || !nonce.matches(OPAQUE_TOKEN)) {
             throw invalidIdToken("OAuth nonce 형식이 올바르지 않습니다.");
@@ -110,8 +112,8 @@ public class OAuthAuthenticationService {
                 LocalDateTime.now(clock))) {
             throw invalidIdToken("이 인증 세션과 제공자에 발급한 유효한 nonce가 아닙니다.");
         }
-        String subject = providers.verifyNativeIdToken(provider, idToken, nonce);
-        return new VerifiedIdentity(session.getMemberId(), provider, subject, session.getTokenHash());
+        return VerifiedIdentity.of(session, provider,
+                providers.verifyNativeLogin(provider, idToken, nonce, authorizationCode));
     }
 
     private static AuthenticationFailedException invalid(String message) {
@@ -123,6 +125,13 @@ public class OAuthAuthenticationService {
         return new InvalidInputException(ErrorCode.OAUTH_ID_TOKEN_INVALID, message);
     }
 
-    public record VerifiedIdentity(Long memberId, OAuthProvider provider, String subject, String refreshTokenHash) {
+    // credential은 탈퇴할 때 제공자 연결을 해제하려고 저장할 제공자 토큰이다. 필요 없는 제공자는 null이다.
+    public record VerifiedIdentity(Long memberId, OAuthProvider provider, String subject, String refreshTokenHash,
+                                   ProviderCredential credential) {
+
+        private static VerifiedIdentity of(RefreshToken session, OAuthProvider provider, ProviderIdentity verified) {
+            return new VerifiedIdentity(session.getMemberId(), provider, verified.subject(), session.getTokenHash(),
+                    verified.credential());
+        }
     }
 }

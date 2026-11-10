@@ -143,7 +143,7 @@ public class OAuthController {
             @CookieValue(name = "refresh_token", required = false) String refreshCookie,
             @RequestBody IdTokenRequest request) {
         VerifiedIdentity identity = service.verifyNativeIdToken(provider, memberId, refreshCookie,
-                request.idToken(), request.nonce());
+                request.idToken(), request.nonce(), request.authorizationCode());
         IssuedRefreshToken token = authService.completeOAuth(identity);
         // WebView가 이 쿠키로 /api/auth/refresh를 불러 바뀐 회원의 Access Token을 받는다.
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore())
@@ -157,7 +157,7 @@ public class OAuthController {
     public record NonceResponse(String nonce) {
     }
 
-    // authorizationCode는 Apple 앱이 함께 보내지만 회원 식별에는 ID Token만 쓰므로 받기만 하고 사용하지 않는다.
+    // authorizationCode는 Apple 로그인에 필요하다. 서버가 교환해 탈퇴할 때 철회할 refresh token을 받는다.
     public record IdTokenRequest(String idToken, String nonce, String authorizationCode) {
     }
 }

@@ -28,16 +28,25 @@ auth:
     validity-days: 365
   oauth:
     success-redirect-uri: ${OAUTH_SUCCESS_REDIRECT_URI:}
+    # 탈퇴할 때 철회할 Apple refresh token을 암호화하는 32바이트 키(Base64)
+    token-encryption-key: ${OAUTH_TOKEN_ENCRYPTION_KEY:}
+    unlink:
+      # 탈퇴 후 제공자 연결 해제 요청을 처리한다.
+      enabled: false
     kakao:
       client-id: ${KAKAO_OAUTH_CLIENT_ID:}
       client-secret: ${KAKAO_OAUTH_CLIENT_SECRET:}
       redirect-uri: ${KAKAO_OAUTH_REDIRECT_URI:}
       native-audiences: ${KAKAO_OAUTH_NATIVE_AUDIENCES:}
+      admin-key: ${KAKAO_OAUTH_ADMIN_KEY:}
     apple:
       client-id: ${APPLE_OAUTH_CLIENT_ID:}
       client-secret: ${APPLE_OAUTH_CLIENT_SECRET:}
       redirect-uri: ${APPLE_OAUTH_REDIRECT_URI:}
       native-audiences: ${APPLE_OAUTH_NATIVE_AUDIENCES:}
+      team-id: ${APPLE_OAUTH_TEAM_ID:}
+      key-id: ${APPLE_OAUTH_KEY_ID:}
+      private-key: ${APPLE_OAUTH_PRIVATE_KEY:}
 
 app:
   cors:
