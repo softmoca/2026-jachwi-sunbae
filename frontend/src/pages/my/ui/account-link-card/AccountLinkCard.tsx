@@ -353,7 +353,6 @@ const styles = {
     }
   `,
 
-
   /* 마이 화면은 스크롤되므로 화면 아래에 고정하고, 앱 탭바와 하단 메뉴 위에 띄운다. 등장 애니메이션이 transform을 쓰므로 가운데 정렬은 margin으로 한다. */
   toast: css`
     label: AccountLinkCard-toast;

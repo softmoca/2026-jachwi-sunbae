@@ -59,7 +59,6 @@ describe('OAuth 연결 상태', () => {
     expect(notice.description).toContain('날씨 위치와 알림 설정은 계정에 있던 설정');
   });
 
-
   it('완료 없이 돌아온 경우는 취소와 실패를 함께 안내한다', () => {
     expect(createOAuthFailureNotice('unfinished')).toMatchObject({
       tone: 'error',

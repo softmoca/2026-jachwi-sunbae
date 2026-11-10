@@ -60,9 +60,7 @@ describe('OAuth 연결 분석 이벤트', () => {
       leavePage: vi.fn(),
     });
 
-    expect(oauthEvents()).toEqual([
-      ['oauth_link_started', { provider: 'kakao', property_count: 3 }],
-    ]);
+    expect(oauthEvents()).toEqual([['oauth_link_started', { provider: 'kakao', property_count: 3 }]]);
     expect(trackOutboundEvent).toHaveBeenCalledTimes(1);
   });
 
