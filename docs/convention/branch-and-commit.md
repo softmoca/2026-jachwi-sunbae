@@ -1,5 +1,7 @@
 # 브랜치와 커밋
 
+> 개인 실험 Fork에서는 `develop`에서 작업 브랜치를 만들고 `main`·`develop`에 직접 push하지 않는 규칙을 유지한다. 아래 팀 자동 배포·필수 검사 정책은 참고용이다. Fork는 [Backend CI](../../backend/docs/operations/ci.md)의 경로 필터와 [lab 수동 배포](../../backend/lab/README.md)를 사용하며, 삭제된 워크플로의 필수 검사는 원격 설정에서 별도 확인한다.
+
 ## 브랜치 전략
 
 `main`과 `develop` 두 브랜치를 유지하고, 작업은 짧은 작업 브랜치에서 한다.

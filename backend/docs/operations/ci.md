@@ -1,75 +1,65 @@
 # Backend CI
 
-[워크플로](../../../.github/workflows/backend-ci.yml)와 [Gradle 초기화 스크립트](../../../.github/gradle/backend-ci.init.gradle)에 정의된 실행 범위, 캐시와 테스트 정책을 설명한다. 설정을 변경하면 이 문서도 함께 수정한다.
+개인 Fork의 [워크플로](../../../.github/workflows/backend-ci.yml)는 Java 21로 기존 백엔드 빌드·일반 테스트를 수행한다. 자동 배포는 하지 않는다.
 
-## 실행 조건
+## 실행 조건과 명령
 
-- `main`, `develop` 대상 PR과 두 브랜치의 push에서 실행한다.
-- 수동 실행을 지원한다.
-- 같은 워크플로와 ref에 새 실행이 시작되면 진행 중인 이전 실행을 취소한다.
-- 검사 이름은 `Build`이며 제한 시간은 10분이다.
+- `backend/**`, `.github/gradle/**` 또는 `.github/workflows/backend-ci.yml` 변경이 있을 때 실행하며, 백엔드 문서 변경도 포함한다.
+- 작업 브랜치는 PR 생성·재개 또는 새 커밋 반영 시 검사한다. PR 대상 브랜치에는 제한을 두지 않는다.
+- push 검사는 `main`·`develop`에서만 실행한다. PR 병합 후에도 검사하며, 작업 브랜치 push로는 실행하지 않아 PR 검사와의 중복을 피한다.
+- `workflow_dispatch` 수동 실행은 경로 필터와 관계없이 지원한다.
+- 같은 워크플로와 ref의 새 실행은 진행 중인 이전 실행을 취소한다.
+- 검사 이름 `Build`, `ubuntu-latest`, 제한 시간 10분, `contents: read` 권한을 유지한다.
+- Temurin 21과 저장소의 Gradle Wrapper를 사용한다. Docker는 기존 Testcontainers 테스트에 필요하다.
 
-변경 경로에 따라 Java·Gradle 준비와 빌드 실행 여부를 결정한다.
-
-| 변경 경로 또는 이벤트                                   | 빌드 실행 |
-| ------------------------------------------------------- | --------- |
-| `backend/**` 중 아래 문서 경로를 제외한 파일            | 실행      |
-| `.github/workflows/backend-ci.yml`, `.github/gradle/**` | 실행      |
-| `backend/docs/**`, `backend` 바로 아래 Markdown만 변경  | 생략      |
-| 그 밖의 경로만 변경                                     | 생략      |
-| 수동 실행                                               | 항상 실행 |
-
-빌드를 생략해도 `Build` 검사는 성공 상태를 보고한다. 문서와 빌드 대상 파일을 함께 변경하면 빌드한다. 파일 이동은 이전 경로의 삭제와 새 경로의 추가로 검사해 소스가 문서 경로로 이동해도 빌드를 생략하지 않는다.
-
-## 빌드 명령
-
-Temurin Java 21을 준비하고 `backend`에서 다음 명령을 실행한다. Gradle 버전은 [Wrapper 설정](../../gradle/wrapper/gradle-wrapper.properties)의 `distributionUrl`을 따른다.
+`backend` 작업 디렉터리에서 실행하는 명령:
 
 ```bash
-./gradlew clean build --no-daemon --build-cache --console=plain \
-  --init-script ../.github/gradle/backend-ci.init.gradle
+./gradlew clean build --no-daemon --build-cache --console=plain --init-script ../.github/gradle/backend-ci.init.gradle
 ```
 
-워크플로는 `CI_GRADLE_BUILD_CACHE`에 `${{ runner.temp }}/backend-gradle-task-cache`를 지정한다. 초기화 스크립트는 이 경로를 Gradle 작업 결과 캐시로 사용한다. 해당 스크립트를 넘기지 않는 로컬 기본 빌드에는 이 정책을 적용하지 않는다.
+`build.gradle`은 변경하지 않았다. `test`는 `acceptance` 태그를 제외하고 단위·SQL·통합·아키텍처 테스트를 수행한다. 실패를 무시하는 옵션이나 `continue-on-error`는 없으며 테스트 실패는 CI 실패다. 인수 테스트를 포함하려면 로컬에서 `./gradlew testAll --no-daemon --console=plain`을 실행한다.
 
-## 캐시 저장과 복원
+## 병렬 실행과 캐시
 
-`setup-gradle`은 `cache-provider: external`로 실행한다. 캐시 저장과 복원은 별도의 `actions/cache/restore`, `actions/cache/save` 단계에서 수행한다.
+[CI 초기화 스크립트](../../../.github/gradle/backend-ci.init.gradle)는 테스트 JVM을 `min(2, CPU 수)`개 사용한다. 서로 다른 테스트 클래스를 별도 프로세스에서 실행하며 JUnit의 메서드 병렬 실행 설정은 바꾸지 않는다. 테스트 코드·Testcontainers 수명주기·`build.gradle`은 유지한다. 초기화 스크립트를 지정하지 않는 로컬 빌드에는 이 설정을 적용하지 않는다.
 
-| 구분                    | 저장 경로                                             | 저장 내용                                                                                  | 키 구성                                                                      |
-| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| 의존성·Gradle 실행 준비 | `GRADLE_USER_HOME/caches`, `GRADLE_USER_HOME/wrapper` | 내려받은 라이브러리·플러그인, 빌드 스크립트 처리 결과, Wrapper가 내려받은 Gradle 배포본 등 | 실행 OS·아키텍처, Java 21, 백엔드 Gradle 설정 해시                           |
-| 작업 결과               | `runner.temp/backend-gradle-task-cache`               | 캐시 가능한 작업의 출력. Java 컴파일 결과 등                                               | 실행 OS·아키텍처, Java 21, 백엔드 Gradle 설정·초기화 스크립트 해시, 커밋 SHA |
+캐시는 `setup-gradle@v6` 하나로 관리한다. Gradle User Home에 있는 의존성·Wrapper 배포본·로컬 빌드 캐시를 저장·복원하고, `--build-cache`로 컴파일 등 캐시 가능한 작업의 결과 재사용을 활성화한다. 별도 `actions/cache`, `setup-java cache: gradle`, 사용자 지정 캐시 디렉터리는 추가하지 않는다.
 
-백엔드 Gradle 설정 해시에는 `backend/**/*.gradle*`, `backend/**/gradle-wrapper.properties`, `backend/**/gradle.properties`, `backend/gradle/**/*.toml`을 사용한다.
+| 실행 종류                    | 캐시 읽기·저장 정책                                       |
+| ---------------------------- | --------------------------------------------------------- |
+| 같은 저장소 작업 브랜치의 PR | 읽기·저장 허용. 해당 PR의 후속 실행에서 재사용            |
+| `main`·`develop` push        | 읽기·저장 허용. 해당 브랜치를 대상으로 하는 PR에서도 활용 |
+| `workflow_dispatch`          | 선택한 ref에서 읽기·저장 허용                             |
+| 외부 Fork에서 들어온 PR      | 읽기만 허용                                               |
 
-- 의존성 캐시는 정확히 일치하는 키를 우선 복원하고, 없으면 같은 실행 환경의 이전 캐시를 복원한다. 기존 `setup-java-...-gradle-...` 키도 복원 후보에 포함한다.
-- 기존 캐시와 호환되도록 `setup-gradle`이 설정한 `GRADLE_USER_HOME`의 절대 경로를 사용하며, `caches`, `wrapper` 순서를 유지한다.
-- 작업 결과 캐시는 정확한 키, 설정 해시까지 같은 접두어, 실행 환경까지 같은 접두어 순서로 복원한다. 후속 커밋도 이전 커밋의 작업 결과를 사용할 수 있다.
-- 빌드 성공 후 동일 저장소 PR과 push·수동 실행은 새 캐시를 저장한다. fork PR은 복원만 한다. 정확한 키가 이미 적중하면 다시 저장하지 않는다.
-- PR에서 저장한 캐시는 해당 PR의 후속 커밋과 재실행에서 재사용한다. 다른 PR과 공유하지 않는다. `develop`에서 저장한 캐시는 `develop` 대상 새 PR에서도 복원할 수 있다.
-- 캐시가 없어도 필요한 파일을 내려받고 작업을 실행한다.
+`cache-read-only` 조건을 명시해 기본 브랜치 외 실행에서도 캐시를 저장한다. 캐시가 없는 최초 실행은 다운로드·컴파일 후 캐시를 채운다. PR에서 저장한 캐시는 해당 PR의 merge ref에 속하므로 다른 PR이나 기준 브랜치에서는 사용할 수 없다. 여러 PR이 공유할 캐시는 `main`·`develop` push 실행에서 채워진다. [setup-gradle 캐시 정책](https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#common-cache-configuration)과 [GitHub 캐시 접근 범위](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache)를 따른다.
 
-### Gradle 설정이나 코드가 바뀔 때
+테스트 작업에는 결과 캐시와 up-to-date 생략을 모두 비활성화한다. 따라서 컴파일이 `FROM-CACHE`여도 일반 테스트는 매번 실제로 실행한다. 로그의 `CI_TEST_CONFIG`에서 병렬 수를, `CI_TEST_SUMMARY`에서 실행·실패·건너뛰기 수를 확인한다. `Set up Gradle` 및 후처리 단계에서는 캐시 복원·저장 여부를 확인한다. 실행 시간 단축 정도는 원격 Actions에서 캐시가 채워진 후 비교한다.
 
-GitHub 캐시는 저장된 파일 묶음을 복원한다. 복원한 컴파일 결과를 실제로 사용할지는 Gradle이 작업 구현과 소스·클래스패스 등 입력으로 다시 판단한다. GitHub 캐시 적중만으로 컴파일이나 테스트를 건너뛰지 않는다.
+## 이전 CI와의 차이
 
-| 변경                                       | 동작                                                                                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `build.gradle` 등에서 의존성·플러그인 변경 | 설정 해시가 바뀐다. 이전 캐시를 복원하더라도 새로 필요한 의존성을 내려받고 영향을 받는 작업을 실행한다.                        |
-| Wrapper의 Gradle 버전 변경                 | 설정 해시가 바뀐다. 지정한 버전의 배포본이 없으면 내려받는다. 컴파일 결과 재사용 여부는 새 Gradle이 작업별 캐시 키로 판단한다. |
-| Java 소스·테스트 변경                      | 의존성 캐시 키는 유지한다. 이전 작업 결과를 복원한 뒤 입력이 바뀐 작업을 실행한다.                                             |
-| CI 초기화 스크립트 변경                    | 작업 결과 캐시의 설정 해시가 바뀐다. 이전 캐시 복원 후 재사용 가능한 작업인지 Gradle이 판단한다.                               |
+| 항목                  | 이전 팀 CI                                         | 개인 실험 CI                                           |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------------ |
+| 변경 감지             | 전체 checkout 후 Git diff·조건부 단계              | GitHub Actions `paths`; 수동 실행 지원                 |
+| 브랜치                | `main`·`develop` push 및 대상 PR                   | `main`·`develop` push 및 모든 대상 PR                  |
+| 무관한 변경           | job은 성공, 빌드 단계 생략                         | 워크플로 자체 생략                                     |
+| 백엔드 문서만 변경    | 빌드 생략                                          | 빌드 실행                                              |
+| 캐시                  | `cache-provider: external`, 별도 복원·저장·키 계산 | `setup-gradle@v6`, 같은 저장소 PR·브랜치에서 읽기·저장 |
+| 작업 결과 캐시        | `--build-cache`와 별도 디렉터리                    | `--build-cache`와 Gradle 기본 디렉터리                 |
+| 테스트 JVM            | `min(2, CPU 수)`                                   | 동일                                                   |
+| 테스트 강제 실행 정책 | 초기화 스크립트에서 캐시·up-to-date 생략 금지      | 동일                                                   |
+| 로그                  | `CI_TASK`, `CI_TEST_CONFIG`, `CI_TEST_SUMMARY`     | 테스트 설정·결과 요약과 Gradle 기본 로그·리포트        |
+| 검사 범위             | 일반 테스트, 인수 태그 제외                        | 동일                                                   |
+| 배포                  | Actions 빌드와 별개인 팀 AWS 파이프라인            | Actions 자동 배포 없음, lab 수동 배포                  |
 
-## 테스트 실행과 로그
+## 제거한 워크플로와 원격 설정
 
-- `Test` 작업은 결과 캐시와 up-to-date 생략을 비활성화해 매 빌드 실행한다.
-- 테스트 JVM 수의 상한은 `min(2, 사용 가능한 프로세서 수)`다. 같은 JVM 안에서 JUnit 스레드 병렬화는 설정하지 않는다.
-- 기존 테스트 태그 제외 정책을 유지한다.
-- [아키텍처 검사](../conventions/test-convention.md#아키텍처-검사)는 `src/test/java/com/jachwisunbae/architecture`에 두며, CI의 `clean build`가 실행하는 일반 `test` 작업에 포함된다. 새 위반이나 동결 기준선 누락은 `Build`를 실패시킨다.
+프론트엔드 검사·mutation, 모바일 검사, Storybook Pages 배포, 태그·GitHub Release 발행, Markdown CI의 6개 워크플로를 제거했다. 추가 워크플로는 없었으며 `backend-ci.yml`만 남긴다. 프론트엔드·모바일·QA 소스와 공용 스크립트는 보존한다. Markdown 정렬·검사는 계속 루트에서 수동 실행한다.
 
-| 로그                                                          | 확인할 내용                                         |
-| ------------------------------------------------------------- | --------------------------------------------------- |
-| `CI_TASK :작업명 elapsed_ms=... outcome=...`                  | 작업별 실행 시간과 `EXECUTED`, `FROM-CACHE` 등 결과 |
-| `CI_TEST_CONFIG max_parallel_forks=...`                       | 설정된 테스트 JVM 수 상한                           |
-| `CI_TEST_SUMMARY task=... tests=... failures=... skipped=...` | 실행한 테스트 수와 실패·건너뛰기 건수               |
+```bash
+npm run format:docs
+npm run format:docs:check
+```
+
+GitHub 경로 필터로 생략된 워크플로가 필수 검사라면 해당 PR의 검사가 Pending에 남을 수 있다. 삭제한 `Check frontend`·`Check mobile`·`Check Markdown` 등 필수 검사와 `Build` 필수 여부는 개인 Fork에서 사용자가 확인한다. 이 작업은 GitHub 브랜치 보호나 AWS 파이프라인을 변경하지 않는다. 실제 원격 Actions 실행도 별도 확인이 필요하다.
