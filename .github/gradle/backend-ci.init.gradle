@@ -1,0 +1,20 @@
+import org.gradle.api.tasks.testing.Test
+
+gradle.allprojects { project ->
+    project.tasks.withType(Test).configureEach { testTask ->
+        testTask.maxParallelForks = Math.min(2, Runtime.getRuntime().availableProcessors())
+
+        // 컴파일 결과는 재사용하되 CI 테스트는 캐시나 up-to-date 판정으로 생략하지 않는다.
+        testTask.outputs.cacheIf { false }
+        testTask.outputs.upToDateWhen { false }
+
+        testTask.doFirst {
+            logger.lifecycle("CI_TEST_CONFIG max_parallel_forks=${testTask.maxParallelForks}")
+        }
+        testTask.afterSuite { suite, result ->
+            if (!suite.parent) {
+                logger.lifecycle("CI_TEST_SUMMARY task=${testTask.path} tests=${result.testCount} failures=${result.failedTestCount} skipped=${result.skippedTestCount}")
+            }
+        }
+    }
+}

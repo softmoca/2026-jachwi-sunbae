@@ -4,12 +4,15 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - ".github/gradle/**"
       - ".github/workflows/backend-ci.yml"
   push:
     branches:
-      - "**"
+      - main
+      - develop
     paths:
       - "backend/**"
+      - ".github/gradle/**"
       - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 
@@ -41,6 +44,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Build
-        run: ./gradlew clean build --no-daemon --console=plain
+        run: ./gradlew clean build --no-daemon --build-cache --console=plain --init-script ../.github/gradle/backend-ci.init.gradle

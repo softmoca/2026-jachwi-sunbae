@@ -215,7 +215,7 @@ Health의 `status: UP`, info의 빌드 버전·commit, Prometheus 텍스트 응�
 - 모니터링 EC2에서 Prometheus·Grafana를 구성하고 JVM·HikariCP·HTTP·CPU·메모리·재시작 기준치를 기록한다.
 - 기준선부터 사진 정합성·30장 제한·락·트랜잭션·재시도·PDF·외부 API·배치·알림·다중 서버 실험을 하나씩 분리한다.
 - 원본과의 비교 및 진단 스크립트 참조를 재확인한 후 `appspec.yml`, `before_install.sh`, `after_install.sh`, `prepare_vault.sh`, `fetch_env.sh`, Vault 공개 인증서 등 팀 배포 전용 파일의 보관 위치를 정리한다.
-- 삭제된 워크플로에서 사용하던 `.github/actions`·`.github/scripts`, 프론트엔드·모바일·QA 파일은 다른 실행 경로의 참조를 확인한 뒤 정리한다. 이번에는 워크플로와 사용하지 않는 CI 초기화 스크립트만 삭제했다.
+- 삭제된 워크플로에서 사용하던 `.github/actions`·`.github/scripts`, 프론트엔드·모바일·QA 파일은 다른 실행 경로의 참조를 확인한 뒤 정리한다. CI 초기화 스크립트는 테스트 병렬 실행·매번 실행·결과 요약에 사용한다. 현재 실행·캐시 정책은 [Backend CI](../docs/operations/ci.md)를 따른다.
 - Fork 브랜치 보호에 삭제한 `Check frontend`·`Check mobile`·`Check Markdown` 등이 필수 검사로 남았는지 확인한다. 경로 필터로 Backend CI가 실행되지 않는 PR은 `Build`가 Pending에 남을 수 있으므로 개인 Fork 정책에 맞춰 사용자가 조정한다. 원격 설정은 변경하지 않았다.
 
 ## 변경 파일
@@ -226,7 +226,7 @@ Health의 `status: UP`, info의 빌드 버전·commit, Prometheus 텍스트 응�
 | 수정: 실행·검사 | `.github/workflows/backend-ci.yml`, `.gitignore`, `package.json`                                                                                                                                                                                  |
 | 수정: 안내 문서 | `README.md`, `backend/docs/README.md`, `backend/docs/guides/environment-variables.md`, `backend/docs/operations/ci.md`, `backend/docs/operations/deployment.md`, `docs/convention/branch-and-commit.md`, `docs/convention/markdown-formatting.md` |
 | 삭제: 워크플로  | `.github/workflows/frontend-ci.yml`, `.github/workflows/frontend-mutation.yml`, `.github/workflows/mobile-ci.yml`, `.github/workflows/storybook-pages.yml`, `.github/workflows/release.yml`, `.github/workflows/markdown-format.yml`              |
-| 삭제: CI 초기화 | `.github/gradle/backend-ci.init.gradle`                                                                                                                                                                                                           |
+| 수정: CI 초기화 | `.github/gradle/backend-ci.init.gradle`                                                                                                                                                                                                           |
 
 ## 검증 상태와 발견 사항
 
