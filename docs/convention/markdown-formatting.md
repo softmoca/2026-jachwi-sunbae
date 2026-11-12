@@ -28,15 +28,11 @@ npm run format:docs:check
 - 작업과 무관한 변경이나 문서 의미가 달라진 부분이 없는지 확인한다.
 - PR 생성 전에는 `format:docs:check`를 실행한다. AI도 같은 명령을 사용하며 포맷팅 규칙을 임의로 바꾸거나 검사를 생략하지 않는다.
 
-## Markdown CI
+## 개인 Fork의 Markdown 검사
 
-[markdown-format.yml](../../.github/workflows/markdown-format.yml)의 워크플로 이름은 `Markdown CI`, 검사 이름은 `Check Markdown`이다.
-Backend CI, Frontend CI와 별도로 루트 의존성을 설치하고 `npm run format:docs:check`를 실행한다.
+개인 백엔드 실험에서는 `markdown-format.yml` 워크플로를 제거했다. 자동 Markdown 검사는 없지만 위 로컬 정렬·검사 명령과 PR 전 검사 규칙은 그대로 유지한다. 새 `backend/lab/**/*.md`도 루트 스크립트의 검사 대상에 포함한다. Prettier 설정은 변경하지 않는다.
 
-- `main`, `develop` 대상 PR과 두 브랜치의 push에서 실행한다.
-- 수동 실행을 지원한다.
-- 변경 경로 필터가 없으므로 Java나 프론트엔드 코드만 수정한 PR에서도 관리 대상 Markdown 전체를 검사한다.
-- CI는 문서를 자동 수정하거나 커밋하지 않는다.
+기존 브랜치 보호에 `Check Markdown`이 필수 검사로 등록되어 있다면 개인 Fork 설정에서 사용자가 정리한다. 이번 작업에서는 원격 설정을 변경하지 않는다.
 
 ### 포맷 검사 실패 시
 

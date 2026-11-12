@@ -1,5 +1,7 @@
 # 환경변수
 
+> 개인 Fork의 EC2 실행은 [lab 환경변수](../../lab/README.md#설정과-환경변수)와 `backend/lab/.env.lab.example`을 사용한다. 아래 로컬·팀 dev·prod 환경변수를 lab으로 복사하지 않는다.
+
 ## 관리 원칙
 
 Spring Boot 애플리케이션은 CORS 허용 Origin과 인증·저장소 설정을 환경변수로 주입받는다. 아래 값 중 로컬 인프라용 값은 Docker Compose에서 사용하고, 애플리케이션 설정에 연결된 값은
