@@ -157,15 +157,7 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
 
    Java 21과 기존 `jachwi-lab.service`, JAR·환경변수 파일이 있어야 한다. `sudo -n true`가 실패하면 기존 `ec2-user`의 암호 없는 sudo 설정부터 확인한다. `deploy.sh`는 매번 전송하므로 EC2에 따로 설치하지 않는다. `/etc/jachwi-lab/app.env`도 기존 파일을 그대로 사용한다.
 
-3. **EC2의 검증된 연결 또는 콘솔에서 서버 fingerprint 확인**
-
-   ```bash
-   sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256 | awk '{print $2}'
-   ```
-
-   출력된 `SHA256:...` 전체를 복사한다. 이것은 PEM 개인키의 지문이 아니라 접속 대상 EC2의 SSH 호스트 키 지문이다.
-
-4. **개인 GitHub 저장소에 Secrets 등록**
+3. **개인 GitHub 저장소에 Secrets 등록**
 
    **Settings → Secrets and variables → Actions → New repository secret**에서 등록한다.
 
@@ -173,7 +165,6 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
    | --------------------- | --------------------------------------------------------- |
    | `LAB_SSH_HOST`        | `3.34.33.54` 또는 현재 개인 EC2 주소                      |
    | `LAB_SSH_PRIVATE_KEY` | 위 접속에 사용한 개인키 파일 전체 내용. BEGIN/END 줄 포함 |
-   | `LAB_SSH_FINGERPRINT` | EC2에서 확인한 `SHA256:...` 전체                          |
 
    macOS 개발 PC에서 개인키를 로그에 출력하지 않고 복사하려면 다음 명령을 사용한다.
 
@@ -181,13 +172,13 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
    pbcopy < /absolute/path/to/lab-key.pem
    ```
 
-   복사한 내용을 `LAB_SSH_PRIVATE_KEY`에 붙여넣는다. 기존 Secret이 접속 가능한 키라면 재등록할 필요가 없다. 암호가 없는 기존 EC2 PEM 키를 기준으로 하며, 암호가 있는 개인키는 두 Action에 `passphrase` 설정을 추가해야 한다. `LAB_SSH_KNOWN_HOSTS`는 더 이상 사용하지 않으므로 제거해도 된다.
+   복사한 내용을 `LAB_SSH_PRIVATE_KEY`에 붙여넣는다. 기존 Secret이 접속 가능한 키라면 재등록할 필요가 없다. 암호가 없는 기존 EC2 PEM 키를 기준으로 하며, 암호가 있는 개인키는 두 Action에 `passphrase` 설정을 추가해야 한다. `LAB_SSH_FINGERPRINT`와 `LAB_SSH_KNOWN_HOSTS`는 사용하지 않으므로 제거해도 된다.
 
-5. **EC2 보안 그룹의 SSH 접근 확인**
+4. **EC2 보안 그룹의 SSH 접근 확인**
 
    GitHub-hosted runner에서 EC2 TCP 22번 포트로 접근할 수 있어야 한다. 집 IP만 허용되어 있으면 Actions의 SSH 연결은 타임아웃된다. EC2 콘솔의 보안 그룹 인바운드 SSH 규칙에서 runner 접근을 별도로 설정한다. 워크플로는 AWS 보안 그룹을 수정하지 않는다. health 검사는 EC2 내부에서 수행하므로 이 배포를 위해 8080을 추가로 공개할 필요는 없다.
 
-[scp-action](https://github.com/appleboy/scp-action)과 [ssh-action](https://github.com/appleboy/ssh-action)은 같은 개인키와 fingerprint를 사용한다. fingerprint가 비어 있으면 전송 전에 실패하도록 구성했다. 키 파일 생성·SSH 옵션 관리는 Action에 맡기며 Secret·`app.env`는 출력하지 않는다.
+[scp-action](https://github.com/appleboy/scp-action)과 [ssh-action](https://github.com/appleboy/ssh-action)은 같은 개인키를 사용한다. fingerprint 설정을 생략하므로 SSH 서버 호스트 키를 검증하지 않는다. 키 파일 생성·SSH 옵션 관리는 Action에 맡기며 Secret·`app.env`는 출력하지 않는다.
 
 ### 실행과 확인
 
@@ -197,7 +188,7 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
 
 GitHub 배포 job의 concurrency와 EC2의 `flock`으로 배포를 직렬화한다. GitHub 기본 정책상 새 요청은 기존 대기 요청을 대체할 수 있다. 아래 관리자 수동 JAR 교체는 CD와 동시에 실행하지 않는다.
 
-Actions Summary에 SHA·브랜치·UTC 실행 시각·성공/실패를 기록한다. 실패 시 다음 명령으로 확인한다. SSH 실패는 Secrets·개인키·서버 fingerprint·22번 접근을, 재시작/health 실패는 DB·Flyway·환경변수와 서비스 로그를 확인한다.
+Actions Summary에 SHA·브랜치·UTC 실행 시각·성공/실패를 기록한다. 실패 시 다음 명령으로 확인한다. SSH 실패는 Secrets·개인키·22번 접근을, 재시작/health 실패는 DB·Flyway·환경변수와 서비스 로그를 확인한다.
 
 ```bash
 sudo systemctl status jachwi-lab.service --no-pager

@@ -30,7 +30,7 @@ CD는 다음 명령으로 테스트 없이 실행 JAR만 빌드한다. 같은 ru
 ./gradlew clean bootJar --no-daemon --build-cache --console=plain
 ```
 
-배포는 `appleboy/scp-action@v1`로 JAR·스크립트를 전송하고 `appleboy/ssh-action@v1`로 기존 `deploy.sh`를 실행한다. 두 Action 모두 `LAB_SSH_FINGERPRINT`로 서버 호스트 키를 검증하며 이전 `LAB_SSH_KNOWN_HOSTS`는 사용하지 않는다. JAR 백업·교체, systemd 재시작, health·실행 SHA 확인은 그대로 유지한다. PR CI에는 SSH Secrets를 전달하지 않는다. 배포 실패는 Actions 실패로 반환하고 Flyway 호환성을 확인하지 않은 자동 JAR 롤백은 하지 않는다.
+배포는 `appleboy/scp-action@v1`로 JAR·스크립트를 전송하고 `appleboy/ssh-action@v1`로 기존 `deploy.sh`를 실행한다. SSH Secrets는 `LAB_SSH_HOST`와 `LAB_SSH_PRIVATE_KEY` 두 개만 사용한다. 두 Action의 fingerprint 설정을 생략하므로 SSH 서버 호스트 키를 검증하지 않는다. JAR 백업·교체, systemd 재시작, health·실행 SHA 확인은 그대로 유지한다. PR CI에는 SSH Secrets를 전달하지 않는다. 배포 실패는 Actions 실패로 반환하고 Flyway 호환성을 확인하지 않은 자동 JAR 롤백은 하지 않는다.
 
 ## 병렬 실행과 캐시
 
