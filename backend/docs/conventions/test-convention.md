@@ -46,21 +46,29 @@
 
 ## 실행 범위
 
-| 명령                | 범위                      |
-| ------------------- | ------------------------- |
-| `./gradlew test`    | 인수 테스트를 제외한 전체 |
-| `./gradlew testAll` | 인수 테스트를 포함한 전체 |
+| 명령                | 범위                                   |
+| ------------------- | -------------------------------------- |
+| `./gradlew test`    | `property` 하위 테스트, 인수 태그 제외 |
+| `./gradlew testAll` | 인수 테스트를 포함한 전체              |
 
-- CI는 `./gradlew clean build`로 실행하므로 인수 테스트가 제외된다.
+- 로컬 `test`와 PR CI의 `clean build`는 `com.jachwisunbae.property.*`만 검사한다. 다른 패키지나 인수 테스트까지 확인하려면 `testAll`을 사용한다. 테스트 필터는 실행 범위만 제한하며 전체 소스와 테스트 컴파일은 유지한다.
+- `build.gradle`에서 `test`와 `testAll` 모두 최대 2개 JVM을 사용한다. 클래스별 기존 MySQL 컨테이너와 DB 준비 코드를 유지한다.
+- CI는 컴파일 캐시를 사용하되 테스트 결과 캐시와 up-to-date 생략을 비활성화한다. 로컬에서 같은 방식으로 검사하려면 `backend`에서 아래 명령을 사용한다.
+
+```bash
+./gradlew test --no-daemon --build-cache --console=plain --init-script ../.github/gradle/backend-ci.init.gradle
+```
+
+- CD는 `clean bootJar`로 실행 JAR만 빌드하며 테스트를 실행하지 않는다. 실행 조건은 [Backend CI·CD](../operations/ci.md)를 따른다.
 
 ## 아키텍처 검사
 
 [src/test/java/com/jachwisunbae/architecture](../../src/test/java/com/jachwisunbae/architecture/)에서 JUnit 5와 ArchUnit으로 백엔드 프로덕션 클래스를 검사한다. 아키텍처 테스트 자체는 Spring 컨텍스트와 DB를 실행하지 않으며, 테스트 클래스패스에서 프로덕션 클래스를 읽고 테스트 코드는 검사에서 제외한다.
 
-기존 `test` 작업에 포함되므로 `./gradlew test`, `./gradlew testAll`, `./gradlew check`, `./gradlew build`와 GitHub CI의 `clean build`에서 함께 실행한다. 별도 모듈이나 작업 간 연결은 필요하지 않다. 아키텍처 검사만 실행하려면 `backend`에서 다음 명령을 사용한다.
+개인 Fork의 기본 `test`·`check`·`build` 및 PR CI는 `property`만 검사하므로 아키텍처 검사를 포함하지 않는다. `testAll`에는 기존대로 포함된다. 아키텍처 검사만 실행하려면 `backend`에서 다음 명령을 사용한다.
 
 ```bash
-./gradlew test --tests 'com.jachwisunbae.architecture.*'
+./gradlew testAll --tests 'com.jachwisunbae.architecture.*'
 ```
 
 ### 검사 범위와 규칙

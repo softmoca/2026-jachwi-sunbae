@@ -66,9 +66,18 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+tasks.withType(Test).configureEach {
+	// 로컬과 CI 모두 최대 2개 JVM으로 테스트 클래스를 병렬 실행한다.
+	maxParallelForks = Math.min(2, Runtime.getRuntime().availableProcessors())
+}
+
 tasks.named('test') {
 	useJUnitPlatform {
 		excludeTags 'acceptance'
+	}
+	// 개인 사진 실험의 기본 검사 범위. testAll은 전체 테스트를 유지한다.
+	filter {
+		includeTestsMatching 'com.jachwisunbae.property.*'
 	}
 }
 

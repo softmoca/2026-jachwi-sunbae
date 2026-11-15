@@ -106,12 +106,12 @@ SHOW GRANTS FOR 'jachwi_lab'@'%';
 ```bash
 cd backend
 java -version
-./gradlew clean build --no-daemon --console=plain
-./gradlew testAll --no-daemon --console=plain
+./gradlew clean build --no-daemon --build-cache --console=plain
+./gradlew testAll --no-daemon --build-cache --console=plain
 ```
 
-- `test`와 `clean build`: 인수 태그(`acceptance`)를 제외한 기존 단위·SQL·통합·아키텍처 테스트.
-- `testAll`: 인수 테스트를 포함한 전체 테스트. CI에 새로 추가하지 않고 로컬 명령을 유지한다.
+- `test`와 `clean build`: `property` 하위 테스트만 실행하며 인수 태그(`acceptance`)는 제외한다. 다른 패키지와 아키텍처 검사는 포함하지 않는다.
+- `testAll`: 인수 테스트를 포함한 전체 테스트. `test`와 `testAll` 모두 최대 2개 JVM을 사용한다.
 - HTML 결과: `build/reports/tests/test/index.html`, `build/reports/tests/testAll/index.html`.
 - CI 병렬 실행·캐시·배포 조건: [Backend CI·CD](../docs/operations/ci.md).
 
@@ -125,59 +125,79 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
 
 ## GitHub Actions 최소 CD
 
-기존 CI로 Java 21 빌드·테스트 후, 같은 JAR를 SSH로 보내 [deploy.sh](deploy.sh)를 EC2에서 실행한다. 별도 배포 프로그램·계정·sudoers 설치는 없다. 기존 `ec2-user`의 암호 없는 sudo 권한을 사용하므로 배포 전용 키도 해당 관리자 권한을 가진다. 앱 서비스·`lab` 프로필·8080·`/etc/jachwi-lab/app.env`는 유지한다.
+[Backend CI](../../.github/workflows/backend-ci.yml)는 PR에서 빌드·`property` 테스트를 수행한다. [Backend CD](../../.github/workflows/backend-cd.yml)는 Java 21로 `clean bootJar`만 실행해 테스트 없이 JAR를 만들고, 같은 runner에서 SCP Action으로 JAR·스크립트를 전송하고 SSH Action으로 기존 [deploy.sh](deploy.sh)를 EC2에서 실행한다. 별도 배포 프로그램·계정·sudoers 설치는 없다. 기존 `ec2-user`의 암호 없는 sudo 권한을 사용하므로 배포 전용 키도 해당 관리자 권한을 가진다. 앱 서비스·`lab` 프로필·8080·`/etc/jachwi-lab/app.env`는 유지한다.
 
-- `develop` push(병합 포함): 변경 경로와 관계없이 CI 성공 후 자동 배포. 직접 push 금지 규칙은 유지한다.
-- `workflow_dispatch`: 선택한 개인 저장소 브랜치를 CI 검증 후 배포. 태그는 배포하지 않는다.
+- `develop` push(병합 포함): 변경 경로와 관계없이 CD만 실행하고 테스트 없이 빌드·자동 배포한다. PR CI를 통과한 변경을 병합하며 직접 push 금지 규칙은 유지한다.
+- `workflow_dispatch`: Backend CD에서 선택한 개인 저장소 브랜치를 테스트 없이 빌드·배포한다. 태그는 배포하지 않는다.
 - PR·`main` push·다른 저장소: 배포하지 않는다. SSH Secrets는 배포 job에서만 사용한다.
 
 ### 최초 설정
 
-개발 PC에서 배포 전용 키를 만들고 공개키만 기존 관리자 SSH 연결로 전송한다. 기존 키 경로·호스트는 개인 EC2 값으로 바꾼다.
+이미 수동 배포된 EC2와 정상 접속되는 개인키를 사용한다. 새 SSH 키·사용자·sudoers를 만들 필요는 없다. 이전에 만든 배포 전용 키도 그대로 사용할 수 있다. 아래 명령의 PEM 경로는 자신의 파일로 바꾼다.
 
-```bash
-ssh-keygen -t ed25519 -N '' -C jachwi-lab-cd -f ~/.ssh/jachwi-lab-cd
-scp -i /path/to/existing-ec2-key.pem ~/.ssh/jachwi-lab-cd.pub ec2-user@YOUR_LAB_HOST:~/
-```
+1. **개발 PC에서 EC2 접속**
 
-EC2의 `ec2-user` 터미널에서 실행한다. 기존 관리자 공개키는 유지한다.
+   ```bash
+   chmod 400 /absolute/path/to/lab-key.pem
+   ssh -i /absolute/path/to/lab-key.pem ec2-user@3.34.33.54
+   ```
 
-```bash
-install -d -m 0700 ~/.ssh
-{ printf 'restrict '; cat ~/jachwi-lab-cd.pub; } >> ~/.ssh/authorized_keys
-chmod 0600 ~/.ssh/authorized_keys
-rm ~/jachwi-lab-cd.pub
-sudo dnf install -y jq util-linux
-sudo -n true
-command -v curl flock
-```
+2. **EC2에서 전송 도구와 기존 서비스 확인**
 
-EC2 콘솔/SSM 또는 이미 신원을 확인한 관리자 연결에서 호스트 키를 확인한다. 이 검증 없이 `ssh-keyscan` 결과를 그대로 신뢰하지 않는다.
+   ```bash
+   sudo dnf install -y jq util-linux tar gzip
+   sudo -n true
+   command -v bash curl jq flock tar gzip
+   java -version
+   getent group jachwi-lab
+   sudo test -f /opt/jachwi-lab/app.jar
+   sudo test -f /etc/jachwi-lab/app.env
+   sudo systemctl status jachwi-lab.service --no-pager
+   ```
 
-```bash
-sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
-sudo awk '{print "jachwi-lab " $1 " " $2}' /etc/ssh/ssh_host_ed25519_key.pub
-```
+   Java 21과 기존 `jachwi-lab.service`, JAR·환경변수 파일이 있어야 한다. `sudo -n true`가 실패하면 기존 `ec2-user`의 암호 없는 sudo 설정부터 확인한다. `deploy.sh`는 매번 전송하므로 EC2에 따로 설치하지 않는다. `/etc/jachwi-lab/app.env`도 기존 파일을 그대로 사용한다.
 
-개인 저장소 **Settings → Secrets and variables → Actions**에 등록한다.
+3. **EC2의 검증된 연결 또는 콘솔에서 서버 fingerprint 확인**
 
-| Secret                | 값                                            |
-| --------------------- | --------------------------------------------- |
-| `LAB_SSH_HOST`        | 개인 앱 EC2의 IP 또는 DNS 이름                |
-| `LAB_SSH_PRIVATE_KEY` | PC의 `~/.ssh/jachwi-lab-cd` 전체 내용         |
-| `LAB_SSH_KNOWN_HOSTS` | 확인한 `jachwi-lab ssh-ed25519 AAAA...` 한 줄 |
+   ```bash
+   sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256 | awk '{print $2}'
+   ```
 
-GitHub-hosted runner에서 EC2의 22번 포트로 접근할 수 있어야 한다. 표준 runner의 IP는 변할 수 있으므로 집 IP만 허용한 규칙은 부족하다. 네트워크 허용은 별도 설정하며 CI가 AWS 보안 그룹을 변경하지 않는다. health 검사는 EC2 내부에서 하므로 8080을 추가로 공개할 필요는 없다. 개인키 임시 파일은 실행 종료 시 삭제하며 Secret·`app.env`는 로그에 출력하지 않는다.
+   출력된 `SHA256:...` 전체를 복사한다. 이것은 PEM 개인키의 지문이 아니라 접속 대상 EC2의 SSH 호스트 키 지문이다.
+
+4. **개인 GitHub 저장소에 Secrets 등록**
+
+   **Settings → Secrets and variables → Actions → New repository secret**에서 등록한다.
+
+   | Secret                | 값                                                        |
+   | --------------------- | --------------------------------------------------------- |
+   | `LAB_SSH_HOST`        | `3.34.33.54` 또는 현재 개인 EC2 주소                      |
+   | `LAB_SSH_PRIVATE_KEY` | 위 접속에 사용한 개인키 파일 전체 내용. BEGIN/END 줄 포함 |
+   | `LAB_SSH_FINGERPRINT` | EC2에서 확인한 `SHA256:...` 전체                          |
+
+   macOS 개발 PC에서 개인키를 로그에 출력하지 않고 복사하려면 다음 명령을 사용한다.
+
+   ```bash
+   pbcopy < /absolute/path/to/lab-key.pem
+   ```
+
+   복사한 내용을 `LAB_SSH_PRIVATE_KEY`에 붙여넣는다. 기존 Secret이 접속 가능한 키라면 재등록할 필요가 없다. 암호가 없는 기존 EC2 PEM 키를 기준으로 하며, 암호가 있는 개인키는 두 Action에 `passphrase` 설정을 추가해야 한다. `LAB_SSH_KNOWN_HOSTS`는 더 이상 사용하지 않으므로 제거해도 된다.
+
+5. **EC2 보안 그룹의 SSH 접근 확인**
+
+   GitHub-hosted runner에서 EC2 TCP 22번 포트로 접근할 수 있어야 한다. 집 IP만 허용되어 있으면 Actions의 SSH 연결은 타임아웃된다. EC2 콘솔의 보안 그룹 인바운드 SSH 규칙에서 runner 접근을 별도로 설정한다. 워크플로는 AWS 보안 그룹을 수정하지 않는다. health 검사는 EC2 내부에서 수행하므로 이 배포를 위해 8080을 추가로 공개할 필요는 없다.
+
+[scp-action](https://github.com/appleboy/scp-action)과 [ssh-action](https://github.com/appleboy/ssh-action)은 같은 개인키와 fingerprint를 사용한다. fingerprint가 비어 있으면 전송 전에 실패하도록 구성했다. 키 파일 생성·SSH 옵션 관리는 Action에 맡기며 Secret·`app.env`는 출력하지 않는다.
 
 ### 실행과 확인
 
-자동 배포는 `develop` 병합으로 실행한다. 수동 배포는 **Actions → Backend CI → Run workflow → Use workflow from**에서 브랜치를 선택한다. 워크플로가 기본 브랜치에 등록되어 있어야 버튼이 보이고, 선택한 브랜치에도 CD 파일이 있어야 한다. 관리자 권한으로 실행되므로 본인이 관리하는 개인 브랜치만 선택한다.
+자동 배포는 `develop` 병합으로 실행한다. 수동 배포는 **Actions → Backend CD → Run workflow → Use workflow from**에서 브랜치를 선택한다. 워크플로가 기본 브랜치에 등록되어 있어야 버튼이 보이고, 선택한 브랜치에도 CD 파일이 있어야 한다. 관리자 권한으로 실행되므로 본인이 관리하는 개인 브랜치만 선택한다.
 
-배포 순서는 `JAR 전송 → app.jar.next 준비 → app.jar.bak 백업 → 서비스 중지 → 원자적 JAR 교체 → 재시작 → health UP 및 info.build.commit 일치 확인`이다. 재시작 동안 중단 시간이 있고 상태 확인은 약 180초간 재시도한다. 백업은 `/opt/jachwi-lab/app.jar.bak` 한 개이며 다음 배포에서 갱신된다. EC2에서 Gradle 빌드는 하지 않는다.
+배포 순서는 `runner에서 bootJar 빌드 → SCP Action으로 JAR·스크립트 전송 → SSH Action으로 deploy.sh 실행 → app.jar.next 준비 → app.jar.bak 백업 → 서비스 중지 → 원자적 JAR 교체 → 재시작 → health UP 및 info.build.commit 일치 확인`이다. 재시작 동안 중단 시간이 있고 상태 확인은 약 180초간 재시도한다. 백업은 `/opt/jachwi-lab/app.jar.bak` 한 개이며 다음 배포에서 갱신된다. EC2에서 Gradle 빌드는 하지 않는다.
 
 GitHub 배포 job의 concurrency와 EC2의 `flock`으로 배포를 직렬화한다. GitHub 기본 정책상 새 요청은 기존 대기 요청을 대체할 수 있다. 아래 관리자 수동 JAR 교체는 CD와 동시에 실행하지 않는다.
 
-Actions Summary에 SHA·브랜치·UTC 실행 시각·성공/실패를 기록한다. 실패 시 다음 명령으로 확인한다. SSH 실패는 Secrets·키·22번 접근을, 재시작/health 실패는 DB·Flyway·환경변수와 서비스 로그를 확인한다.
+Actions Summary에 SHA·브랜치·UTC 실행 시각·성공/실패를 기록한다. 실패 시 다음 명령으로 확인한다. SSH 실패는 Secrets·개인키·서버 fingerprint·22번 접근을, 재시작/health 실패는 DB·Flyway·환경변수와 서비스 로그를 확인한다.
 
 ```bash
 sudo systemctl status jachwi-lab.service --no-pager
@@ -187,7 +207,7 @@ curl --fail http://127.0.0.1:8080/actuator/info
 ls -lh /opt/jachwi-lab/app.jar*
 ```
 
-**자동 JAR 롤백은 하지 않는다.** Flyway 스키마 호환성을 확인한 뒤 수정한 브랜치를 다시 배포한다. 같은 SHA 재시도는 **Re-run failed jobs**, JAR artifact의 7일 보관 기간이 지났으면 전체 job 재실행을 사용한다. 이전 JAR 복구는 DB 호환성을 확인한 후 관리자가 수행한다. 실패 업로드 `/home/ec2-user/jachwi-lab-<RUN_ID>-<ATTEMPT>.jar`는 확인 후 정리한다. 강제 취소·SSH 단절 시에는 실제 실행 SHA도 확인한다.
+**자동 JAR 롤백은 하지 않는다.** Flyway 스키마 호환성을 확인한 뒤 수정한 브랜치를 다시 배포한다. 같은 SHA 재시도는 **Re-run failed jobs**를 사용한다. 단일 CD job이 같은 SHA의 JAR를 다시 빌드해 배포하므로 artifact 보관 기간에 의존하지 않는다. 이전 JAR 복구는 DB 호환성을 확인한 후 관리자가 수행한다. 실패 시 `/home/ec2-user/jachwi-lab-<RUN_ID>-<ATTEMPT>.jar`와 같은 이름의 `.sh`는 조사용으로 남으며 확인 후 정리한다. 성공하면 두 업로드 파일을 삭제한다. 강제 취소·SSH 단절 시에는 실제 실행 SHA도 확인한다.
 
 Secrets 등록·EC2 설정·runner SSH 접근·GitHub 실제 자동/수동 배포는 아직 수행하지 않았다. 로컬에서는 셸 구문·워크플로 검사와 모의 배포를 검증한다.
 
@@ -283,12 +303,12 @@ Health의 `status: UP`, info의 빌드 버전·commit, Prometheus 텍스트 응�
 - 연동된 Prometheus·Grafana에서 JVM·HikariCP·HTTP·CPU·메모리·재시작 기준치를 기록한다.
 - 기준선부터 사진 정합성·30장 제한·락·트랜잭션·재시도·PDF·외부 API·배치·알림·다중 서버 실험을 하나씩 분리한다.
 - 원본과의 비교 및 진단 스크립트 참조를 재확인한 후 `appspec.yml`, `before_install.sh`, `after_install.sh`, `prepare_vault.sh`, `fetch_env.sh`, Vault 공개 인증서 등 팀 배포 전용 파일의 보관 위치를 정리한다.
-- 삭제된 워크플로에서 사용하던 `.github/actions`·`.github/scripts`, 프론트엔드·모바일·QA 파일은 다른 실행 경로의 참조를 확인한 뒤 정리한다. CI 초기화 스크립트는 테스트 병렬 실행·매번 실행·결과 요약에 사용한다. 현재 실행·캐시 정책은 [Backend CI](../docs/operations/ci.md)를 따른다.
+- 삭제된 워크플로에서 사용하던 `.github/actions`·`.github/scripts`, 프론트엔드·모바일·QA 파일은 다른 실행 경로의 참조를 확인한 뒤 정리한다. 테스트 병렬 실행은 `build.gradle`에서 관리하고 CI 초기화 스크립트는 매번 실행·결과 요약에 사용한다. 현재 실행·캐시 정책은 [Backend CI](../docs/operations/ci.md)를 따른다.
 - Fork 브랜치 보호에 삭제한 `Check frontend`·`Check mobile`·`Check Markdown` 등이 필수 검사로 남았는지 확인한다. 경로 필터로 Backend CI가 실행되지 않는 PR은 `Build`가 Pending에 남을 수 있으므로 개인 Fork 정책에 맞춰 사용자가 조정한다. 원격 설정은 변경하지 않았다.
 
 ## 변경 파일
 
-아래 목록은 최초 lab 분리 작업의 기록이다. 이후 최소 CD는 `backend-ci.yml`, `backend/lab/deploy.sh`와 관련 배포 안내에 구현한다.
+아래 목록은 최초 lab 분리 작업의 기록이다. 이후 CI·CD는 `backend-ci.yml`·`backend-cd.yml`로 분리하며 기존 `backend/lab/deploy.sh`를 사용한다.
 
 | 구분            | 파일                                                                                                                                                                                                                                              |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -300,7 +320,7 @@ Health의 `status: UP`, info의 빌드 버전·commit, Prometheus 텍스트 응�
 
 ## 검증 상태와 발견 사항
 
-2026-11-12 로컬 macOS ARM64·Temurin 21.0.12.1·Docker 29.8.2에서 검증했다. AWS RDS·S3 접속, EC2 systemd 실행, GitHub Actions 원격 실행은 수행하지 않았다.
+아래 표는 현재 테스트 범위 변경 전인 2026-11-12의 기록이다. 로컬 macOS ARM64·Temurin 21.0.12.1·Docker 29.8.2에서 검증했다. AWS RDS·S3 접속, EC2 systemd 실행, GitHub Actions 원격 실행은 수행하지 않았다.
 
 | 검증                                                | 결과                                                                                                                                            |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |

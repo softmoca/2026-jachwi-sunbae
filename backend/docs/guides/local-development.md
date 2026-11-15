@@ -190,6 +190,8 @@ Kakao Developers 앱에 허용 IP를 설정했다면 현재 PC의 공인 IP를 �
 ./gradlew test --no-daemon
 ```
 
+개인 Fork의 `test`는 `property` 하위만 검사한다. 인수 테스트와 다른 도메인까지 확인하려면 `./gradlew testAll --no-daemon`을 실행한다. 두 작업 모두 최대 2개 JVM을 사용하며 자세한 범위는 [테스트 컨벤션](../conventions/test-convention.md#실행-범위)을 따른다.
+
 프론트엔드는 변경 범위에 맞춰 `npm run build`를 실행하고, 필요에 따라 타입·린트·포맷·테스트를 확인한다.
 
 ## 7. 확인 목록
