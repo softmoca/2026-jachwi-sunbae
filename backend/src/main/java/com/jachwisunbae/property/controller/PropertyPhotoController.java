@@ -9,6 +9,7 @@ import com.jachwisunbae.property.service.PropertyPhotoService;
 import com.jachwisunbae.property.service.dto.result.PropertyPhotoUploadResult;
 import com.jachwisunbae.property.storage.PhotoContent;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
@@ -54,9 +55,9 @@ public class PropertyPhotoController {
     @PostMapping(value = "/{propertyId}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "매물 사진 업로드", description = "JPEG, PNG, WebP, HEIC, HEIF 사진 한 장을 비공개 객체 저장소에 업로드합니다.")
     public ResponseEntity<ApiResponse<PropertyPhotoResponse>> uploadPhoto(
-            @AuthenticatedMemberId final Long memberId,
+            @Parameter(hidden = true) @AuthenticatedMemberId final Long memberId,
             @PathVariable final Long propertyId,
-            @RequestPart("file") final MultipartFile file) {
+            @Parameter(description = "업로드할 사진", required = true) @RequestPart("file") final MultipartFile file) {
         PropertyPhotoUploadResult result = propertyPhotoService.upload(memberId, propertyId, file);
         var photo = result.photo();
         return ResponseEntity.created(URI.create("/api/properties/" + propertyId + "/photos/" + photo.getId()))
