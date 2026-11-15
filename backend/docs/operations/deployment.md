@@ -1,6 +1,6 @@
 # 배포
 
-> 이 문서는 원본 팀의 CodePipeline·CodeDeploy·Vault 배포 참고 자료다. 개인 Fork에서는 이 절차를 실행하지 않고 [lab 수동 배포](../../lab/README.md)를 사용한다. 기존 스크립트와 진단 도구는 보존하지만 lab에서 호출하지 않는다.
+> 이 문서는 원본 팀의 CodePipeline·CodeDeploy·Vault 배포 참고 자료다. 개인 Fork에서는 이 절차를 실행하지 않고 [lab CI·CD 및 관리자 수동 배포](../../lab/README.md)를 사용한다. 기존 스크립트와 진단 도구는 보존하지만 lab에서 호출하지 않는다.
 
 백엔드는 GitHub Actions로 검증하고 AWS CodePipeline·CodeDeploy로 배포한다. dev·prod는 빌드 명령과 배포 훅을 공유하며, 소스 브랜치·배포 그룹·환경변수로 구분한다.
 

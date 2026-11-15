@@ -9,7 +9,7 @@
 
 ## 개인 백엔드 실험 환경
 
-이 Fork는 [개인 실험 가이드](backend/lab/README.md)에 따라 `lab` 프로필·8080·EC2 IAM 역할을 사용합니다. CI는 백엔드 빌드만 수행하고 배포는 JAR 전송과 systemd로 수동 실행합니다. 기존 팀 배포 자료와 다른 파트의 소스는 비교·참고를 위해 보존합니다.
+이 Fork는 [개인 실험 가이드](backend/lab/README.md)에 따라 `lab` 프로필·8080·EC2 IAM 역할을 사용합니다. GitHub Actions CI 성공 후 `develop` 자동 배포와 개인 브랜치 수동 배포를 JAR 전송·systemd로 수행합니다. PR에서는 빌드·테스트만 실행합니다. 기존 팀 배포 자료와 다른 파트의 소스는 비교·참고를 위해 보존합니다.
 
 ## 원본 팀 실행 환경
 
@@ -46,7 +46,7 @@
 ```text
 2026-jachwi-sunbae/
 ├── .github/              # Issue·PR 템플릿, 개인 백엔드 CI
-├── backend/              # Spring Boot, lab 수동 배포, 기존 CodeDeploy 참고 자료
+├── backend/              # Spring Boot, lab CI·CD, 기존 CodeDeploy 참고 자료
 ├── frontend/             # React, TypeScript, Webpack, S3·CloudFront 배포 파일
 ├── mobile/               # React Native WebView 앱 셸(iOS·Android), 푸시 발송 스크립트
 ├── qa/                   # AI E2E QA 기준 문서(docs/)와 Playwright 실행 코드
