@@ -1,16 +1,16 @@
 # Backend CI
 
-개인 Fork의 [워크플로](../../../.github/workflows/backend-ci.yml)는 Java 21로 기존 백엔드 빌드·일반 테스트를 수행한다. 자동 배포는 하지 않는다.
+개인 Fork의 [워크플로](../../../.github/workflows/backend-ci.yml)는 Java 21로 기존 백엔드 빌드·일반 테스트를 수행한다. `develop` push와 개인 브랜치 수동 실행은 CI 성공 후 lab에 배포한다. PR은 배포하지 않는다. 설정·배포 절차는 [lab README](../../lab/README.md#github-actions-최소-cd)를 참고한다.
 
 ## 실행 조건과 명령
 
-- `backend/**`, `.github/gradle/**` 또는 `.github/workflows/backend-ci.yml` 변경이 있을 때 실행하며, 백엔드 문서 변경도 포함한다.
+- PR은 `backend/**`, `.github/gradle/**` 또는 `.github/workflows/backend-ci.yml` 변경이 있을 때 실행하며, 백엔드 문서 변경도 포함한다.
 - 작업 브랜치는 PR 생성·재개 또는 새 커밋 반영 시 검사한다. PR 대상 브랜치에는 제한을 두지 않는다.
-- push 검사는 `main`·`develop`에서만 실행한다. PR 병합 후에도 검사하며, 작업 브랜치 push로는 실행하지 않아 PR 검사와의 중복을 피한다.
+- push 검사는 경로 필터 없이 `main`·`develop`에서만 실행한다. PR 병합 후에도 검사하며, 작업 브랜치 push로는 실행하지 않아 PR 검사와의 중복을 피한다.
 - `workflow_dispatch` 수동 실행은 경로 필터와 관계없이 지원한다.
-- 같은 워크플로와 ref의 새 실행은 진행 중인 이전 실행을 취소한다.
+- 같은 워크플로·이벤트·ref의 새 실행은 이전 `Build` job만 취소한다. 배포 job은 취소하지 않고 직렬 실행한다.
 - 검사 이름 `Build`, `ubuntu-latest`, 제한 시간 10분, `contents: read` 권한을 유지한다.
-- Temurin 21과 저장소의 Gradle Wrapper를 사용한다. Docker는 기존 Testcontainers 테스트에 필요하다.
+- Temurin 21과 저장소의 Gradle Wrapper를 사용한다. Docker는 기존 Testcontainers 테스트에 필요하다. `SOURCE_COMMIT_ID=github.sha`로 배포 SHA를 JAR에 기록한다.
 
 `backend` 작업 디렉터리에서 실행하는 명령:
 
@@ -41,9 +41,9 @@
 
 | 항목                  | 이전 팀 CI                                         | 개인 실험 CI                                           |
 | --------------------- | -------------------------------------------------- | ------------------------------------------------------ |
-| 변경 감지             | 전체 checkout 후 Git diff·조건부 단계              | GitHub Actions `paths`; 수동 실행 지원                 |
+| 변경 감지             | 전체 checkout 후 Git diff·조건부 단계              | PR의 GitHub Actions `paths`; 수동 실행 지원            |
 | 브랜치                | `main`·`develop` push 및 대상 PR                   | `main`·`develop` push 및 모든 대상 PR                  |
-| 무관한 변경           | job은 성공, 빌드 단계 생략                         | 워크플로 자체 생략                                     |
+| 무관한 변경           | job은 성공, 빌드 단계 생략                         | PR은 생략, `main`·`develop` push는 검사                |
 | 백엔드 문서만 변경    | 빌드 생략                                          | 빌드 실행                                              |
 | 캐시                  | `cache-provider: external`, 별도 복원·저장·키 계산 | `setup-gradle@v6`, 같은 저장소 PR·브랜치에서 읽기·저장 |
 | 작업 결과 캐시        | `--build-cache`와 별도 디렉터리                    | `--build-cache`와 Gradle 기본 디렉터리                 |
@@ -51,7 +51,7 @@
 | 테스트 강제 실행 정책 | 초기화 스크립트에서 캐시·up-to-date 생략 금지      | 동일                                                   |
 | 로그                  | `CI_TASK`, `CI_TEST_CONFIG`, `CI_TEST_SUMMARY`     | 테스트 설정·결과 요약과 Gradle 기본 로그·리포트        |
 | 검사 범위             | 일반 테스트, 인수 태그 제외                        | 동일                                                   |
-| 배포                  | Actions 빌드와 별개인 팀 AWS 파이프라인            | Actions 자동 배포 없음, lab 수동 배포                  |
+| 배포                  | Actions 빌드와 별개인 팀 AWS 파이프라인            | CI 성공 후 `develop` 자동·개인 브랜치 수동 lab 배포    |
 
 ## 제거한 워크플로와 원격 설정
 

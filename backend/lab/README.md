@@ -17,15 +17,15 @@
 
 아래는 사용자가 제공한 환경이며, AWS 조회나 변경으로 검증한 값이 아니다. 리전은 `ap-northeast-2`다.
 
-| 대상             | 구성                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| 애플리케이션 EC2 | `moca-jachwi-sunbae-prod`, `t4g.small`, Amazon Linux 2023 ARM64, Java 21                 |
-| EC2 IAM 역할     | 이미 연결된 `moca-jachwi-app-role`                                                       |
-| RDS              | `jachwi-sunbae-db`, MySQL 8.4.9, `db.t4g.micro`, Single-AZ                               |
-| RDS 엔드포인트   | `jachwi-sunbae-db.c30280sa2kfd.ap-northeast-2.rds.amazonaws.com:3306`                    |
-| DB               | `jachwi_sunbae`                                                                          |
-| S3               | `moca-jachwi`, 객체 키 prefix `lab/photos/`                                              |
-| 모니터링 EC2     | `moca-jachwi-sunbae-monitoring-server`, `t4g.small`; Prometheus·Grafana 구축은 다음 단계 |
+| 대상             | 구성                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| 애플리케이션 EC2 | `moca-jachwi-sunbae-prod`, `t4g.small`, Amazon Linux 2023 ARM64, Java 21                       |
+| EC2 IAM 역할     | 이미 연결된 `moca-jachwi-app-role`                                                             |
+| RDS              | `jachwi-sunbae-db`, MySQL 8.4.9, `db.t4g.micro`, Single-AZ                                     |
+| RDS 엔드포인트   | `jachwi-sunbae-db.c30280sa2kfd.ap-northeast-2.rds.amazonaws.com:3306`                          |
+| DB               | `jachwi_sunbae`                                                                                |
+| S3               | `moca-jachwi`, 객체 키 prefix `lab/photos/`                                                    |
+| 모니터링 EC2     | `moca-jachwi-sunbae-monitoring-server`, `t4g.small`; Prometheus·Grafana 연동 완료(사용자 제공) |
 
 이름에 `prod`가 있어도 애플리케이션은 **`lab` 프로필만** 사용한다. 원본 팀 저장소·AWS·운영 데이터에는 접근하거나 변경하지 않는다. 아래 서버 준비·DB 생성·배포 명령은 사용자가 이후 직접 실행할 절차이며 이번 작업에서 실행하지 않는다.
 
@@ -113,7 +113,7 @@ java -version
 - `test`와 `clean build`: 인수 태그(`acceptance`)를 제외한 기존 단위·SQL·통합·아키텍처 테스트.
 - `testAll`: 인수 테스트를 포함한 전체 테스트. CI에 새로 추가하지 않고 로컬 명령을 유지한다.
 - HTML 결과: `build/reports/tests/test/index.html`, `build/reports/tests/testAll/index.html`.
-- CI 변경 및 초기화 스크립트 제거 영향: [Backend CI](../docs/operations/ci.md).
+- CI 병렬 실행·캐시·배포 조건: [Backend CI·CD](../docs/operations/ci.md).
 
 배포 JAR에 소스 SHA를 넣으려면 변경 내용을 먼저 커밋한 뒤 `backend`에서 빌드한다. 미커밋 변경이 있으면 SHA만으로 해당 바이너리를 재현할 수 없으므로 diff도 별도로 기록한다.
 
@@ -123,9 +123,77 @@ SOURCE_COMMIT_ID="$(git rev-parse HEAD)" ./gradlew clean build --no-daemon --con
 
 현재 버전의 실행 JAR는 `build/libs/jachwi-sunbae-backend-4.2.0.jar`다. `-plain.jar`는 배포하지 않는다. 버전이 바뀌면 아래 전송 파일명도 실제 `bootJar` 산출물에 맞춘다.
 
+## GitHub Actions 최소 CD
+
+기존 CI로 Java 21 빌드·테스트 후, 같은 JAR를 SSH로 보내 [deploy.sh](deploy.sh)를 EC2에서 실행한다. 별도 배포 프로그램·계정·sudoers 설치는 없다. 기존 `ec2-user`의 암호 없는 sudo 권한을 사용하므로 배포 전용 키도 해당 관리자 권한을 가진다. 앱 서비스·`lab` 프로필·8080·`/etc/jachwi-lab/app.env`는 유지한다.
+
+- `develop` push(병합 포함): 변경 경로와 관계없이 CI 성공 후 자동 배포. 직접 push 금지 규칙은 유지한다.
+- `workflow_dispatch`: 선택한 개인 저장소 브랜치를 CI 검증 후 배포. 태그는 배포하지 않는다.
+- PR·`main` push·다른 저장소: 배포하지 않는다. SSH Secrets는 배포 job에서만 사용한다.
+
+### 최초 설정
+
+개발 PC에서 배포 전용 키를 만들고 공개키만 기존 관리자 SSH 연결로 전송한다. 기존 키 경로·호스트는 개인 EC2 값으로 바꾼다.
+
+```bash
+ssh-keygen -t ed25519 -N '' -C jachwi-lab-cd -f ~/.ssh/jachwi-lab-cd
+scp -i /path/to/existing-ec2-key.pem ~/.ssh/jachwi-lab-cd.pub ec2-user@YOUR_LAB_HOST:~/
+```
+
+EC2의 `ec2-user` 터미널에서 실행한다. 기존 관리자 공개키는 유지한다.
+
+```bash
+install -d -m 0700 ~/.ssh
+{ printf 'restrict '; cat ~/jachwi-lab-cd.pub; } >> ~/.ssh/authorized_keys
+chmod 0600 ~/.ssh/authorized_keys
+rm ~/jachwi-lab-cd.pub
+sudo dnf install -y jq util-linux
+sudo -n true
+command -v curl flock
+```
+
+EC2 콘솔/SSM 또는 이미 신원을 확인한 관리자 연결에서 호스트 키를 확인한다. 이 검증 없이 `ssh-keyscan` 결과를 그대로 신뢰하지 않는다.
+
+```bash
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+sudo awk '{print "jachwi-lab " $1 " " $2}' /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+개인 저장소 **Settings → Secrets and variables → Actions**에 등록한다.
+
+| Secret                | 값                                            |
+| --------------------- | --------------------------------------------- |
+| `LAB_SSH_HOST`        | 개인 앱 EC2의 IP 또는 DNS 이름                |
+| `LAB_SSH_PRIVATE_KEY` | PC의 `~/.ssh/jachwi-lab-cd` 전체 내용         |
+| `LAB_SSH_KNOWN_HOSTS` | 확인한 `jachwi-lab ssh-ed25519 AAAA...` 한 줄 |
+
+GitHub-hosted runner에서 EC2의 22번 포트로 접근할 수 있어야 한다. 표준 runner의 IP는 변할 수 있으므로 집 IP만 허용한 규칙은 부족하다. 네트워크 허용은 별도 설정하며 CI가 AWS 보안 그룹을 변경하지 않는다. health 검사는 EC2 내부에서 하므로 8080을 추가로 공개할 필요는 없다. 개인키 임시 파일은 실행 종료 시 삭제하며 Secret·`app.env`는 로그에 출력하지 않는다.
+
+### 실행과 확인
+
+자동 배포는 `develop` 병합으로 실행한다. 수동 배포는 **Actions → Backend CI → Run workflow → Use workflow from**에서 브랜치를 선택한다. 워크플로가 기본 브랜치에 등록되어 있어야 버튼이 보이고, 선택한 브랜치에도 CD 파일이 있어야 한다. 관리자 권한으로 실행되므로 본인이 관리하는 개인 브랜치만 선택한다.
+
+배포 순서는 `JAR 전송 → app.jar.next 준비 → app.jar.bak 백업 → 서비스 중지 → 원자적 JAR 교체 → 재시작 → health UP 및 info.build.commit 일치 확인`이다. 재시작 동안 중단 시간이 있고 상태 확인은 약 180초간 재시도한다. 백업은 `/opt/jachwi-lab/app.jar.bak` 한 개이며 다음 배포에서 갱신된다. EC2에서 Gradle 빌드는 하지 않는다.
+
+GitHub 배포 job의 concurrency와 EC2의 `flock`으로 배포를 직렬화한다. GitHub 기본 정책상 새 요청은 기존 대기 요청을 대체할 수 있다. 아래 관리자 수동 JAR 교체는 CD와 동시에 실행하지 않는다.
+
+Actions Summary에 SHA·브랜치·UTC 실행 시각·성공/실패를 기록한다. 실패 시 다음 명령으로 확인한다. SSH 실패는 Secrets·키·22번 접근을, 재시작/health 실패는 DB·Flyway·환경변수와 서비스 로그를 확인한다.
+
+```bash
+sudo systemctl status jachwi-lab.service --no-pager
+sudo journalctl -u jachwi-lab.service -n 200 --no-pager
+curl --fail http://127.0.0.1:8080/actuator/health
+curl --fail http://127.0.0.1:8080/actuator/info
+ls -lh /opt/jachwi-lab/app.jar*
+```
+
+**자동 JAR 롤백은 하지 않는다.** Flyway 스키마 호환성을 확인한 뒤 수정한 브랜치를 다시 배포한다. 같은 SHA 재시도는 **Re-run failed jobs**, JAR artifact의 7일 보관 기간이 지났으면 전체 job 재실행을 사용한다. 이전 JAR 복구는 DB 호환성을 확인한 후 관리자가 수행한다. 실패 업로드 `/home/ec2-user/jachwi-lab-<RUN_ID>-<ATTEMPT>.jar`는 확인 후 정리한다. 강제 취소·SSH 단절 시에는 실제 실행 SHA도 확인한다.
+
+Secrets 등록·EC2 설정·runner SSH 접근·GitHub 실제 자동/수동 배포는 아직 수행하지 않았다. 로컬에서는 셸 구문·워크플로 검사와 모의 배포를 검증한다.
+
 ## 수동 JAR 배포와 systemd
 
-배포 경로는 `빌드 → SCP → JAR 교체 → systemd restart → health 확인`이다. CodePipeline, CodeDeploy `appspec.yml`, Vault 스크립트, 기존 `backend/deploy/`를 호출하지 않는다. 자동 배포·SSH 실행을 CI에 추가하지 않는다.
+아래는 최초 설치 및 관리자 수동 작업 참고 절차다. 평상시 반복 배포는 위 Actions CD를 사용한다. CodePipeline, CodeDeploy `appspec.yml`, Vault 스크립트, 기존 `backend/deploy/`를 호출하지 않는다. 자동 배포가 진행 중이거나 대기 중일 때 아래 JAR 교체 명령을 동시에 실행하지 않는다.
 
 ### 1. 개발 PC에서 파일 전송
 
@@ -212,13 +280,15 @@ Health의 `status: UP`, info의 빌드 버전·commit, Prometheus 텍스트 응�
 첫 배포 성공 후 다음을 별도 변경으로 검토한다.
 
 - GC 로그·Thread Dump·서비스 종료 기록을 `jachwi-lab` 사용자·경로·서비스명으로 이식하고 보존 기간을 결정한다.
-- 모니터링 EC2에서 Prometheus·Grafana를 구성하고 JVM·HikariCP·HTTP·CPU·메모리·재시작 기준치를 기록한다.
+- 연동된 Prometheus·Grafana에서 JVM·HikariCP·HTTP·CPU·메모리·재시작 기준치를 기록한다.
 - 기준선부터 사진 정합성·30장 제한·락·트랜잭션·재시도·PDF·외부 API·배치·알림·다중 서버 실험을 하나씩 분리한다.
 - 원본과의 비교 및 진단 스크립트 참조를 재확인한 후 `appspec.yml`, `before_install.sh`, `after_install.sh`, `prepare_vault.sh`, `fetch_env.sh`, Vault 공개 인증서 등 팀 배포 전용 파일의 보관 위치를 정리한다.
 - 삭제된 워크플로에서 사용하던 `.github/actions`·`.github/scripts`, 프론트엔드·모바일·QA 파일은 다른 실행 경로의 참조를 확인한 뒤 정리한다. CI 초기화 스크립트는 테스트 병렬 실행·매번 실행·결과 요약에 사용한다. 현재 실행·캐시 정책은 [Backend CI](../docs/operations/ci.md)를 따른다.
 - Fork 브랜치 보호에 삭제한 `Check frontend`·`Check mobile`·`Check Markdown` 등이 필수 검사로 남았는지 확인한다. 경로 필터로 Backend CI가 실행되지 않는 PR은 `Build`가 Pending에 남을 수 있으므로 개인 Fork 정책에 맞춰 사용자가 조정한다. 원격 설정은 변경하지 않았다.
 
 ## 변경 파일
+
+아래 목록은 최초 lab 분리 작업의 기록이다. 이후 최소 CD는 `backend-ci.yml`, `backend/lab/deploy.sh`와 관련 배포 안내에 구현한다.
 
 | 구분            | 파일                                                                                                                                                                                                                                              |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
