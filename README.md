@@ -9,7 +9,7 @@
 
 ## 개인 백엔드 실험 환경
 
-이 Fork는 [개인 실험 가이드](backend/lab/README.md)에 따라 `lab` 프로필·8080·EC2 IAM 역할을 사용합니다. GitHub Actions CI 성공 후 `develop` 자동 배포와 개인 브랜치 수동 배포를 JAR 전송·systemd로 수행합니다. PR에서는 빌드·테스트만 실행합니다. 기존 팀 배포 자료와 다른 파트의 소스는 비교·참고를 위해 보존합니다.
+이 Fork는 [개인 실험 가이드](backend/lab/README.md)에 따라 `lab` 프로필·8080·EC2 IAM 역할을 사용합니다. GitHub Actions CI는 PR에서 빌드·`property` 테스트를 실행합니다. 별도 CD는 `develop` 자동 배포와 개인 브랜치 수동 배포에서 테스트 없이 JAR를 빌드하고 JAR 전송·systemd로 배포합니다. 기존 팀 배포 자료와 다른 파트의 소스는 비교·참고를 위해 보존합니다.
 
 ## 원본 팀 실행 환경
 
