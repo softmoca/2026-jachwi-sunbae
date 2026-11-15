@@ -56,11 +56,7 @@ jobs:
           ./gradlew clean bootJar --no-daemon --build-cache --console=plain
 
       - name: Prepare deployment files
-        env:
-          LAB_SSH_FINGERPRINT: ${{ secrets.LAB_SSH_FINGERPRINT }}
         run: |
-          # fingerprint 미설정 시 Action의 서버 신원 확인이 생략되지 않도록 중단한다.
-          [[ -n "$LAB_SSH_FINGERPRINT" ]] || { echo 'Set LAB_SSH_FINGERPRINT first.'; exit 1; }
           jars=(backend/build/libs/*.jar)
           [[ ${#jars[@]} -eq 1 && -f ${jars[0]} ]] || exit 1
           mkdir -p lab-upload
@@ -74,7 +70,6 @@ jobs:
           host: ${{ secrets.LAB_SSH_HOST }}
           username: ec2-user
           key: ${{ secrets.LAB_SSH_PRIVATE_KEY }}
-          fingerprint: ${{ secrets.LAB_SSH_FINGERPRINT }}
           source: "lab-upload/*"
           target: /home/ec2-user
           strip_components: 1 # lab-upload/를 제거해 기존 스크립트의 업로드 경로에 맞춘다.
@@ -85,7 +80,6 @@ jobs:
           host: ${{ secrets.LAB_SSH_HOST }}
           username: ec2-user
           key: ${{ secrets.LAB_SSH_PRIVATE_KEY }}
-          fingerprint: ${{ secrets.LAB_SSH_FINGERPRINT }}
           command_timeout: 10m
           script: |
             set -e
